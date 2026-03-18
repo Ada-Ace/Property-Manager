@@ -42,6 +42,7 @@ import {
     FileCheck,
     ExternalLink,
     Building2,
+    ChevronDown,
     Maximize,
     Image as ImageIcon,
     Tag,
