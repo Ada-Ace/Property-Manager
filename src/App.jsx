@@ -72,7 +72,8 @@ const INITIAL_TENANTS = [
         maintenanceSelection: null,
         utilityShare: 45.50,
         notifications: [],
-        leaseDocument: null
+        leaseDocument: null,
+        propertyName: 'Skyline Residency'
     },
     {
         id: 'T2',
@@ -88,15 +89,16 @@ const INITIAL_TENANTS = [
         maintenanceSelection: null,
         utilityShare: 32.20,
         notifications: [],
-        leaseDocument: 'lease_agreement_B.pdf'
+        leaseDocument: 'lease_agreement_B.pdf',
+        propertyName: 'Skyline Residency'
     }
 ];
 
 const INITIAL_UNITS = [
-    { id: 'U1', unitNumber: '12-A', size: 850, expectedRent: 2200, status: 'Occupied', image: null, fittings: ['Aircon x2', 'Fridge (Samsung)', 'Washing Machine'] },
-    { id: 'U2', unitNumber: '12-B', size: 720, expectedRent: 1800, status: 'Occupied', image: null, fittings: ['Aircon x1', 'Microwave'] },
-    { id: 'U3', unitNumber: '14-C', size: 1100, expectedRent: 3100, status: 'Available', image: null, fittings: [] },
-    { id: 'U4', unitNumber: '08-G', size: 650, expectedRent: 1550, status: 'Available', image: null, fittings: [] },
+    { id: 'U1', unitNumber: '12-A', size: 850, expectedRent: 2200, status: 'Occupied', image: null, fittings: ['Aircon x2', 'Fridge (Samsung)', 'Washing Machine'], propertyName: 'Skyline Residency' },
+    { id: 'U2', unitNumber: '12-B', size: 720, expectedRent: 1800, status: 'Occupied', image: null, fittings: ['Aircon x1', 'Microwave'], propertyName: 'Skyline Residency' },
+    { id: 'U3', unitNumber: '14-C', size: 1100, expectedRent: 3100, status: 'Available', image: null, fittings: [], propertyName: 'Skyline Residency' },
+    { id: 'U4', unitNumber: '08-G', size: 650, expectedRent: 1550, status: 'Available', image: null, fittings: [], propertyName: 'Skyline Residency' },
 ];
 
 const INITIAL_BILLS = [];
@@ -207,11 +209,17 @@ export default function App() {
     const [utilityBills, setUtilityBills] = useState(INITIAL_BILLS);
     const [tasks, setTasks] = useState([]);
     const [activeTenantId, setActiveTenantId] = useState(null);
+    const [activeProperty, setActiveProperty] = useState(null);
     const [globalMessage, setGlobalMessage] = useState(null);
     const [tenantMessages, setTenantMessages] = useState([
-        { id: 'M1', tenantId: 'T1', content: 'The aircon in the master bedroom is leaking slightly.', timestamp: '2026-03-18T10:30:00Z' },
-        { id: 'M2', tenantId: 'T2', content: 'When will the utility bills for March be posted?', timestamp: '2026-03-18T14:45:00Z' }
+        { id: 'M1', tenantId: 'T1', content: 'The aircon in the master bedroom is leaking slightly.', timestamp: '2026-03-18T10:30:00Z', propertyName: 'Skyline Residency' },
+        { id: 'M2', tenantId: 'T2', content: 'When will the utility bills for March be posted?', timestamp: '2026-03-18T14:45:00Z', propertyName: 'Skyline Residency' }
     ]);
+
+    // Computed filtered lists based on selected property
+    const filteredTenants = useMemo(() => activeProperty ? tenants.filter(t => t.propertyName === activeProperty) : [], [tenants, activeProperty]);
+    const filteredUnits = useMemo(() => activeProperty ? propertyUnits.filter(u => u.propertyName === activeProperty) : [], [propertyUnits, activeProperty]);
+    const filteredMessages = useMemo(() => activeProperty ? tenantMessages.filter(m => m.propertyName === activeProperty) : [], [tenantMessages, activeProperty]);
 
     // Initial Data Fetch
     useEffect(() => {
@@ -236,6 +244,7 @@ export default function App() {
     });
 
     const handleLogin = (email, password, property) => {
+        setActiveProperty(property);
         if (email === MANAGER_CREDENTIALS.email && password === MANAGER_CREDENTIALS.password) {
             setView('manager');
             return { success: true };
@@ -252,6 +261,7 @@ export default function App() {
     const logout = () => {
         setView('login');
         setActiveTenantId(null);
+        setActiveProperty(null);
     };
 
     const updateUnitFittings = async (unitId, newFittings) => {
@@ -281,14 +291,15 @@ export default function App() {
     };
 
     const handleAddTask = async (newTask) => {
-        setTasks([...tasks, newTask]);
-        await API.saveToSheet('ADD', 'Tasks', newTask);
-        setGlobalMessage({ type: 'success', text: `Maintenance task created!` });
+        const taskData = { ...newTask, propertyName: activeProperty };
+        setTasks([...tasks, taskData]);
+        await API.saveToSheet('ADD', 'Tasks', taskData);
+        setGlobalMessage({ type: 'success', text: `Maintenance task created for ${activeProperty}!` });
         setTimeout(() => setGlobalMessage(null), 3000);
     };
 
     const addUnitToCatalog = async (unitData) => {
-        const newUnit = { ...unitData, id: `U${Date.now()}`, fittings: [] };
+        const newUnit = { ...unitData, id: `U${Date.now()}`, fittings: [], propertyName: activeProperty };
         setPropertyUnits([...propertyUnits, newUnit]);
         await API.saveToSheet('ADD', 'Units', newUnit);
         setGlobalMessage({ type: 'success', text: `Unit ${unitData.unitNumber} added to catalog` });
@@ -302,7 +313,8 @@ export default function App() {
             maintenanceSelection: null,
             utilityShare: 0,
             notifications: [],
-            leaseDocument: null
+            leaseDocument: null,
+            propertyName: activeProperty
         };
         setTenants([...tenants, tenantData]);
         setPropertyUnits(prev => prev.map(u => u.unitNumber === newTenant.unit ? { ...u, status: 'Occupied' } : u));
@@ -345,7 +357,8 @@ export default function App() {
             tenantId: activeTenantId,
             content: msg,
             photoUrl: photoUrl, // Remote URL
-            timestamp: new Date().toISOString()
+            timestamp: new Date().toISOString(),
+            propertyName: activeProperty
         };
 
         // UI Persistence (Immediate)
@@ -354,7 +367,7 @@ export default function App() {
         // Remote Persistence
         await API.saveToSheet('ADD', 'Messages', newMessage);
 
-        setGlobalMessage({ type: 'success', text: "Message sent with secure attachment!" });
+        setGlobalMessage({ type: 'success', text: `Message sent to ${activeProperty} management!` });
         setTimeout(() => setGlobalMessage(null), 3000);
     };
 
@@ -417,11 +430,11 @@ export default function App() {
                     >
                         {view === 'manager' ? (
                             <ManagerDashboard
-                                tenants={tenants}
-                                propertyUnits={propertyUnits}
+                                tenants={filteredTenants}
+                                propertyUnits={filteredUnits}
                                 utilityBills={utilityBills}
                                 tasks={tasks}
-                                tenantMessages={tenantMessages}
+                                tenantMessages={filteredMessages}
                                 onAddUnit={addUnitToCatalog}
                                 onAddTenant={addTenant}
                                 onEditTenant={editTenant}

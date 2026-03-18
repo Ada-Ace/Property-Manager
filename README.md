@@ -59,11 +59,11 @@ To save and persist data for this application, follow these steps:
 
 ### 1. Create a Google Sheet
 Create a new Google Sheet and add the following tabs (with matching headers):
-- **Units**: `id`, `unitNumber`, `size`, `expectedRent`, `status`, `fittings`
-- **Tenants**: `id`, `name`, `unit`, `email`, `mobile`, `password`, `baseRent`, `deposit`, `leaseStart`, `leaseEnd`
+- **Units**: `id`, `unitNumber`, `size`, `expectedRent`, `status`, `fittings`, `propertyName`
+- **Tenants**: `id`, `name`, `unit`, `email`, `mobile`, `password`, `baseRent`, `deposit`, `leaseStart`, `leaseEnd`, `propertyName`
 - **Bills**: `id`, `type`, `date`, `amount`, `mode`, `allocations`
-- **Tasks**: `id`, `title`, `tenantId`, `status`, `dateOptions`
-- **Messages**: `id`, `tenantId`, `content`, `timestamp`
+- **Tasks**: `id`, `title`, `tenantId`, `status`, `dateOptions`, `propertyName`
+- **Messages**: `id`, `tenantId`, `content`, `timestamp`, `photoUrl`, `propertyName`
 
 ### 2. Deploy Google Apps Script
 1. Open your Sheet and go to **Extensions > Apps Script**.
