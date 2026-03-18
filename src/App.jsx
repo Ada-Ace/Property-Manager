@@ -234,7 +234,7 @@ export default function App() {
         options: ['2024-04-10 (AM)', '2024-04-10 (PM)', '2024-04-11 (AM)']
     });
 
-    const handleLogin = (email, password) => {
+    const handleLogin = (email, password, property) => {
         if (email === MANAGER_CREDENTIALS.email && password === MANAGER_CREDENTIALS.password) {
             setView('manager');
             return { success: true };
@@ -1607,15 +1607,23 @@ function StatCard({ title, value, icon, index }) {
 }
 
 function LoginPage({ onLogin }) {
+    const [property, setProperty] = useState('Skyline Residency');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     
     const handleSubmit = (e) => { 
         e.preventDefault(); 
-        const res = onLogin(email, password); 
+        const res = onLogin(email, password, property); 
         if (!res.success) setError(res.message); 
     };
+
+    const properties = [
+        "Skyline Residency",
+        "Parkview Apartments",
+        "Emerald Heights",
+        "Oakwood Terrace"
+    ];
 
     return (
         <div className="min-h-screen bg-slate-950 flex items-center justify-center p-6 relative overflow-hidden">
@@ -1654,6 +1662,21 @@ function LoginPage({ onLogin }) {
                     )}
                     
                     <form onSubmit={handleSubmit} className="space-y-4">
+                        <div className="space-y-1.5">
+                            <label className="text-[10px] text-slate-500 font-bold uppercase tracking-widest ml-1">Select Property</label>
+                            <div className="relative group">
+                                <Building2 className="absolute left-5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 group-focus-within:text-indigo-400 transition-colors" />
+                                <select 
+                                    className="w-full bg-slate-800/50 border border-white/5 rounded-2xl py-4 pl-12 pr-5 text-white outline-none focus:ring-2 ring-indigo-500/50 transition-all appearance-none cursor-pointer text-sm font-medium"
+                                    value={property}
+                                    onChange={(e) => setProperty(e.target.value)}
+                                >
+                                    {properties.map(p => <option key={p} value={p} className="bg-slate-900">{p}</option>)}
+                                </select>
+                                <ChevronDown className="absolute right-5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none" />
+                            </div>
+                        </div>
+
                         <div className="space-y-1.5">
                             <label className="text-[10px] text-slate-500 font-bold uppercase tracking-widest ml-1">Email Access</label>
                             <input 
