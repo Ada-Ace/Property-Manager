@@ -14,6 +14,7 @@
  *    - Execute as: Me
  *    - Who has access: Anyone
  * 5. Copy the 'Web App URL' and add it to your .env file as VITE_API_URL.
+ * 6. Set Timezone Settings: Project Settings (Gear icon) > Timezone > Select (GMT+08:00) Kuala Lumpur.
  */
 
 const SPREADSHEET_ID = SpreadsheetApp.getActiveSpreadsheet().getId();

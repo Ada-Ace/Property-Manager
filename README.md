@@ -72,6 +72,7 @@ Create a new Google Sheet and add the following tabs (with matching headers):
 4. Select **Web App** as the type.
 5. Set **Execute as**: `Me` and **Who has access**: `Anyone`.
 6. Click **Deploy** and copy your **Web App URL**.
+7. **CRITICAL**: Go to **Project Settings** (gear icon) in the Apps Script editor and ensure the **Time zone** is set to `(GMT+08:00) Kuala Lumpur` (or your local GMT+8 region) to ensure date consistency.
 
 ### 3. Configure Environment Variables
 1. Paste your Web App URL into your local `.env` file as `VITE_API_URL`.

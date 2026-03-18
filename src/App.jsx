@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
     LayoutDashboard,
     Users,
@@ -99,9 +100,30 @@ const INITIAL_UNITS = [
 
 const INITIAL_BILLS = [];
 
+// --- Global Configuration ---
+const APP_TIMEZONE = 'Asia/Kuala_Lumpur'; // GMT+8
+const LOCALE = 'en-MY'; // Or your preferred region for GMT+8
+
 // --- Helper Functions ---
+const getLocalDate = () => {
+    // Return a date object adjusted to the targeted timezone if needed, 
+    // or just use this for formatting consistency.
+    return new Date(new Date().toLocaleString("en-US", { timeZone: APP_TIMEZONE }));
+};
+
+const formatDate = (date, includeTime = false) => {
+    if (!date) return '';
+    const d = typeof date === 'string' ? new Date(date) : date;
+    return d.toLocaleDateString(LOCALE, {
+        timeZone: APP_TIMEZONE,
+        year: 'numeric',
+        month: 'short',
+        day: '2-digit',
+        ...(includeTime ? { hour: '2-digit', minute: '2-digit', second: '2-digit' } : {})
+    });
+};
 const calculateNextRentDue = (leaseStart) => {
-    const today = new Date();
+    const today = getLocalDate();
     const lStart = new Date(leaseStart);
     const day = lStart.getDate();
     
@@ -118,7 +140,7 @@ const calculateNextRentDue = (leaseStart) => {
 };
 
 const getDaysUntilDue = (leaseStart) => {
-    const today = new Date();
+    const today = getLocalDate();
     today.setHours(0, 0, 0, 0);
     const dueDate = calculateNextRentDue(leaseStart);
     dueDate.setHours(0, 0, 0, 0);
@@ -233,15 +255,22 @@ export default function App() {
     if (view === 'login') return <LoginPage onLogin={handleLogin} />;
 
     return (
-        <div className="min-h-screen bg-slate-950 text-slate-200 font-sans selection:bg-indigo-500/30">
+        <div className="min-h-screen bg-slate-950 text-slate-200 font-sans selection:bg-indigo-500/30 premium-gradient selection:text-white">
+            <AnimatePresence>
             {globalMessage && (
-                <div className="fixed top-20 left-1/2 -translate-x-1/2 z-[200] animate-in slide-in-from-top-4 duration-300">
-                    <div className="bg-emerald-600 text-white px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-3 border border-emerald-400/30">
+                <motion.div 
+                    initial={{ opacity: 0, y: -20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -20 }}
+                    className="fixed top-20 left-1/2 -translate-x-1/2 z-[200]"
+                >
+                    <div className="bg-emerald-600/90 backdrop-blur-md text-white px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-3 border border-emerald-400/30">
                         <CheckCircle2 className="w-5 h-5" />
-                        <span className="text-sm font-black italic">{globalMessage.text}</span>
+                        <span className="text-sm font-black italic tracking-tight">{globalMessage.text}</span>
                     </div>
-                </div>
+                </motion.div>
             )}
+            </AnimatePresence>
 
             <nav className="border-b border-white/5 bg-slate-900/50 backdrop-blur-md sticky top-0 z-50">
                 <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
@@ -261,28 +290,38 @@ export default function App() {
             </nav>
 
             <main className="max-w-7xl mx-auto p-4 md:p-8">
-                {view === 'manager' ? (
-                    <ManagerDashboard
-                        tenants={tenants}
-                        propertyUnits={propertyUnits}
-                        utilityBills={utilityBills}
-                        tasks={tasks}
-                        tenantMessages={tenantMessages}
-                        onAddUnit={addUnitToCatalog}
-                        onAddTenant={addTenant}
-                        onEditTenant={editTenant}
-                        onUpdateFittings={updateUnitFittings}
-                        onAddBill={handleAddBill}
-                        onAddTask={handleAddTask}
-                        maintenanceEvent={maintenanceEvent}
-                    />
-                ) : (
-                    <TenantDashboard
-                        tenant={tenants.find(t => t.id === activeTenantId)}
-                        unit={propertyUnits.find(u => u.unitNumber === tenants.find(t => t.id === activeTenantId)?.unit)}
-                        onSendMessage={handleSendMessage}
-                    />
-                )}
+                <AnimatePresence mode="wait">
+                    <motion.div
+                        key={view + activeTenantId}
+                        initial={{ opacity: 0, scale: 0.98 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.4, ease: "easeOut" }}
+                    >
+                        {view === 'manager' ? (
+                            <ManagerDashboard
+                                tenants={tenants}
+                                propertyUnits={propertyUnits}
+                                utilityBills={utilityBills}
+                                tasks={tasks}
+                                tenantMessages={tenantMessages}
+                                onAddUnit={addUnitToCatalog}
+                                onAddTenant={addTenant}
+                                onEditTenant={editTenant}
+                                onUpdateFittings={updateUnitFittings}
+                                onAddBill={handleAddBill}
+                                onAddTask={handleAddTask}
+                                maintenanceEvent={maintenanceEvent}
+                            />
+                        ) : (
+                            <TenantDashboard
+                                tenant={tenants.find(t => t.id === activeTenantId)}
+                                unit={propertyUnits.find(u => u.unitNumber === tenants.find(t => t.id === activeTenantId)?.unit)}
+                                onSendMessage={handleSendMessage}
+                            />
+                        )}
+                    </motion.div>
+                </AnimatePresence>
             </main>
         </div>
     );
@@ -302,32 +341,37 @@ function ManagerDashboard({ tenants, propertyUnits, utilityBills, tasks, tenantM
     return (
         <div className="space-y-8 animate-in fade-in duration-700">
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <StatCard title="Monthly Revenue" value={`$${totalRevenue.toLocaleString()}`} icon={<CreditCard className="text-emerald-400" />} />
-                <StatCard title="Occupancy Rate" value={`${Math.round(((propertyUnits.length - vacantUnits) / propertyUnits.length) * 100)}%`} icon={<Users className="text-blue-400" />} />
-                <StatCard title="Available Units" value={vacantUnits} icon={<Building2 className="text-sky-400" />} />
-                <StatCard title="Active Maintenance" value={tasks.length.toString()} icon={<Wrench className="text-amber-400" />} />
+                <StatCard index={0} title="Monthly Revenue" value={`$${totalRevenue.toLocaleString()}`} icon={<CreditCard className="text-emerald-400" />} />
+                <StatCard index={1} title="Occupancy Rate" value={`${Math.round(((propertyUnits.length - vacantUnits) / propertyUnits.length) * 100)}%`} icon={<Users className="text-blue-400" />} />
+                <StatCard index={2} title="Available Units" value={vacantUnits} icon={<Building2 className="text-sky-400" />} />
+                <StatCard index={3} title="Active Maintenance" value={tasks.length.toString()} icon={<Wrench className="text-amber-400" />} />
             </div>
 
-            <div className="flex bg-slate-900/50 p-1 rounded-2xl border border-white/5 w-fit overflow-x-auto max-w-full">
-                <button onClick={() => setActiveTab('rents')} className={`px-6 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-2 shrink-0 ${activeTab === 'rents' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20' : 'text-slate-500 hover:text-slate-300'}`}>
-                    <Receipt className="w-4 h-4" /> Rent Summary
-                </button>
-                <button onClick={() => setActiveTab('leases')} className={`px-6 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-2 shrink-0 ${activeTab === 'leases' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20' : 'text-slate-500 hover:text-slate-300'}`}>
-                    <FileText className="w-4 h-4" /> Lease Directory
-                </button>
-                <button onClick={() => setActiveTab('inventory')} className={`px-6 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-2 shrink-0 ${activeTab === 'inventory' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20' : 'text-slate-500 hover:text-slate-300'}`}>
-                    <Building2 className="w-4 h-4" /> Property Catalog
-                </button>
-                <button onClick={() => setActiveTab('utilities')} className={`px-6 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-2 shrink-0 ${activeTab === 'utilities' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20' : 'text-slate-500 hover:text-slate-300'}`}>
-                    <Droplets className="w-4 h-4" /> Utilities Share
-                </button>
-                <button onClick={() => setActiveTab('tasks')} className={`px-6 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-2 shrink-0 ${activeTab === 'tasks' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20' : 'text-slate-500 hover:text-slate-300'}`}>
-                    <Hammer className="w-4 h-4" /> Maintenance
-                </button>
-                <button onClick={() => setActiveTab('messages')} className={`px-6 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-2 shrink-0 ${activeTab === 'messages' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20' : 'text-slate-500 hover:text-slate-300'}`}>
-                    <MessageSquare className="w-4 h-4" /> Messages
-                    {tenantMessages.length > 0 && <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>}
-                </button>
+            <div className="flex bg-slate-900/50 p-1 rounded-2xl border border-white/5 w-fit overflow-x-auto max-w-full relative">
+                {[
+                    { id: 'rents', icon: <Receipt className="w-4 h-4" />, label: 'Rent Summary' },
+                    { id: 'leases', icon: <FileText className="w-4 h-4" />, label: 'Lease Directory' },
+                    { id: 'inventory', icon: <Building2 className="w-4 h-4" />, label: 'Property Catalog' },
+                    { id: 'utilities', icon: <Droplets className="w-4 h-4" />, label: 'Utilities Share' },
+                    { id: 'tasks', icon: <Hammer className="w-4 h-4" />, label: 'Maintenance' },
+                    { id: 'messages', icon: <MessageSquare className="w-4 h-4" />, label: 'Messages', badge: tenantMessages.length > 0 }
+                ].map((tab) => (
+                    <button 
+                        key={tab.id}
+                        onClick={() => setActiveTab(tab.id)} 
+                        className={`relative px-6 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-2 shrink-0 z-10 ${activeTab === tab.id ? 'text-white' : 'text-slate-500 hover:text-slate-300'}`}
+                    >
+                        {tab.icon} {tab.label}
+                        {tab.badge && <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>}
+                        {activeTab === tab.id && (
+                            <motion.div 
+                                layoutId="activeTab"
+                                className="absolute inset-0 bg-indigo-600 rounded-xl -z-10 shadow-lg shadow-indigo-600/20"
+                                transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+                            />
+                        )}
+                    </button>
+                ))}
             </div>
 
             {activeTab === 'rents' && <RentSummaryTab tenants={tenants} />}
@@ -433,8 +477,8 @@ function ManagerDashboard({ tenants, propertyUnits, utilityBills, tasks, tenantM
 
 // --- Rent Summary Tab ---
 function RentSummaryTab({ tenants }) {
-    const today = new Date();
-    const currentMonthLabel = today.toLocaleString('default', { month: 'long', year: 'numeric' });
+    const today = getLocalDate();
+    const currentMonthLabel = today.toLocaleString(LOCALE, { month: 'long', year: 'numeric', timeZone: APP_TIMEZONE });
 
     const upcomingRents = useMemo(() => {
         return tenants.map(t => {
@@ -541,7 +585,7 @@ function MessagesManager({ tenants, messages }) {
                                                 <div>
                                                     <h4 className="font-black text-white text-sm">{tenant?.name || 'Unknown Tenant'}</h4>
                                                     <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">
-                                                        {new Date(msg.timestamp).toLocaleString()}
+                                                        {formatDate(msg.timestamp, true)}
                                                     </p>
                                                 </div>
                                             </div>
@@ -1373,15 +1417,21 @@ function LeaseModal({ initialData, availableUnits, onClose, onSubmit }) {
     );
 }
 
-function StatCard({ title, value, icon }) {
+function StatCard({ title, value, icon, index }) {
     return (
-        <div className="bg-slate-900/40 border border-white/5 p-5 rounded-3xl backdrop-blur-sm shadow-lg">
-            <div className="flex justify-between items-start mb-3">
-                <p className="text-[9px] font-black text-slate-500 uppercase tracking-[0.2em]">{title}</p>
-                <div className="p-2 bg-slate-800/50 rounded-xl">{icon}</div>
+        <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: index * 0.1, duration: 0.5 }}
+            whileHover={{ y: -5, transition: { duration: 0.2 } }}
+            className="bg-slate-900/40 border border-white/5 p-6 rounded-3xl backdrop-blur-sm shadow-xl hover:bg-slate-900/60 hover:border-indigo-500/30 transition-colors"
+        >
+            <div className="flex justify-between items-start mb-4">
+                <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">{title}</p>
+                <div className="p-2.5 bg-slate-800/80 rounded-2xl border border-white/5 shadow-inner">{icon}</div>
             </div>
-            <p className="text-2xl font-black text-white tracking-tighter">{value}</p>
-        </div>
+            <p className="text-3xl font-black text-white tracking-tighter leading-none">{value}</p>
+        </motion.div>
     );
 }
 
@@ -1389,28 +1439,95 @@ function LoginPage({ onLogin }) {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
-    const handleSubmit = (e) => { e.preventDefault(); const res = onLogin(email, password); if (!res.success) setError(res.message); };
+    
+    const handleSubmit = (e) => { 
+        e.preventDefault(); 
+        const res = onLogin(email, password); 
+        if (!res.success) setError(res.message); 
+    };
 
     return (
-        <div className="min-h-screen bg-slate-950 flex items-center justify-center p-6">
-            <div className="w-full max-w-md">
-                <div className="text-center mb-10">
-                    <div className="bg-indigo-600 w-16 h-16 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-2xl rotate-3">
-                        <ShieldCheck className="w-8 h-8 text-white" />
-                    </div>
-                    <h1 className="text-3xl font-black text-white italic tracking-tighter">PropManage</h1>
+        <div className="min-h-screen bg-slate-950 flex items-center justify-center p-6 relative overflow-hidden">
+            {/* Background Decorative Elements */}
+            <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-indigo-600/10 blur-[120px] rounded-full animate-pulse" />
+            <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-emerald-600/10 blur-[120px] rounded-full" />
+            
+            <motion.div 
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.8 }}
+                className="w-full max-w-md relative z-10"
+            >
+                <div className="text-center mb-12">
+                    <motion.div 
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1, rotate: 3 }}
+                        transition={{ type: "spring", stiffness: 260, damping: 20, delay: 0.2 }}
+                        className="bg-gradient-to-tr from-indigo-600 to-violet-600 w-20 h-20 rounded-[2rem] flex items-center justify-center mx-auto mb-8 shadow-2xl shadow-indigo-600/40"
+                    >
+                        <ShieldCheck className="w-10 h-10 text-white" />
+                    </motion.div>
+                    <h1 className="text-5xl font-black text-white italic tracking-tighter mb-2">PropManage</h1>
+                    <p className="text-slate-500 font-bold uppercase tracking-[0.3em] text-[10px]">Premium Property Suite</p>
                 </div>
-                <form onSubmit={handleSubmit} className="bg-slate-900 border border-white/10 p-8 rounded-[2.5rem] shadow-2xl space-y-5">
-                    {error && <div className="bg-red-500/10 text-red-400 p-3 rounded-xl text-[10px] font-bold border border-red-500/20 text-center uppercase tracking-widest">{error}</div>}
-                    <input type="email" required className="w-full bg-slate-800 border-none rounded-2xl py-4 px-4 text-white outline-none" placeholder="admin@propmanage.com" value={email} onChange={(e) => setEmail(e.target.value)} />
-                    <input type="password" required className="w-full bg-slate-800 border-none rounded-2xl py-4 px-4 text-white outline-none" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} />
-                    <button type="submit" className="w-full bg-white text-slate-950 font-black py-4 rounded-2xl mt-4 hover:bg-slate-200 transition-all uppercase tracking-widest text-xs">Access Dashboard</button>
-                    <div className="mt-8 pt-6 border-t border-white/5 flex gap-2">
-                        <button type="button" onClick={() => { setEmail('admin@propmanage.com'); setPassword('admin') }} className="flex-1 py-2.5 rounded-xl bg-white/5 text-slate-500 text-[9px] font-black border border-white/5 hover:bg-white/10 uppercase">Admin</button>
-                        <button type="button" onClick={() => { setEmail('alice@example.com'); setPassword('password123') }} className="flex-1 py-2.5 rounded-xl bg-white/5 text-slate-500 text-[9px] font-black border border-white/5 hover:bg-white/10 uppercase">Tenant</button>
+
+                <div className="bg-slate-900/40 backdrop-blur-xl border border-white/10 p-10 rounded-[3rem] shadow-2xl space-y-6">
+                    {error && (
+                        <motion.div 
+                            initial={{ opacity: 0, x: -10 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            className="bg-red-500/10 text-red-400 p-4 rounded-2xl text-[10px] font-bold border border-red-500/20 text-center uppercase tracking-widest"
+                        >
+                            {error}
+                        </motion.div>
+                    )}
+                    
+                    <form onSubmit={handleSubmit} className="space-y-4">
+                        <div className="space-y-1.5">
+                            <label className="text-[10px] text-slate-500 font-bold uppercase tracking-widest ml-1">Email Access</label>
+                            <input 
+                                type="email" 
+                                required 
+                                className="w-full bg-slate-800/50 border border-white/5 rounded-2xl py-4 px-5 text-white outline-none focus:ring-2 ring-indigo-500/50 transition-all placeholder:text-slate-600" 
+                                placeholder="admin@propmanage.com" 
+                                value={email} 
+                                onChange={(e) => setEmail(e.target.value)} 
+                            />
+                        </div>
+
+                        <div className="space-y-1.5">
+                            <label className="text-[10px] text-slate-500 font-bold uppercase tracking-widest ml-1">Secure Pin</label>
+                            <input 
+                                type="password" 
+                                required 
+                                className="w-full bg-slate-800/50 border border-white/5 rounded-2xl py-4 px-5 text-white outline-none focus:ring-2 ring-indigo-500/50 transition-all placeholder:text-slate-600" 
+                                placeholder="••••••••" 
+                                value={password} 
+                                onChange={(e) => setPassword(e.target.value)} 
+                            />
+                        </div>
+
+                        <button 
+                            type="submit" 
+                            className="w-full bg-white text-slate-950 font-black py-5 rounded-2xl mt-4 hover:bg-slate-200 transition-all uppercase tracking-widest text-[11px] shadow-xl active:scale-[0.98]"
+                        >
+                            Launch Dashboard
+                        </button>
+                    </form>
+
+                    <div className="pt-8 border-t border-white/5 space-y-4">
+                        <p className="text-center text-[9px] text-slate-600 font-black uppercase tracking-widest">Quick Access Demo</p>
+                        <div className="flex gap-3">
+                            <button type="button" onClick={() => { setEmail('admin@propmanage.com'); setPassword('admin') }} className="flex-1 py-3 rounded-xl bg-indigo-500/5 text-indigo-400 text-[9px] font-black border border-indigo-500/10 hover:bg-indigo-500/10 uppercase transition-all tracking-tighter">Manager</button>
+                            <button type="button" onClick={() => { setEmail('alice@example.com'); setPassword('password123') }} className="flex-1 py-3 rounded-xl bg-emerald-500/5 text-emerald-400 text-[9px] font-black border border-emerald-500/10 hover:bg-emerald-500/10 uppercase transition-all tracking-tighter">Tenant</button>
+                        </div>
                     </div>
-                </form>
-            </div>
+                </div>
+                
+                <p className="text-center mt-10 text-[9px] text-slate-700 font-bold uppercase tracking-widest">
+                    &copy; 2026 PROPMANAGE PRO &bull; ENTERPRISE GRADE
+                </p>
+            </motion.div>
         </div>
     );
 }
