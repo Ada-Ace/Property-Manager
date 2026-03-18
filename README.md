@@ -53,6 +53,30 @@ To build for production:
 npm run build
 ```
 
+## Persistence Setup (Google Sheets API)
+
+To save and persist data for this application, follow these steps:
+
+### 1. Create a Google Sheet
+Create a new Google Sheet and add the following tabs (with matching headers):
+- **Units**: `id`, `unitNumber`, `size`, `expectedRent`, `status`, `fittings`
+- **Tenants**: `id`, `name`, `unit`, `email`, `mobile`, `password`, `baseRent`, `deposit`, `leaseStart`, `leaseEnd`
+- **Bills**: `id`, `type`, `date`, `amount`, `mode`, `allocations`
+- **Tasks**: `id`, `title`, `tenantId`, `status`, `dateOptions`
+- **Messages**: `id`, `tenantId`, `content`, `timestamp`
+
+### 2. Deploy Google Apps Script
+1. Open your Sheet and go to **Extensions > Apps Script**.
+2. Copy the contents of [`backend/gas_script.gs`](./backend/gas_script.gs) into the editor.
+3. Click **Deploy > New Deployment**.
+4. Select **Web App** as the type.
+5. Set **Execute as**: `Me` and **Who has access**: `Anyone`.
+6. Click **Deploy** and copy your **Web App URL**.
+
+### 3. Configure Environment Variables
+1. Paste your Web App URL into your local `.env` file as `VITE_API_URL`.
+2. Restart your development server.
+
 ## Environment Variables
 
 Copy the example file and fill in your variables:
