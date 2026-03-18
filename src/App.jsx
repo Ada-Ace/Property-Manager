@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion as Motion, AnimatePresence } from 'framer-motion';
 import {
     LayoutDashboard,
     Users,
@@ -239,12 +239,6 @@ export default function App() {
         loadInitialData();
     }, []);
 
-    const [maintenanceEvent] = useState({
-        active: false,
-        title: 'Routine Aircon Cleaning',
-        options: ['2024-04-10 (AM)', '2024-04-10 (PM)', '2024-04-11 (AM)']
-    });
-
     const handleLogin = (email, password, property) => {
         setActiveProperty(property);
         if (email === MANAGER_CREDENTIALS.email && password === MANAGER_CREDENTIALS.password) {
@@ -391,7 +385,7 @@ export default function App() {
         <div className="min-h-screen bg-slate-950 text-slate-200 font-sans selection:bg-indigo-500/30 premium-gradient selection:text-white">
             <AnimatePresence>
             {globalMessage && (
-                <motion.div 
+                <Motion.div 
                     initial={{ opacity: 0, y: -20 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -20 }}
@@ -401,7 +395,7 @@ export default function App() {
                         <CheckCircle2 className="w-5 h-5" />
                         <span className="text-sm font-black italic tracking-tight">{globalMessage.text}</span>
                     </div>
-                </motion.div>
+                </Motion.div>
             )}
             </AnimatePresence>
 
@@ -424,7 +418,7 @@ export default function App() {
 
             <main className="max-w-7xl mx-auto p-4 md:p-8">
                 <AnimatePresence mode="wait">
-                    <motion.div
+                    <Motion.div
                         key={view + activeTenantId}
                         initial={{ opacity: 0, scale: 0.98 }}
                         animate={{ opacity: 1, scale: 1 }}
@@ -444,7 +438,6 @@ export default function App() {
                                 onUpdateFittings={updateUnitFittings}
                                 onAddBill={handleAddBill}
                                 onAddTask={handleAddTask}
-                                maintenanceEvent={maintenanceEvent}
                             />
                         ) : (
                             <TenantDashboard
@@ -453,7 +446,7 @@ export default function App() {
                                 onSendMessage={handleSendMessage}
                             />
                         )}
-                    </motion.div>
+                    </Motion.div>
                 </AnimatePresence>
             </main>
         </div>
@@ -462,7 +455,7 @@ export default function App() {
 
 // --- Manager Components ---
 
-function ManagerDashboard({ tenants, propertyUnits, utilityBills, tasks, tenantMessages, onAddUnit, onAddTenant, onEditTenant, onUpdateFittings, onAddBill, onAddTask, maintenanceEvent }) {
+function ManagerDashboard({ tenants, propertyUnits, utilityBills, tasks, tenantMessages, onAddUnit, onAddTenant, onEditTenant, onUpdateFittings, onAddBill, onAddTask }) {
     const [activeTab, setActiveTab] = useState('rents');
     const [showLeaseModal, setShowLeaseModal] = useState(false);
     const [editingTenant, setEditingTenant] = useState(null);
@@ -795,16 +788,15 @@ function WhatsAppRentButton({ tenant }) {
 function UtilityManager({ tenants, utilityBills, onAddBill }) {
     const [activeTab, setActiveTab] = useState('new'); // 'new', 'monthly', or 'history'
 
-    const uniqueMonths = Array.from(new Set(utilityBills.map(b => b.date.substring(0, 7)))).sort().reverse();
-    if (uniqueMonths.length === 0) {
-        uniqueMonths.push(new Date().toISOString().substring(0, 7));
-    }
+    const uniqueMonths = useMemo(() => {
+        const months = Array.from(new Set(utilityBills.map(b => b.date.substring(0, 7)))).sort().reverse();
+        return months.length > 0 ? months : [new Date().toISOString().substring(0, 7)];
+    }, [utilityBills]);
+
     const [selectedMonth, setSelectedMonth] = useState(uniqueMonths[0]);
 
-    useEffect(() => {
-        if (!selectedMonth && uniqueMonths.length > 0) {
-            setSelectedMonth(uniqueMonths[0]);
-        }
+    const effectiveMonth = useMemo(() => {
+        return uniqueMonths.includes(selectedMonth) ? selectedMonth : uniqueMonths[0];
     }, [uniqueMonths, selectedMonth]);
 
     // New Bill State
@@ -1004,7 +996,7 @@ function UtilityManager({ tenants, utilityBills, onAddBill }) {
                         <h3 className="font-bold text-lg flex items-center gap-2 text-white italic"><Calendar className="w-5 h-5 text-indigo-400" /> Monthly Summary</h3>
                         <div className="flex items-center gap-3">
                             <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Select Month</span>
-                            <select className="bg-slate-800 border border-white/10 hover:border-indigo-500/50 rounded-xl px-4 py-2 text-white text-sm font-bold outline-none cursor-pointer" value={selectedMonth} onChange={e => setSelectedMonth(e.target.value)}>
+                            <select className="bg-slate-800 border border-white/10 hover:border-indigo-500/50 rounded-xl px-4 py-2 text-white text-sm font-bold outline-none cursor-pointer" value={effectiveMonth} onChange={e => setSelectedMonth(e.target.value)}>
                                 {uniqueMonths.map(m => <option key={m} value={m}>{new Date(m + '-01').toLocaleString('default', { month: 'long', year: 'numeric' })}</option>)}
                             </select>
                         </div>
@@ -1012,7 +1004,7 @@ function UtilityManager({ tenants, utilityBills, onAddBill }) {
 
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         {tenants.map(t => {
-                            const billsInMonth = utilityBills.filter(b => b.date.startsWith(selectedMonth));
+                            const billsInMonth = utilityBills.filter(b => b.date.startsWith(effectiveMonth));
                             const breakdowns = billsInMonth.reduce((acc, bill) => {
                                 const alloc = bill.allocations.find(a => a.tenantId === t.id);
                                 if (alloc && alloc.amount > 0) acc.push({ type: bill.type, amount: alloc.amount });
@@ -1050,7 +1042,7 @@ function UtilityManager({ tenants, utilityBills, onAddBill }) {
                                         </div>
                                         {t.mobile && totalOwed > 0 && (
                                             <a
-                                                href={`https://wa.me/${t.mobile.replace(/\D/g, '')}?text=${encodeURIComponent(`Hi ${t.name.split(' ')[0]},\n\nYour utility bill summary for ${new Date(selectedMonth + '-01').toLocaleString('default', { month: 'long', year: 'numeric' })} is:\n${breakdowns.map(b => `- ${b.type}: $${b.amount.toFixed(2)}`).join('\n')}\n\n*Total Due: $${totalOwed.toFixed(2)}*`)}`}
+                                                href={`https://wa.me/${t.mobile.replace(/\D/g, '')}?text=${encodeURIComponent(`Hi ${t.name.split(' ')[0]},\n\nYour utility bill summary for ${new Date(effectiveMonth + '-01').toLocaleString('default', { month: 'long', year: 'numeric' })} is:\n${breakdowns.map(b => `- ${b.type}: $${b.amount.toFixed(2)}`).join('\n')}\n\n*Total Due: $${totalOwed.toFixed(2)}*`)}`}
                                                 target="_blank"
                                                 rel="noopener noreferrer"
                                                 className="w-full bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest flex justify-center items-center gap-2 transition-all"
@@ -1398,7 +1390,7 @@ function MessageModal({ onClose, onSubmit }) {
 
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-md">
-            <motion.div 
+            <Motion.div 
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
                 className="bg-slate-900 border border-white/10 w-full max-w-md rounded-[2.5rem] p-8 shadow-2xl"
@@ -1445,7 +1437,7 @@ function MessageModal({ onClose, onSubmit }) {
                         <Send className="w-3.5 h-3.5" /> Send Message
                     </button>
                 </form>
-            </motion.div>
+            </Motion.div>
         </div>
     );
 }
@@ -1541,11 +1533,12 @@ function UnitCard({ unit, actualRent, tenantName, onUpdateFittings }) {
     );
 }
 
-function UnitModal({ onClose, onSubmit }) {
+function UnitModal({ onSubmit, onClose }) {
     const [form, setForm] = useState({ unitNumber: '', size: '', expectedRent: '', status: 'Available', image: null });
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-md animate-in fade-in duration-300">
-            <div className="bg-slate-900 border border-white/10 w-full max-w-md rounded-[2.5rem] p-8 shadow-2xl">
+            <div className="bg-slate-900 border border-white/10 w-full max-w-md rounded-[2.5rem] p-8 shadow-2xl relative">
+                <button onClick={onClose} className="absolute top-8 right-8 text-slate-500 hover:text-white transition-colors"><XCircle className="w-6 h-6" /></button>
                 <h2 className="text-2xl font-bold text-white italic mb-6 flex items-center gap-3"><Building2 className="w-6 h-6 text-indigo-500" /> Add Unit</h2>
                 <form onSubmit={(e) => { e.preventDefault(); onSubmit(form); }} className="space-y-5">
                     <input required className="w-full bg-slate-800 border-none rounded-xl p-3 text-white text-sm outline-none" placeholder="Unit Number" value={form.unitNumber} onChange={e => setForm({ ...form, unitNumber: e.target.value })} />
@@ -1607,7 +1600,7 @@ function LeaseModal({ initialData, availableUnits, onClose, onSubmit }) {
 
 function StatCard({ title, value, icon, index }) {
     return (
-        <motion.div 
+        <Motion.div 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: index * 0.1, duration: 0.5 }}
@@ -1619,7 +1612,7 @@ function StatCard({ title, value, icon, index }) {
                 <div className="p-2.5 bg-slate-800/80 rounded-2xl border border-white/5 shadow-inner">{icon}</div>
             </div>
             <p className="text-3xl font-black text-white tracking-tighter leading-none">{value}</p>
-        </motion.div>
+        </Motion.div>
     );
 }
 
@@ -1648,34 +1641,34 @@ function LoginPage({ onLogin }) {
             <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-indigo-600/10 blur-[120px] rounded-full animate-pulse" />
             <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-emerald-600/10 blur-[120px] rounded-full" />
             
-            <motion.div 
+            <Motion.div 
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.8 }}
                 className="w-full max-w-md relative z-10"
             >
                 <div className="text-center mb-12">
-                    <motion.div 
+                    <Motion.div 
                         initial={{ scale: 0 }}
                         animate={{ scale: 1, rotate: 3 }}
                         transition={{ type: "spring", stiffness: 260, damping: 20, delay: 0.2 }}
                         className="bg-gradient-to-tr from-indigo-600 to-violet-600 w-20 h-20 rounded-[2rem] flex items-center justify-center mx-auto mb-8 shadow-2xl shadow-indigo-600/40"
                     >
                         <ShieldCheck className="w-10 h-10 text-white" />
-                    </motion.div>
+                    </Motion.div>
                     <h1 className="text-5xl font-black text-white italic tracking-tighter mb-2">PropManage</h1>
                     <p className="text-slate-500 font-bold uppercase tracking-[0.3em] text-[10px]">Premium Property Suite</p>
                 </div>
 
                 <div className="bg-slate-900/40 backdrop-blur-xl border border-white/10 p-10 rounded-[3rem] shadow-2xl space-y-6">
                     {error && (
-                        <motion.div 
+                        <Motion.div 
                             initial={{ opacity: 0, x: -10 }}
                             animate={{ opacity: 1, x: 0 }}
                             className="bg-red-500/10 text-red-400 p-4 rounded-2xl text-[10px] font-bold border border-red-500/20 text-center uppercase tracking-widest"
                         >
                             {error}
-                        </motion.div>
+                        </Motion.div>
                     )}
                     
                     <form onSubmit={handleSubmit} className="space-y-4">
@@ -1738,7 +1731,7 @@ function LoginPage({ onLogin }) {
                 <p className="text-center mt-10 text-[9px] text-slate-700 font-bold uppercase tracking-widest">
                     &copy; 2026 PROPMANAGE PRO &bull; ENTERPRISE GRADE
                 </p>
-            </motion.div>
+            </Motion.div>
         </div>
     );
 }
