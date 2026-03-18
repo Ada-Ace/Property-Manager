@@ -220,6 +220,8 @@ export default function App() {
     const filteredTenants = useMemo(() => activeProperty ? tenants.filter(t => t.propertyName === activeProperty) : [], [tenants, activeProperty]);
     const filteredUnits = useMemo(() => activeProperty ? propertyUnits.filter(u => u.propertyName === activeProperty) : [], [propertyUnits, activeProperty]);
     const filteredMessages = useMemo(() => activeProperty ? tenantMessages.filter(m => m.propertyName === activeProperty) : [], [tenantMessages, activeProperty]);
+    const filteredBills = useMemo(() => activeProperty ? utilityBills.filter(b => b.propertyName === activeProperty) : [], [utilityBills, activeProperty]);
+    const filteredTasks = useMemo(() => activeProperty ? tasks.filter(t => t.propertyName === activeProperty) : [], [tasks, activeProperty]);
 
     // Initial Data Fetch
     useEffect(() => {
@@ -275,18 +277,19 @@ export default function App() {
         setTimeout(() => setGlobalMessage(null), 3000);
     };
 
-    const handleAddBill = async (newBill, updatedTenants) => {
+    const handleAddBill = async (newBillData, updatedTenants) => {
+        const newBill = { ...newBillData, propertyName: activeProperty };
         setUtilityBills([...utilityBills, newBill]);
         setTenants(updatedTenants);
         
         // Save bill
         await API.saveToSheet('ADD', 'Bills', newBill);
-        // Update all affected tenants (bulk update would be better, but doing sequentially for now)
+        // Update all affected tenants
         for (const t of updatedTenants) {
             await API.saveToSheet('UPDATE', 'Tenants', t);
         }
 
-        setGlobalMessage({ type: 'success', text: `Bill recorded and allocated to tenants!` });
+        setGlobalMessage({ type: 'success', text: `Bill recorded and allocated for ${activeProperty}!` });
         setTimeout(() => setGlobalMessage(null), 3000);
     };
 
@@ -432,8 +435,8 @@ export default function App() {
                             <ManagerDashboard
                                 tenants={filteredTenants}
                                 propertyUnits={filteredUnits}
-                                utilityBills={utilityBills}
-                                tasks={tasks}
+                                utilityBills={filteredBills}
+                                tasks={filteredTasks}
                                 tenantMessages={filteredMessages}
                                 onAddUnit={addUnitToCatalog}
                                 onAddTenant={addTenant}
