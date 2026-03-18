@@ -161,8 +161,12 @@ const MANAGER_CREDENTIALS = {
 const API_URL = import.meta.env.VITE_API_URL;
 
 const API = {
+    isValid() {
+        return typeof API_URL === 'string' && API_URL.includes("/exec");
+    },
+
     async uploadToDrive(fileData, fileName) {
-        if (!API_URL) return { success: false, message: 'API URL missing in .env' };
+        if (!this.isValid()) return { success: false, message: 'Invalid API URL (Must end in /exec)' };
         try {
             const resp = await fetch(API_URL, {
                 method: 'POST',
@@ -176,7 +180,7 @@ const API = {
     },
 
     async saveToSheet(action, sheetName, data) {
-        if (!API_URL) return { success: false, message: 'API URL missing in .env' };
+        if (!this.isValid()) return { success: false, message: 'Invalid API URL (Must end in /exec)' };
         try {
             const resp = await fetch(API_URL, {
                 method: 'POST',
@@ -190,12 +194,21 @@ const API = {
     },
 
     async getAllData() {
-        if (!API_URL || API_URL.includes("PASTE_YOUR")) return null;
+        if (!this.isValid()) {
+            console.warn("Cloud Sync disabled: Library or missing API URL. Please deploy as Web App.");
+            return null;
+        }
         try {
-            const resp = await fetch(API_URL);
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 6000); // 6s safety timeout
+            
+            const resp = await fetch(API_URL, { signal: controller.signal });
+            clearTimeout(timeoutId);
+            
+            if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
             return await resp.json();
         } catch (err) {
-            console.error('Fetch Data Error:', err);
+            console.error('Cloud Sync Error (Using Offline Mode):', err);
             return null;
         }
     }
@@ -241,6 +254,9 @@ export default function App() {
 
     const handleLogin = (email, password, property) => {
         setActiveProperty(property);
+        // Force-clear landing delay if logging in manually
+        setIsLoading(false); 
+        
         if (email === MANAGER_CREDENTIALS.email && password === MANAGER_CREDENTIALS.password) {
             setView('manager');
             return { success: true };
@@ -374,8 +390,14 @@ export default function App() {
         return (
             <div className="min-h-screen bg-slate-950 flex items-center justify-center">
                 <div className="text-center">
-                    <div className="w-12 h-12 border-4 border-indigo-500/30 border-t-indigo-600 rounded-full animate-spin mx-auto mb-4"></div>
-                    <p className="text-[10px] text-slate-500 font-bold uppercase tracking-[0.3em]">Connecting to Cloud Service...</p>
+                    <div className="w-12 h-12 border-4 border-indigo-500/20 border-t-indigo-500 rounded-full animate-spin mx-auto mb-4 shadow-[0_0_15px_rgba(99,102,241,0.2)]"></div>
+                    <p className="text-[10px] text-slate-500 font-black uppercase tracking-[0.3em] animate-pulse">Establishing Secure Connection...</p>
+                    <button 
+                        onClick={() => setIsLoading(false)} 
+                        className="mt-8 text-[9px] text-slate-700 hover:text-indigo-400 font-black uppercase tracking-widest transition-all hover:tracking-[0.4em]"
+                    >
+                        Skip & Continue Offline
+                    </button>
                 </div>
             </div>
         );
@@ -1661,6 +1683,13 @@ function LoginPage({ onLogin }) {
                 </div>
 
                 <div className="bg-slate-900/40 backdrop-blur-xl border border-white/10 p-10 rounded-[3rem] shadow-2xl space-y-6">
+                    {!API.isValid() && (
+                        <div className="bg-amber-500/10 text-amber-500/80 p-4 rounded-2xl text-[9px] font-black border border-amber-500/20 text-center uppercase tracking-widest leading-relaxed">
+                            ⚠️ API Mode: Offline / Library URL Detected<br/>
+                            <span className="opacity-60 font-medium lowercase">Please deploy as Web App and use /exec URL</span>
+                        </div>
+                    )}
+                    
                     {error && (
                         <Motion.div 
                             initial={{ opacity: 0, x: -10 }}
