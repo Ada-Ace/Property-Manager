@@ -154,8 +154,53 @@ const MANAGER_CREDENTIALS = {
     mobile: import.meta.env.VITE_MANAGER_MOBILE || '+1555000111'
 };
 
+// --- API Service Management ---
+const API_URL = import.meta.env.VITE_API_URL;
+
+const API = {
+    async uploadToDrive(fileData, fileName) {
+        if (!API_URL) return { success: false, message: 'API URL missing in .env' };
+        try {
+            const resp = await fetch(API_URL, {
+                method: 'POST',
+                body: JSON.stringify({ action: 'UPLOAD', fileData, fileName })
+            });
+            return await resp.json();
+        } catch (err) {
+            console.error('Drive Upload Error:', err);
+            return { success: false, message: 'Upload failed' };
+        }
+    },
+
+    async saveToSheet(action, sheetName, data) {
+        if (!API_URL) return { success: false, message: 'API URL missing in .env' };
+        try {
+            const resp = await fetch(API_URL, {
+                method: 'POST',
+                body: JSON.stringify({ action, sheetName, data })
+            });
+            return await resp.json();
+        } catch (err) {
+            console.error('Sheet Save Error:', err);
+            return { success: false, message: 'Save failed' };
+        }
+    },
+
+    async getAllData() {
+        if (!API_URL || API_URL.includes("PASTE_YOUR")) return null;
+        try {
+            const resp = await fetch(API_URL);
+            return await resp.json();
+        } catch (err) {
+            console.error('Fetch Data Error:', err);
+            return null;
+        }
+    }
+};
+
 export default function App() {
     const [view, setView] = useState('login');
+    const [isLoading, setIsLoading] = useState(true);
     const [tenants, setTenants] = useState(INITIAL_TENANTS);
     const [propertyUnits, setPropertyUnits] = useState(INITIAL_UNITS);
     const [utilityBills, setUtilityBills] = useState(INITIAL_BILLS);
@@ -166,6 +211,22 @@ export default function App() {
         { id: 'M1', tenantId: 'T1', content: 'The aircon in the master bedroom is leaking slightly.', timestamp: '2026-03-18T10:30:00Z' },
         { id: 'M2', tenantId: 'T2', content: 'When will the utility bills for March be posted?', timestamp: '2026-03-18T14:45:00Z' }
     ]);
+
+    // Initial Data Fetch
+    useEffect(() => {
+        const loadInitialData = async () => {
+            const data = await API.getAllData();
+            if (data) {
+                if (data.tenants?.length) setTenants(data.tenants);
+                if (data.units?.length) setPropertyUnits(data.units);
+                if (data.bills?.length) setUtilityBills(data.bills);
+                if (data.tasks?.length) setTasks(data.tasks);
+                if (data.messages?.length) setTenantMessages(data.messages);
+            }
+            setIsLoading(false);
+        };
+        loadInitialData();
+    }, []);
 
     const [maintenanceEvent] = useState({
         active: false,
@@ -192,67 +253,122 @@ export default function App() {
         setActiveTenantId(null);
     };
 
-    const updateUnitFittings = (unitId, newFittings) => {
-        setPropertyUnits(prev => prev.map(u => u.id === unitId ? { ...u, fittings: newFittings } : u));
+    const updateUnitFittings = async (unitId, newFittings) => {
+        const unit = propertyUnits.find(u => u.id === unitId);
+        if (unit) {
+            const updatedUnit = { ...unit, fittings: newFittings };
+            setPropertyUnits(prev => prev.map(u => u.id === unitId ? updatedUnit : u));
+            await API.saveToSheet('UPDATE', 'Units', updatedUnit);
+        }
         setGlobalMessage({ type: 'success', text: `Inventory updated successfully` });
         setTimeout(() => setGlobalMessage(null), 3000);
     };
 
-    const handleAddBill = (newBill, updatedTenants) => {
+    const handleAddBill = async (newBill, updatedTenants) => {
         setUtilityBills([...utilityBills, newBill]);
         setTenants(updatedTenants);
+        
+        // Save bill
+        await API.saveToSheet('ADD', 'Bills', newBill);
+        // Update all affected tenants (bulk update would be better, but doing sequentially for now)
+        for (const t of updatedTenants) {
+            await API.saveToSheet('UPDATE', 'Tenants', t);
+        }
+
         setGlobalMessage({ type: 'success', text: `Bill recorded and allocated to tenants!` });
         setTimeout(() => setGlobalMessage(null), 3000);
     };
 
-    const handleAddTask = (newTask) => {
+    const handleAddTask = async (newTask) => {
         setTasks([...tasks, newTask]);
+        await API.saveToSheet('ADD', 'Tasks', newTask);
         setGlobalMessage({ type: 'success', text: `Maintenance task created!` });
         setTimeout(() => setGlobalMessage(null), 3000);
     };
 
-    const addUnitToCatalog = (unitData) => {
-        setPropertyUnits([...propertyUnits, { ...unitData, id: `U${Date.now()}`, fittings: [] }]);
+    const addUnitToCatalog = async (unitData) => {
+        const newUnit = { ...unitData, id: `U${Date.now()}`, fittings: [] };
+        setPropertyUnits([...propertyUnits, newUnit]);
+        await API.saveToSheet('ADD', 'Units', newUnit);
         setGlobalMessage({ type: 'success', text: `Unit ${unitData.unitNumber} added to catalog` });
         setTimeout(() => setGlobalMessage(null), 3000);
     };
 
-    const addTenant = (newTenant) => {
-        setTenants([...tenants, {
+    const addTenant = async (newTenant) => {
+        const tenantData = {
             ...newTenant,
             id: `T${Date.now()}`,
             maintenanceSelection: null,
             utilityShare: 0,
             notifications: [],
             leaseDocument: null
-        }]);
+        };
+        setTenants([...tenants, tenantData]);
         setPropertyUnits(prev => prev.map(u => u.unitNumber === newTenant.unit ? { ...u, status: 'Occupied' } : u));
+        
+        // Save tenant
+        await API.saveToSheet('ADD', 'Tenants', tenantData);
+        // Update unit status
+        const unit = propertyUnits.find(u => u.unitNumber === newTenant.unit);
+        if (unit) await API.saveToSheet('UPDATE', 'Units', { ...unit, status: 'Occupied' });
+
         setGlobalMessage({ type: 'success', text: `New lease for Unit ${newTenant.unit} added!` });
         setTimeout(() => setGlobalMessage(null), 3000);
     };
 
-    const editTenant = (updatedTenant) => {
+    const editTenant = async (updatedTenant) => {
         setTenants(prev => prev.map(t => t.id === updatedTenant.id ? { ...t, ...updatedTenant } : t));
         if (updatedTenant.unit) {
             setPropertyUnits(prev => prev.map(u => u.unitNumber === updatedTenant.unit ? { ...u, status: 'Occupied' } : u));
+            const unit = propertyUnits.find(u => u.unitNumber === updatedTenant.unit);
+            if (unit) await API.saveToSheet('UPDATE', 'Units', { ...unit, status: 'Occupied' });
         }
+        await API.saveToSheet('UPDATE', 'Tenants', updatedTenant);
         setGlobalMessage({ type: 'success', text: `Lease updated!` });
         setTimeout(() => setGlobalMessage(null), 3000);
     };
 
-    const handleSendMessage = (msg) => {
+    const handleSendMessage = async (msg, photoData = null) => {
+        let photoUrl = null;
+        
+        if (photoData) {
+            setGlobalMessage({ type: 'info', text: "Uploading attachment to Drive..." });
+            const uploadRes = await API.uploadToDrive(photoData, `msg_${Date.now()}.png`);
+            if (uploadRes.success) {
+                photoUrl = uploadRes.url;
+            }
+        }
+
         const newMessage = {
             id: `MSG${Date.now()}`,
             tenantId: activeTenantId,
             content: msg,
+            photoUrl: photoUrl, // Remote URL
             timestamp: new Date().toISOString()
         };
+
+        // UI Persistence (Immediate)
         setTenantMessages(prev => [newMessage, ...prev]);
-        setGlobalMessage({ type: 'success', text: "Message sent to manager!" });
+        
+        // Remote Persistence
+        await API.saveToSheet('ADD', 'Messages', newMessage);
+
+        setGlobalMessage({ type: 'success', text: "Message sent with secure attachment!" });
         setTimeout(() => setGlobalMessage(null), 3000);
     };
 
     if (view === 'login') return <LoginPage onLogin={handleLogin} />;
+
+    if (isLoading) {
+        return (
+            <div className="min-h-screen bg-slate-950 flex items-center justify-center">
+                <div className="text-center">
+                    <div className="w-12 h-12 border-4 border-indigo-500/30 border-t-indigo-600 rounded-full animate-spin mx-auto mb-4"></div>
+                    <p className="text-[10px] text-slate-500 font-bold uppercase tracking-[0.3em]">Connecting to Cloud Service...</p>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen bg-slate-950 text-slate-200 font-sans selection:bg-indigo-500/30 premium-gradient selection:text-white">
@@ -589,9 +705,23 @@ function MessagesManager({ tenants, messages }) {
                                                     </p>
                                                 </div>
                                             </div>
-                                            <div className="bg-slate-950/50 p-4 rounded-2xl border border-white/5 text-slate-300 text-sm italic leading-relaxed">
+                                            <div className="bg-slate-950/50 p-4 rounded-2xl border border-white/5 text-slate-300 text-sm italic leading-relaxed mb-4">
                                                 "{msg.content}"
                                             </div>
+                                            {msg.photoUrl && (
+                                                 <div className="mb-4">
+                                                     <a href={msg.photoUrl} target="_blank" rel="noopener noreferrer" className="inline-block relative group">
+                                                         <img 
+                                                             src={msg.photoUrl} 
+                                                             alt="Attachment" 
+                                                             className="h-32 w-auto rounded-2xl border border-white/10 shadow-lg group-hover:scale-[1.02] transition-transform" 
+                                                         />
+                                                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-2xl">
+                                                            <ExternalLink className="w-5 h-5 text-white" />
+                                                        </div>
+                                                    </a>
+                                                </div>
+                                            )}
                                         </div>
                                         <div className="w-full md:w-auto self-end md:self-center">
                                             {tenant && (
@@ -1223,7 +1353,7 @@ function TenantDashboard({ tenant, unit, onSendMessage }) {
             {showMsgModal && (
                 <MessageModal
                     onClose={() => setShowMsgModal(false)}
-                    onSubmit={(msg) => { onSendMessage(msg); setShowMsgModal(false); }}
+                    onSubmit={(msg, photo) => { onSendMessage(msg, photo); setShowMsgModal(false); }}
                 />
             )}
         </div>
@@ -1234,9 +1364,28 @@ function TenantDashboard({ tenant, unit, onSendMessage }) {
 
 function MessageModal({ onClose, onSubmit }) {
     const [msg, setMsg] = useState('');
+    const [photo, setPhoto] = useState(null);
+    const [photoPreview, setPhotoPreview] = useState(null);
+
+    const handlePhotoChange = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setPhoto(reader.result); // Data URL
+                setPhotoPreview(reader.result);
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
     return (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-md animate-in fade-in duration-300">
-            <div className="bg-slate-900 border border-white/10 w-full max-w-md rounded-[2.5rem] p-8 shadow-2xl">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-md">
+            <motion.div 
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="bg-slate-900 border border-white/10 w-full max-w-md rounded-[2.5rem] p-8 shadow-2xl"
+            >
                 <div className="flex justify-between items-center mb-6">
                     <h2 className="text-xl font-black text-white italic flex items-center gap-3">
                         <MessageSquare className="w-6 h-6 text-indigo-500" />
@@ -1244,20 +1393,42 @@ function MessageModal({ onClose, onSubmit }) {
                     </h2>
                     <button onClick={onClose} className="text-slate-500 hover:text-white transition-colors">✕</button>
                 </div>
-                <form onSubmit={(e) => { e.preventDefault(); onSubmit(msg); }} className="space-y-4">
+                <form onSubmit={(e) => { e.preventDefault(); onSubmit(msg, photo); }} className="space-y-4">
                     <textarea
                         required
-                        rows={5}
+                        rows={4}
                         className="w-full bg-slate-800 border-none rounded-2xl p-4 text-white text-sm outline-none ring-1 ring-white/5 focus:ring-indigo-500 transition-all placeholder:text-slate-600"
-                        placeholder="Type your message here..."
+                        placeholder="Describe the issue or request..."
                         value={msg}
                         onChange={e => setMsg(e.target.value)}
                     />
+                    
+                    <div className="space-y-2">
+                        <label className="text-[10px] text-slate-500 font-bold uppercase tracking-widest pl-1 mb-2 block">Attachment (Optional)</label>
+                        <div className="flex gap-4 items-center">
+                            <label className="flex-1 cursor-pointer">
+                                <input type="file" accept="image/*" className="hidden" onChange={handlePhotoChange} />
+                                <div className="border border-dashed border-white/10 rounded-2xl p-4 flex flex-col items-center justify-center gap-2 text-slate-500 hover:text-indigo-400 hover:border-indigo-500/30 transition-all">
+                                    <ImageIcon className="w-5 h-5" />
+                                    <span className="text-[9px] font-black uppercase tracking-widest">{photo ? 'Change Photo' : 'Upload Photo'}</span>
+                                </div>
+                            </label>
+                            {photoPreview && (
+                                <div className="w-20 h-20 bg-slate-800 rounded-2xl overflow-hidden border border-white/10 relative group">
+                                    <img src={photoPreview} alt="Preview" className="w-full h-full object-cover" />
+                                    <button onClick={() => { setPhoto(null); setPhotoPreview(null); }} className="absolute inset-0 bg-red-600/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white">
+                                        <Trash2 className="w-4 h-4" />
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
                     <button type="submit" className="w-full py-4 bg-indigo-600 hover:bg-indigo-500 text-white font-black rounded-2xl shadow-xl shadow-indigo-600/20 transition-all uppercase tracking-widest text-[10px] flex items-center justify-center gap-2">
                         <Send className="w-3.5 h-3.5" /> Send Message
                     </button>
                 </form>
-            </div>
+            </motion.div>
         </div>
     );
 }

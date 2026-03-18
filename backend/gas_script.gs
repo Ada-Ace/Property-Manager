@@ -1,23 +1,21 @@
 /**
- * PropManage Pro - Backend API (Google Apps Script)
+ * PropManage Pro - Backend API with Google Drive Upload (v2)
  * 
  * Instructions:
  * 1. Create a Google Sheet with the following tabs:
  *    - Units (Headers: id, unitNumber, size, expectedRent, status, fittings)
- *    - Tenants (Headers: id, name, unit, email, mobile, password, baseRent, deposit, leaseStart, leaseEnd)
- *    - Bills (Headers: id, type, date, amount, mode, allocations)
+ *    - Tenants (Headers: id, name, unit, email, mobile, password, baseRent, deposit, leaseStart, leaseEnd, leaseDocument)
+ *    - Bills (Headers: id, type, date, amount, mode, allocations, fileName, fileUrl)
  *    - Tasks (Headers: id, title, tenantId, status, dateOptions)
- *    - Messages (Headers: id, tenantId, content, timestamp)
- * 2. In Google Sheets: Extensions > Apps Script.
- * 3. Copy/Paste this code into the editor.
- * 4. Click 'Deploy' > 'New Deployment' > Type: Web App.
- *    - Execute as: Me
- *    - Who has access: Anyone
- * 5. Copy the 'Web App URL' and add it to your .env file as VITE_API_URL.
- * 6. Set Timezone Settings: Project Settings (Gear icon) > Timezone > Select (GMT+08:00) Kuala Lumpur.
+ *    - Messages (Headers: id, tenantId, content, timestamp, photoUrl)
+ * 2. In Google Drive, create a folder for uploads and COPY THE FOLDER ID.
+ * 3. In Google Sheets: Extensions > Apps Script.
+ * 4. Paste this code and ADD YOUR FOLDER ID to the constant below.
+ * 5. Deploy as Web App (Me / Anyone).
  */
 
 const SPREADSHEET_ID = SpreadsheetApp.getActiveSpreadsheet().getId();
+const UPLOAD_FOLDER_ID = 'REPLACE_WITH_YOUR_DRIVE_FOLDER_ID'; // <-- CRITICAL: Add your folder ID
 
 function doGet(e) {
   const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
@@ -29,18 +27,22 @@ function doGet(e) {
     const rows = sheet.getDataRange().getValues();
     const headers = rows.shift();
     
-    data[sheetName.toLowerCase()] = rows.map(row => {
-      const obj = {};
-      headers.forEach((header, index) => {
-        let val = row[index];
-        // Parse JSON strings if needed
-        if (typeof val === 'string' && (val.startsWith('[') || val.startsWith('{'))) {
-          try { val = JSON.parse(val); } catch(err) {}
-        }
-        obj[header] = val;
+    if (headers && headers.length > 0) {
+      data[sheetName.toLowerCase()] = rows.map(row => {
+        const obj = {};
+        headers.forEach((header, index) => {
+          let val = row[index];
+          // Parse JSON strings if needed
+          if (typeof val === 'string' && (val.startsWith('[') || val.startsWith('{'))) {
+            try { val = JSON.parse(val); } catch(err) {}
+          }
+          obj[header] = val;
+        });
+        return obj;
       });
-      return obj;
-    });
+    } else {
+      data[sheetName.toLowerCase()] = [];
+    }
   });
 
   return ContentService.createTextOutput(JSON.stringify(data))
@@ -50,17 +52,44 @@ function doGet(e) {
 function doPost(e) {
   const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
   const body = JSON.parse(e.postData.contents);
-  const { action, sheetName, data } = body;
-  
+  const { action, sheetName, data, fileName, fileData } = body;
+
+  // Handle File Upload to Google Drive (Action: UPLOAD)
+  if (action === "UPLOAD") {
+    try {
+      if (!UPLOAD_FOLDER_ID || UPLOAD_FOLDER_ID === 'REPLACE_WITH_YOUR_DRIVE_FOLDER_ID') {
+        return errorResponse("Missing UPLOAD_FOLDER_ID. Please update the GAS script.");
+      }
+      
+      const folder = DriveApp.getFolderById(UPLOAD_FOLDER_ID);
+      const contentType = fileData.substring(5, fileData.indexOf(';'));
+      const bytes = Utilities.base64Decode(fileData.split(',')[1]);
+      const blob = Utilities.newBlob(bytes, contentType, fileName);
+      const file = folder.createFile(blob);
+      
+      // Set permissions: Anyone with link can view
+      file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+      
+      return ContentService.createTextOutput(JSON.stringify({ 
+        success: true, 
+        url: file.getDownloadUrl().replace("?e=download", ""), // Clean download/preview link
+        fileId: file.getId() 
+      })).setMimeType(ContentService.MimeType.JSON);
+    } catch (err) {
+      return errorResponse("Upload Failed: " + err.toString());
+    }
+  }
+
+  // Handle Sheet Operations (Action: ADD or UPDATE)
   const sheet = ss.getSheetByName(sheetName);
-  if (!sheet) return errorResponse("Sheet not found");
+  if (!sheet) return errorResponse("Sheet not found: " + sheetName);
 
   if (action === "ADD") {
     const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
     const newRow = headers.map(header => {
       let val = data[header];
-      if (typeof val === 'object') val = JSON.stringify(val);
-      return val || "";
+      if (typeof val === 'object' && val !== null) val = JSON.stringify(val);
+      return val !== undefined ? val : "";
     });
     sheet.appendRow(newRow);
     return successResponse("Data added successfully");
@@ -76,7 +105,7 @@ function doPost(e) {
         const range = sheet.getRange(i + 2, 1, 1, headers.length);
         const updatedRow = headers.map(header => {
           let val = data[header];
-          if (typeof val === 'object') val = JSON.stringify(val);
+          if (typeof val === 'object' && val !== null) val = JSON.stringify(val);
           return val !== undefined ? val : rows[i][headers.indexOf(header)];
         });
         range.setValues([updatedRow]);
@@ -85,7 +114,7 @@ function doPost(e) {
     }
   }
 
-  return errorResponse("Invalid action");
+  return errorResponse("Invalid action provided");
 }
 
 function successResponse(message) {
@@ -96,12 +125,4 @@ function successResponse(message) {
 function errorResponse(message) {
   return ContentService.createTextOutput(JSON.stringify({ success: false, message }))
     .setMimeType(ContentService.MimeType.JSON);
-}
-
-/**
- * Handle CORS (if needed, but GAS handles this with redirects for Web Apps)
- */
-function doOptions(e) {
-  return ContentService.createTextOutput("")
-    .setMimeType(ContentService.MimeType.TEXT);
 }
