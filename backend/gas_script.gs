@@ -3,11 +3,12 @@
  * 
  * Instructions:
  * 1. Create a Google Sheet with the following tabs:
- *    - Units (Headers: id, unitNumber, size, expectedRent, status, fittings)
- *    - Tenants (Headers: id, name, unit, email, mobile, password, baseRent, deposit, leaseStart, leaseEnd, leaseDocument)
- *    - Bills (Headers: id, type, date, amount, mode, allocations, fileName, fileUrl)
- *    - Tasks (Headers: id, title, tenantId, status, dateOptions)
- *    - Messages (Headers: id, tenantId, content, timestamp, photoUrl)
+ *    - Units (Headers: id, unitNumber, size, expectedRent, status, fittings, propertyName)
+ *    - Tenants (Headers: id, name, unit, email, mobile, password, baseRent, deposit, leaseStart, leaseEnd, leaseDocument, propertyName)
+ *    - Bills (Headers: id, type, date, amount, mode, allocations, fileName, fileUrl, propertyName)
+ *    - Tasks (Headers: id, title, tenantId, status, dateOptions, propertyName)
+ *    - Messages (Headers: id, tenantId, content, timestamp, photoUrl, propertyName)
+ *    - Properties (Headers: id, name, address)
  * 2. In Google Drive, create a folder for uploads and COPY THE FOLDER ID.
  * 3. In Google Sheets: Extensions > Apps Script.
  * 4. Paste this code and ADD YOUR FOLDER ID to the constant below.

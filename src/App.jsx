@@ -101,6 +101,13 @@ const INITIAL_UNITS = [
     { id: 'U4', unitNumber: '08-G', size: 650, expectedRent: 1550, status: 'Available', image: null, fittings: [], propertyName: 'Skyline Residency' },
 ];
 
+const INITIAL_PROPERTIES = [
+    { id: 'P1', name: 'Skyline Residency', address: '123 Skyline St' },
+    { id: 'P2', name: 'Parkview Apartments', address: '456 Parkview Rd' },
+    { id: 'P3', name: 'Emerald Heights', address: '789 Emerald Ave' },
+    { id: 'P4', name: 'Oakwood Terrace', address: '101 Oakwood Lane' }
+];
+
 const INITIAL_BILLS = [];
 
 // --- Global Configuration ---
@@ -224,6 +231,7 @@ export default function App() {
     const [activeTenantId, setActiveTenantId] = useState(null);
     const [activeProperty, setActiveProperty] = useState(null);
     const [globalMessage, setGlobalMessage] = useState(null);
+    const [properties, setProperties] = useState(INITIAL_PROPERTIES);
     const [tenantMessages, setTenantMessages] = useState([
         { id: 'M1', tenantId: 'T1', content: 'The aircon in the master bedroom is leaking slightly.', timestamp: '2026-03-18T10:30:00Z', propertyName: 'Skyline Residency' },
         { id: 'M2', tenantId: 'T2', content: 'When will the utility bills for March be posted?', timestamp: '2026-03-18T14:45:00Z', propertyName: 'Skyline Residency' }
@@ -241,6 +249,7 @@ export default function App() {
         const loadInitialData = async () => {
             const data = await API.getAllData();
             if (data) {
+                if (data.properties?.length) setProperties(data.properties);
                 if (data.tenants?.length) setTenants(data.tenants);
                 if (data.units?.length) setPropertyUnits(data.units);
                 if (data.bills?.length) setUtilityBills(data.bills);
@@ -252,18 +261,18 @@ export default function App() {
         loadInitialData();
     }, []);
 
-    const handleLogin = (email, password, property) => {
-        setActiveProperty(property);
+    const handleLogin = (email, password) => {
         // Force-clear landing delay if logging in manually
         setIsLoading(false); 
         
         if (email === MANAGER_CREDENTIALS.email && password === MANAGER_CREDENTIALS.password) {
-            setView('manager');
+            setView('select-property');
             return { success: true };
         }
         const tenant = tenants.find(t => t.email.toLowerCase() === email.toLowerCase() && t.password === password);
         if (tenant) {
             setActiveTenantId(tenant.id);
+            setActiveProperty(tenant.propertyName);
             setView('tenant');
             return { success: true };
         }
@@ -385,6 +394,18 @@ export default function App() {
     };
 
     if (view === 'login') return <LoginPage onLogin={handleLogin} />;
+    
+    if (view === 'select-property') {
+        return (
+            <PropertySelectView 
+                properties={properties} 
+                onSelect={(propName) => {
+                    setActiveProperty(propName);
+                    setView('manager');
+                }} 
+            />
+        );
+    }
 
     if (isLoading) {
         return (
@@ -430,6 +451,18 @@ export default function App() {
                         <span>{import.meta.env.VITE_APP_NAME || "PropManage"} <span className="text-indigo-400 font-normal italic">Pro</span></span>
                     </div>
                     <div className="flex items-center gap-4">
+                        {view === 'manager' && (
+                            <div className="relative group flex items-center gap-2">
+                                <Building2 className="w-4 h-4 text-indigo-400" />
+                                <select 
+                                    className="bg-white/5 border border-white/10 rounded-xl px-3 py-1.5 text-[10px] font-black uppercase tracking-widest outline-none hover:bg-white/10 transition-all cursor-pointer text-indigo-200"
+                                    value={activeProperty}
+                                    onChange={(e) => setActiveProperty(e.target.value)}
+                                >
+                                    {properties.map(p => <option key={p.id} value={p.name} className="bg-slate-900">{p.name}</option>)}
+                                </select>
+                            </div>
+                        )}
                         <button onClick={logout} className="flex items-center gap-2 text-[10px] uppercase tracking-widest text-red-400 hover:text-red-300 transition-colors bg-red-500/10 px-4 py-2 rounded-xl border border-red-500/20 font-black">
                             <Power className="w-3.5 h-3.5" />
                             Sign Out
@@ -1639,23 +1672,15 @@ function StatCard({ title, value, icon, index }) {
 }
 
 function LoginPage({ onLogin }) {
-    const [property, setProperty] = useState('Skyline Residency');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     
     const handleSubmit = (e) => { 
         e.preventDefault(); 
-        const res = onLogin(email, password, property); 
+        const res = onLogin(email, password); 
         if (!res.success) setError(res.message); 
     };
-
-    const properties = [
-        "Skyline Residency",
-        "Parkview Apartments",
-        "Emerald Heights",
-        "Oakwood Terrace"
-    ];
 
     return (
         <div className="min-h-screen bg-slate-950 flex items-center justify-center p-6 relative overflow-hidden">
@@ -1701,20 +1726,6 @@ function LoginPage({ onLogin }) {
                     )}
                     
                     <form onSubmit={handleSubmit} className="space-y-4">
-                        <div className="space-y-1.5">
-                            <label className="text-[10px] text-slate-500 font-bold uppercase tracking-widest ml-1">Select Property</label>
-                            <div className="relative group">
-                                <Building2 className="absolute left-5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 group-focus-within:text-indigo-400 transition-colors" />
-                                <select 
-                                    className="w-full bg-slate-800/50 border border-white/5 rounded-2xl py-4 pl-12 pr-5 text-white outline-none focus:ring-2 ring-indigo-500/50 transition-all appearance-none cursor-pointer text-sm font-medium"
-                                    value={property}
-                                    onChange={(e) => setProperty(e.target.value)}
-                                >
-                                    {properties.map(p => <option key={p} value={p} className="bg-slate-900">{p}</option>)}
-                                </select>
-                                <ChevronDown className="absolute right-5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none" />
-                            </div>
-                        </div>
 
                         <div className="space-y-1.5">
                             <label className="text-[10px] text-slate-500 font-bold uppercase tracking-widest ml-1">Email Access</label>
@@ -1761,6 +1772,53 @@ function LoginPage({ onLogin }) {
                     &copy; 2026 PROPMANAGE PRO &bull; ENTERPRISE GRADE
                 </p>
             </Motion.div>
+        </div>
+    );
+}
+
+function PropertySelectView({ properties, onSelect }) {
+    return (
+        <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-8 premium-gradient">
+            <Motion.div 
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="text-center mb-12"
+            >
+                <div className="bg-indigo-600 w-16 h-16 rounded-[1.5rem] flex items-center justify-center mx-auto mb-6 shadow-2xl shadow-indigo-500/20">
+                    <Building2 className="w-8 h-8 text-white" />
+                </div>
+                <h2 className="text-3xl font-black text-white italic tracking-tighter mb-2">Select Management Portal</h2>
+                <p className="text-slate-500 text-[10px] uppercase font-black tracking-[0.3em]">Choose a property to continue</p>
+            </Motion.div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl w-full">
+                {properties.map((prop, idx) => (
+                    <Motion.button
+                        key={prop.id}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: idx * 0.1 }}
+                        onClick={() => onSelect(prop.name)}
+                        className="group bg-slate-900/40 backdrop-blur-md border border-white/5 p-8 rounded-[2.5rem] text-left hover:border-indigo-500/40 transition-all hover:bg-slate-900/60 shadow-xl"
+                    >
+                        <div className="flex justify-between items-start mb-6">
+                            <div className="bg-slate-800 p-3 rounded-2xl border border-white/5 group-hover:bg-indigo-600 group-hover:text-white transition-colors text-indigo-400">
+                                <Home className="w-6 h-6" />
+                            </div>
+                            <ArrowUpRight className="w-5 h-5 text-slate-600 group-hover:text-indigo-400 group-hover:translate-x-1 group-hover:-translate-y-1 transition-all" />
+                        </div>
+                        <h3 className="text-xl font-black text-white italic mb-1">{prop.name}</h3>
+                        <p className="text-slate-500 text-[10px] font-bold uppercase tracking-widest">{prop.address}</p>
+                    </Motion.button>
+                ))}
+            </div>
+
+            <button 
+                onClick={() => window.location.reload()} 
+                className="mt-12 text-slate-600 hover:text-slate-400 text-[10px] font-black uppercase tracking-widest flex items-center gap-2 border-b border-white/5 pb-1 transition-all"
+            >
+                <LogOut className="w-3 h-3" /> Back to Login
+            </button>
         </div>
     );
 }
