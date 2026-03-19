@@ -879,7 +879,11 @@ function ManagerDashboard({ tenants, propertyUnits, utilityBills, tasks, tenantM
             {showUnitModal && <UnitModal onClose={() => setShowUnitModal(false)} onSubmit={onAddUnit} />}
             {editingUnit && <UnitModal initialData={editingUnit} onClose={() => setEditingUnit(null)} onSubmit={(data) => { onEditUnit(data); setEditingUnit(null); }} />}
             {showLeaseModal && <LeaseModal availableUnits={propertyUnits.filter(u => !tenants.some(t => t.unit === u.unitNumber))} onClose={() => setShowLeaseModal(false)} onSubmit={onAddTenant} />}
-            {editingTenant && <LeaseModal initialData={editingTenant} availableUnits={propertyUnits.filter(u => !tenants.some(t => t.unit === u.unitNumber) || u.unitNumber === editingTenant.unit)} onClose={() => setEditingTenant(null)} onSubmit={(data) => { onEditTenant(data); setEditingTenant(null); }} />}
+            {editingTenant && <LeaseModal initialData={editingTenant} availableUnits={propertyUnits.filter(u => !tenants.some(t => t.unit === u.unitNumber) || u.unitNumber === editingTenant.unit)} onClose={() => setEditingTenant(null)} onSubmit={(data) => { 
+                if (data.id) onEditTenant(data);
+                else onAddTenant(data);
+                setEditingTenant(null); 
+            }} />}
         </div>
     );
 }
@@ -2151,8 +2155,8 @@ function LeaseModal({ initialData, availableUnits, onClose, onSubmit }) {
             <div className="bg-slate-900 border border-white/10 w-full max-w-lg rounded-[2.5rem] p-8 shadow-2xl">
                 <div className="flex justify-between items-center mb-6">
                     <h2 className="text-2xl font-bold text-white italic flex items-center gap-3">
-                        {initialData ? <Settings className="w-6 h-6 text-indigo-500" /> : <PlusCircle className="w-6 h-6 text-emerald-500" />}
-                        {initialData ? 'Edit Lease' : 'New Lease'}
+                        {initialData?.id ? <Settings className="w-6 h-6 text-indigo-500" /> : <PlusCircle className="w-6 h-6 text-emerald-500" />}
+                        {initialData?.id ? 'Edit Lease' : 'New Lease'}
                     </h2>
                     <button onClick={onClose} className="text-slate-500 hover:text-white transition-colors">✕</button>
                 </div>
