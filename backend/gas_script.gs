@@ -88,7 +88,10 @@ function doPost(e) {
   if (action === "ADD") {
     const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
     const newRow = headers.map(header => {
-      let val = data[header];
+      // Find matching key in data (case-insensitive)
+      const dataKey = Object.keys(data).find(k => k.toLowerCase() === String(header).toLowerCase());
+      let val = dataKey ? data[dataKey] : undefined;
+      
       if (typeof val === 'object' && val !== null) val = JSON.stringify(val);
       return val !== undefined ? val : "";
     });
@@ -114,11 +117,14 @@ function doPost(e) {
 
         if (isIdMatch || isPropertyMatch) {
         const range = sheet.getRange(i + 2, 1, 1, headers.length);
-        const updatedRow = headers.map(header => {
-          let val = data[header];
+        const updatedRow = headers.map((header, colIdx) => {
+          // Find the key in the data object that matches the header (case-insensitive)
+          const dataKey = Object.keys(data).find(k => k.toLowerCase() === String(header).toLowerCase());
+          let val = dataKey ? data[dataKey] : undefined;
+          
           if (typeof val === 'object' && val !== null) val = JSON.stringify(val);
           // Preserve existing value if not provided in update
-          return val !== undefined ? val : rows[i][headers.indexOf(header)];
+          return val !== undefined ? val : rows[i][colIdx];
         });
         range.setValues([updatedRow]);
         return successResponse("Data updated successfully");
