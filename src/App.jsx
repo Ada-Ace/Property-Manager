@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { motion, motion as Motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
+const Motion = motion;
 import {
     LayoutDashboard,
     Users,
@@ -266,9 +267,10 @@ export default function App() {
         setIsLoading(false); 
         
         if (email === MANAGER_CREDENTIALS.email && password === MANAGER_CREDENTIALS.password) {
-            const firstProp = properties[0]?.name || INITIAL_PROPERTIES[0]?.name;
+            const firstProp = (Array.isArray(properties) && properties[0]?.name) || INITIAL_PROPERTIES[0]?.name;
             setActiveProperty(firstProp);
             setView('manager');
+            setIsLoading(false);
             return { success: true };
         }
         const tenant = tenants.find(t => t.email.toLowerCase() === email.toLowerCase() && t.password === password);
