@@ -266,7 +266,9 @@ export default function App() {
         setIsLoading(false); 
         
         if (email === MANAGER_CREDENTIALS.email && password === MANAGER_CREDENTIALS.password) {
-            setView('select-property');
+            const firstProp = properties[0]?.name || INITIAL_PROPERTIES[0]?.name;
+            setActiveProperty(firstProp);
+            setView('manager');
             return { success: true };
         }
         const tenant = tenants.find(t => t.email.toLowerCase() === email.toLowerCase() && t.password === password);
@@ -395,17 +397,7 @@ export default function App() {
 
     if (view === 'login') return <LoginPage onLogin={handleLogin} />;
     
-    if (view === 'select-property') {
-        return (
-            <PropertySelectView 
-                properties={properties} 
-                onSelect={(propName) => {
-                    setActiveProperty(propName);
-                    setView('manager');
-                }} 
-            />
-        );
-    }
+    // Property selection view removed as requested - admins now go direct
 
     if (isLoading) {
         return (
