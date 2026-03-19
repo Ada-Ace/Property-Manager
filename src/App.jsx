@@ -2149,7 +2149,18 @@ function UnitModal({ initialData, onSubmit, onClose }) {
 }
 
 function LeaseModal({ initialData, availableUnits, onClose, onSubmit }) {
-    const [leaseForm, setLeaseForm] = useState(initialData || { name: '', unit: '', mobile: '', password: '', baseRent: '', deposit: '', leaseStart: '', leaseEnd: '' });
+    const [leaseForm, setLeaseForm] = useState({ 
+        name: '', 
+        unit: '', 
+        mobile: '', 
+        email: '', 
+        password: '', 
+        baseRent: '', 
+        deposit: '', 
+        leaseStart: '', 
+        leaseEnd: '', 
+        ...initialData 
+    });
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-md">
             <div className="bg-slate-900 border border-white/10 w-full max-w-lg rounded-[2.5rem] p-8 shadow-2xl">
@@ -2169,9 +2180,10 @@ function LeaseModal({ initialData, availableUnits, onClose, onSubmit }) {
                         </select>
                     </div>
                     <div className="grid grid-cols-2 gap-4">
-                        <input required type="text" className="w-full bg-slate-800 border-none rounded-xl p-3 text-white text-sm" placeholder="Password" value={leaseForm.password} onChange={e => setLeaseForm({ ...leaseForm, password: e.target.value })} />
-                        <input required type="tel" className="w-full bg-slate-800 border-none rounded-xl p-3 text-white text-sm" placeholder="WhatsApp Number" value={leaseForm.mobile} onChange={e => setLeaseForm({ ...leaseForm, mobile: e.target.value })} />
+                        <input required type="text" className="w-full bg-slate-800 border-none rounded-xl p-3 text-white text-sm outline-none" placeholder="Create Password" value={leaseForm.password} onChange={e => setLeaseForm({ ...leaseForm, password: e.target.value })} />
+                        <input required type="tel" className="w-full bg-slate-800 border-none rounded-xl p-3 text-white text-sm outline-none" placeholder="WhatsApp Number" value={leaseForm.mobile} onChange={e => setLeaseForm({ ...leaseForm, mobile: e.target.value })} />
                     </div>
+                    <input type="email" className="w-full bg-slate-800 border-none rounded-xl p-3 text-white text-sm outline-none" placeholder="Email Address (Optional)" value={leaseForm.email} onChange={e => setLeaseForm({ ...leaseForm, email: e.target.value })} />
                     <div className="grid grid-cols-2 gap-4">
                         <input type="number" className="w-full bg-slate-800 border-none rounded-xl p-3 text-white text-sm" placeholder="Rent ($)" value={leaseForm.baseRent} onChange={e => setLeaseForm({ ...leaseForm, baseRent: Number(e.target.value) })} />
                         <input type="number" className="w-full bg-slate-800 border-none rounded-xl p-3 text-white text-sm" placeholder="Deposit ($)" value={leaseForm.deposit} onChange={e => setLeaseForm({ ...leaseForm, deposit: Number(e.target.value) })} />
@@ -2186,7 +2198,9 @@ function LeaseModal({ initialData, availableUnits, onClose, onSubmit }) {
                             <input required type="date" style={{ colorScheme: 'dark' }} className="w-full bg-slate-800 border-none rounded-xl p-3 text-white text-sm outline-none" value={leaseForm.leaseEnd} onChange={e => setLeaseForm({ ...leaseForm, leaseEnd: e.target.value })} />
                         </div>
                     </div>
-                    <button type="submit" className={`w-full py-4 text-white font-black rounded-2xl uppercase tracking-widest text-[10px] ${initialData ? 'bg-indigo-600 hover:bg-indigo-500' : 'bg-emerald-600 hover:bg-emerald-500'}`}>{initialData ? 'Save Changes' : 'Create Lease'}</button>
+                    <button type="submit" className={`w-full py-4 text-white font-black rounded-2xl uppercase tracking-widest text-[10px] transition-all shadow-xl ${initialData?.id ? 'bg-indigo-600 hover:bg-indigo-500 shadow-indigo-600/20' : 'bg-emerald-600 hover:bg-emerald-500 shadow-emerald-500/20'}`}>
+                        {initialData?.id ? 'Save Changes' : 'Create Lease'}
+                    </button>
                 </form>
             </div>
         </div>
