@@ -755,7 +755,6 @@ function ManagerDashboard({ tenants, propertyUnits, utilityBills, tasks, tenantM
             <div className="flex bg-slate-900/50 p-1 rounded-2xl border border-white/5 w-fit overflow-x-auto max-w-full relative">
                 {(Array.isArray(tenants) ? [
                     { id: 'rents', icon: <Receipt className="w-4 h-4" />, label: 'Rent Summary' },
-                    { id: 'leases', icon: <FileText className="w-4 h-4" />, label: 'Lease Directory' },
                     { id: 'inventory', icon: <Building2 className="w-4 h-4" />, label: 'Property Catalog' },
                     { id: 'utilities', icon: <Droplets className="w-4 h-4" />, label: 'Utilities Share' },
                     { id: 'tasks', icon: <Hammer className="w-4 h-4" />, label: 'Maintenance' },
@@ -792,85 +791,6 @@ function ManagerDashboard({ tenants, propertyUnits, utilityBills, tasks, tenantM
                     {activeTab === 'rents' && <RentSummaryTab tenants={tenants} currency={currency} />}
                     {activeTab === 'messages' && <MessagesManager tenants={tenants} messages={tenantMessages} />}
                     {activeTab === 'tasks' && <TasksManager tenants={tenants} tasks={tasks} onAddTask={onAddTask} />}
-                    {activeTab === 'leases' && (
-                        <div className="premium-card rounded-[2.5rem] p-8">
-                            <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-8 gap-4 pb-6 border-b border-white/5">
-                                <h3 className="font-bold text-xl flex items-center gap-3 text-white italic">
-                                    <Users className="w-6 h-6 text-indigo-400" />
-                                    Active Lease Directory
-                                </h3>
-                                <Motion.button 
-                                    whileHover={{ scale: 1.02 }}
-                                    whileTap={{ scale: 0.98 }}
-                                    onClick={() => setShowLeaseModal(true)} 
-                                    className="bg-emerald-600 hover:bg-emerald-500 text-white px-6 py-3 rounded-2xl text-[10px] font-black tracking-widest uppercase transition-all flex items-center gap-2 shadow-xl shadow-emerald-600/20"
-                                >
-                                    <PlusCircle className="w-4 h-4" /> Create New Lease
-                                </Motion.button>
-                            </div>
-                            <div className="overflow-x-auto">
-                                <table className="w-full text-left">
-                                    <thead>
-                                        <tr className="text-[10px] uppercase text-slate-500 font-black tracking-[0.2em] border-b border-white/5">
-                                            <th className="pb-6 pl-2">Tenant</th>
-                                            <th className="pb-6">Unit</th>
-                                            <th className="pb-6">Lease Period</th>
-                                            <th className="pb-6 text-center">Next Rent Due</th>
-                                            <th className="pb-6 text-right">Base Rent ({currency})</th>
-                                            <th className="pb-6 text-right pr-2">Action</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-white/5">
-                                        {tenants.map(t => {
-                                            const daysUntil = getDaysUntilDue(t.leaseStart);
-                                            const dueDate = calculateNextRentDue(t.leaseStart);
-                                            const dueDateStr = (dueDate instanceof Date && !isNaN(dueDate)) ? fmtDate(dueDate.toISOString()) : 'N/A';
-                                            
-                                            return (
-                                                <tr key={t.id} className="group hover:bg-white/[0.02] transition-colors">
-                                                    <td className="py-6 pl-2 font-black text-white">{t.name}</td>
-                                                    <td className="py-6"><span className="text-indigo-400 font-mono text-xs bg-indigo-500/5 px-2 py-1 rounded-md border border-indigo-500/10">Unit {t.unit}</span></td>
-                                                    <td className="py-6">
-                                                        <div className="flex flex-col">
-                                                            <span className="text-white text-sm font-bold tracking-tight">{fmtDate(t.leaseStart)}</span>
-                                                            <span className="text-slate-500 text-[10px] font-black uppercase tracking-widest mt-0.5">to {fmtDate(t.leaseEnd)}</span>
-                                                        </div>
-                                                    </td>
-                                                    <td className="py-6 text-center">
-
-                                                        <div className="flex flex-col items-center">
-                                                            <span className={`text-[10px] font-black uppercase tracking-tight ${daysUntil <= 3 ? 'text-orange-400 animate-pulse' : 'text-slate-400'}`}>
-                                                                {dueDateStr}
-                                                            </span>
-                                                            <span className="text-[8px] font-bold text-slate-600 uppercase mt-0.5">
-                                                                {isNaN(daysUntil) ? 'Invalid Date' : daysUntil === 0 ? 'Due Today' : `${daysUntil} days left`}
-                                                            </span>
-                                                        </div>
-                                                    </td>
-                                                    <td className="py-6 text-right font-black text-white tracking-widest">{cur(t.baseRent)}</td>
-                                                    <td className="py-6 text-right pr-2">
-                                                        <div className="flex items-center justify-end gap-3">
-                                                            {t.mobile && (
-                                                                <WhatsAppRentButton tenant={t} mode="renewal" currency={currency} />
-                                                            )}
-                                                            <Motion.button 
-                                                                whileHover={{ scale: 1.05 }}
-                                                                whileTap={{ scale: 0.95 }}
-                                                                onClick={() => setEditingTenant(t)} 
-                                                                className="text-slate-400 hover:text-white p-2 rounded-xl bg-white/5 hover:bg-indigo-600 transition-all border border-white/5"
-                                                            >
-                                                                <Settings className="w-4 h-4" />
-                                                            </Motion.button>
-                                                        </div>
-                                                    </td>
-                                                </tr>
-                                            );
-                                        })}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    )}
                     {activeTab === 'inventory' && (
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                             {propertyUnits.map(unit => {
