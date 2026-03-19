@@ -100,11 +100,12 @@ const INITIAL_UNITS = [
     { id: 'U2', unitNumber: '12-B', size: 720, expectedRent: 1800, status: 'Occupied', image: null, fittings: ['Aircon x1', 'Microwave'], propertyName: 'Skyline Residency' },
     { id: 'U3', unitNumber: '14-C', size: 1100, expectedRent: 3100, status: 'Available', image: null, fittings: [], propertyName: 'Skyline Residency' },
     { id: 'U4', unitNumber: '08-G', size: 650, expectedRent: 1550, status: 'Available', image: null, fittings: [], propertyName: 'Skyline Residency' },
+    { id: 'U5', unitNumber: '10-A', size: 900, expectedRent: 2500, status: 'Available', image: null, fittings: [], propertyName: 'Uptown@Farrer' }
 ];
 
 const INITIAL_PROPERTIES = [
     { id: 'P1', name: 'Skyline Residency', address: '123 Skyline St' },
-    { id: 'P2', name: 'Parkview Apartments', address: '456 Parkview Rd' },
+    { id: 'P2', name: 'Uptown@Farrer', address: '456 Uptown Rd' },
     { id: 'P3', name: 'Emerald Heights', address: '789 Emerald Ave' },
     { id: 'P4', name: 'Oakwood Terrace', address: '101 Oakwood Lane' }
 ];
@@ -849,7 +850,8 @@ function UtilityManager({ tenants, utilityBills, onAddBill }) {
     const [activeTab, setActiveTab] = useState('new'); // 'new', 'monthly', or 'history'
 
     const uniqueMonths = useMemo(() => {
-        const months = Array.from(new Set(utilityBills.map(b => b.date.substring(0, 7)))).sort().reverse();
+        if (!Array.isArray(utilityBills)) return [new Date().toISOString().substring(0, 7)];
+        const months = Array.from(new Set(utilityBills.filter(b => b && typeof b.date === 'string').map(b => b.date.substring(0, 7)))).sort().reverse();
         return months.length > 0 ? months : [new Date().toISOString().substring(0, 7)];
     }, [utilityBills]);
 
@@ -1063,8 +1065,8 @@ function UtilityManager({ tenants, utilityBills, onAddBill }) {
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {tenants.map(t => {
-                            const billsInMonth = utilityBills.filter(b => b.date.startsWith(effectiveMonth));
+                        {Array.isArray(tenants) && tenants.map(t => {
+                            const billsInMonth = (Array.isArray(utilityBills) ? utilityBills.filter(b => b && typeof b.date === 'string' && b.date.startsWith(effectiveMonth)) : []);
                             const breakdowns = billsInMonth.reduce((acc, bill) => {
                                 const alloc = bill.allocations.find(a => a.tenantId === t.id);
                                 if (alloc && alloc.amount > 0) acc.push({ type: bill.type, amount: alloc.amount });
