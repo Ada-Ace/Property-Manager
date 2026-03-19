@@ -779,6 +779,7 @@ export default function App() {
                             <TenantDashboard
                                 tenant={tenants.find(t => t.id === activeTenantId)}
                                 unit={propertyUnits.find(u => u.unitNumber === (tenants.find(t => t.id === activeTenantId)?.unit))}
+                                currency={activeCurrency}
                                 onSendMessage={handleSendMessage}
                             />
                         )}
@@ -1660,10 +1661,17 @@ function TasksManager({ tenants, tasks, onAddTask }) {
 
 // --- Tenant Dashboard (unchanged logic, showing for completeness) ---
 
-function TenantDashboard({ tenant, unit, onSendMessage }) {
+function TenantDashboard({ tenant, unit, onSendMessage, currency = 'USD' }) {
     const [showMsgModal, setShowMsgModal] = useState(false);
-    if (!tenant) return null;
-    const totalDue = (tenant.baseRent || 0) + (tenant.utilityShare || 0);
+    if (!tenant) {
+        return (
+            <div className="flex flex-col items-center justify-center py-40">
+                <div className="w-12 h-12 border-4 border-indigo-500/20 border-t-indigo-500 rounded-full animate-spin mb-4"></div>
+                <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest animate-pulse">Syncing Lease Profile...</p>
+            </div>
+        );
+    }
+    const totalDue = (Number(tenant.baseRent) || 0) + (Number(tenant.utilityShare) || 0);
 
     return (
         <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
@@ -1698,20 +1706,20 @@ function TenantDashboard({ tenant, unit, onSendMessage }) {
                     </div>
                     <p className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-500 mb-2">Total Outstanding</p>
                     <div className="flex items-baseline gap-2 mb-8">
-                        <span className="text-5xl font-black text-white tracking-tighter">${totalDue.toFixed(2)}</span>
-                        <span className="text-xs text-slate-500 font-bold">Due now</span>
+                        <span className="text-4xl md:text-5xl font-black text-white tracking-tighter italic">{currency} {totalDue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                        <span className="text-[10px] text-slate-500 font-black uppercase tracking-widest opacity-60">Balanced Due</span>
                     </div>
-
-                    <div className="space-y-4 pt-4 border-t border-white/5">
-                        <div className="flex justify-between text-xs">
-                            <span className="text-slate-500 font-bold">Base Monthly Rent</span>
-                            <span className="text-white font-black">${tenant.baseRent.toFixed(2)}</span>
+ 
+                    <div className="space-y-4 pt-6 border-t border-white/5">
+                        <div className="flex justify-between text-[11px] font-bold">
+                            <span className="text-slate-500 uppercase tracking-widest">Base Monthly Rent</span>
+                            <span className="text-white">{currency} {(Number(tenant.baseRent) || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                         </div>
-                        <div className="flex justify-between text-xs">
-                            <span className="text-slate-500 font-bold flex items-center gap-2">
+                        <div className="flex justify-between text-[11px] font-bold">
+                            <span className="text-slate-500 uppercase tracking-widest flex items-center gap-2">
                                 Utility Share <Droplets className="w-3 h-3 text-blue-400" />
                             </span>
-                            <span className="text-white font-black">${tenant.utilityShare.toFixed(2)}</span>
+                            <span className="text-white">{currency} {(Number(tenant.utilityShare) || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                         </div>
                     </div>
 
