@@ -1145,7 +1145,7 @@ function UtilityManager({ tenants, utilityBills, onAddBill }) {
                                         </div>
                                         {t.mobile && totalOwed > 0 && (
                                             <a
-                                                href={`https://wa.me/${t.mobile.replace(/\D/g, '')}?text=${encodeURIComponent(`Hi ${t.name.split(' ')[0]},\n\nYour utility bill summary for ${new Date(effectiveMonth + '-01').toLocaleString('default', { month: 'long', year: 'numeric' })} is:\n${breakdowns.map(b => `- ${b.type}: $${b.amount.toFixed(2)}`).join('\n')}\n\n*Total Due: $${totalOwed.toFixed(2)}*`)}`}
+                                                href={`https://wa.me/${String(t.mobile || '').replace(/\D/g, '')}?text=${encodeURIComponent(`Hi ${String(t.name || 'Tenant').split(' ')[0]},\n\nYour utility bill summary for ${new Date(effectiveMonth + '-01').toLocaleString('default', { month: 'long', year: 'numeric' })} is:\n${breakdowns.map(b => `- ${b.type}: $${b.amount.toFixed(2)}`).join('\n')}\n\n*Total Due: $${totalOwed.toFixed(2)}*`)}`}
                                                 target="_blank"
                                                 rel="noopener noreferrer"
                                                 className="w-full bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest flex justify-center items-center gap-2 transition-all"
