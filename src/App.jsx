@@ -303,7 +303,27 @@ export default function App() {
         const loadInitialData = async () => {
             const data = await API.getAllData();
             if (data && typeof data === 'object') {
-                if (Array.isArray(data.properties)) setProperties(data.properties);
+                // Determine actual properties from data (highest priority is Properties sheet, fallback is unique property names in units/tenants)
+                let actualProperties = Array.isArray(data.properties) ? data.properties : [];
+                
+                const rawUnits = Array.isArray(data.units) ? data.units : [];
+                const rawTenants = Array.isArray(data.tenants) ? data.tenants : [];
+
+                if (actualProperties.length === 0) {
+                    const uniqueNames = new Set([
+                        ...rawUnits.map(u => u.propertyName).filter(Boolean),
+                        ...rawTenants.map(t => t.propertyName).filter(Boolean)
+                    ]);
+                    actualProperties = Array.from(uniqueNames).map((name, idx) => ({ id: idx + 1, name, address: 'Live Property' }));
+                }
+
+                // If we found ANY real data at all, we should clear the mock properties
+                if (actualProperties.length > 0) {
+                    setProperties(actualProperties);
+                    // Ensure active property is the first real one
+                    setActiveProperty(actualProperties[0].name);
+                }
+
                 if (Array.isArray(data.tenants)) setTenants(data.tenants);
                 if (Array.isArray(data.units)) setPropertyUnits(data.units);
                 if (Array.isArray(data.bills)) setUtilityBills(data.bills);
