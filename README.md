@@ -60,7 +60,7 @@ To save and persist data for this application, follow these steps:
 ### 1. Create a Google Sheet
 Create a new Google Sheet and add the following tabs (with matching headers):
 - **Units**: `id`, `unitNumber`, `size`, `expectedRent`, `status`, `fittings`, `propertyName`
-- **Tenants**: `id`, `name`, `unit`, `email`, `mobile`, `password`, `baseRent`, `deposit`, `leaseStart`, `leaseEnd`, `propertyName`
+- **Tenants**: `id`, `name`, `unit`, `mobile`, `password`, `baseRent`, `deposit`, `leaseStart`, `leaseEnd`, `propertyName`
 - **Bills**: `id`, `type`, `date`, `amount`, `mode`, `allocations`, `propertyName`
 - **Tasks**: `id`, `title`, `tenantId`, `status`, `dateOptions`, `propertyName`
 - **Messages**: `id`, `tenantId`, `content`, `timestamp`, `photoUrl`, `propertyName`

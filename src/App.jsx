@@ -2153,7 +2153,6 @@ function LeaseModal({ initialData, availableUnits, onClose, onSubmit }) {
         name: '', 
         unit: '', 
         mobile: '', 
-        email: '', 
         password: '', 
         baseRent: '', 
         deposit: '', 
@@ -2183,7 +2182,6 @@ function LeaseModal({ initialData, availableUnits, onClose, onSubmit }) {
                         <input required type="text" className="w-full bg-slate-800 border-none rounded-xl p-3 text-white text-sm outline-none" placeholder="Create Password" value={leaseForm.password} onChange={e => setLeaseForm({ ...leaseForm, password: e.target.value })} />
                         <input required type="tel" className="w-full bg-slate-800 border-none rounded-xl p-3 text-white text-sm outline-none" placeholder="WhatsApp Number" value={leaseForm.mobile} onChange={e => setLeaseForm({ ...leaseForm, mobile: e.target.value })} />
                     </div>
-                    <input type="email" className="w-full bg-slate-800 border-none rounded-xl p-3 text-white text-sm outline-none" placeholder="Email Address (Optional)" value={leaseForm.email} onChange={e => setLeaseForm({ ...leaseForm, email: e.target.value })} />
                     <div className="grid grid-cols-2 gap-4">
                         <input type="number" className="w-full bg-slate-800 border-none rounded-xl p-3 text-white text-sm" placeholder="Rent ($)" value={leaseForm.baseRent} onChange={e => setLeaseForm({ ...leaseForm, baseRent: Number(e.target.value) })} />
                         <input type="number" className="w-full bg-slate-800 border-none rounded-xl p-3 text-white text-sm" placeholder="Deposit ($)" value={leaseForm.deposit} onChange={e => setLeaseForm({ ...leaseForm, deposit: Number(e.target.value) })} />
