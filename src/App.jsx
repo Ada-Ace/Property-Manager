@@ -298,56 +298,69 @@ export default function App() {
     // Initial Data Fetch
     useEffect(() => {
         const loadInitialData = async () => {
-            const data = await API.getAllData();
-            if (data && typeof data === 'object') {
-                // Determine actual properties from data (highest priority is Properties sheet, fallback is unique property names in units/tenants)
-                // Hardened Property Extraction
-                let actualProperties = Array.isArray(data.properties) ? data.properties.map(p => ({ ...p, name: String(p.name || '').trim() })) : [];
-                
-                const rawUnits = Array.isArray(data.units) ? data.units : [];
-                const rawTenants = Array.isArray(data.tenants) ? data.tenants : [];
-                const rawBills = Array.isArray(data.bills) ? data.bills : [];
-                const rawTasks = Array.isArray(data.tasks) ? data.tasks : [];
-                const rawMessages = Array.isArray(data.messages) ? data.messages : [];
-
-                if (actualProperties.length === 0) {
-                    const foundNames = [
-                        ...rawUnits.map(u => u.propertyName),
-                        ...rawTenants.map(t => t.propertyName),
-                        ...rawBills.map(b => b.propertyName),
-                        ...rawTasks.map(t => t.propertyName),
-                        ...rawMessages.map(m => m.propertyName)
-                    ].filter(Boolean).map(n => String(n).trim());
+            try {
+                const data = await API.getAllData();
+                if (data && typeof data === 'object') {
+                    // Hardened Property Extraction
+                    let actualProperties = Array.isArray(data.properties) ? data.properties.map(p => ({ ...p, name: String(p.name || '').trim() })) : [];
                     
-                    const uniqueNames = Array.from(new Set(foundNames));
-                    actualProperties = uniqueNames.map((name, idx) => ({ id: `cloud-${idx}`, name, address: 'Synced Property' }));
-                }
+                    const rawUnits = Array.isArray(data.units) ? data.units : [];
+                    const rawTenants = Array.isArray(data.tenants) ? data.tenants : [];
+                    const rawBills = Array.isArray(data.bills) ? data.bills : [];
+                    const rawTasks = Array.isArray(data.tasks) ? data.tasks : [];
+                    const rawMessages = Array.isArray(data.messages) ? data.messages : [];
 
-                if (actualProperties.length > 0) {
-                    setProperties(actualProperties);
-                    // Force set active property if currently null or not in the list
-                    setActiveProperty(prev => {
-                        const exists = actualProperties.some(p => p.name === prev);
-                        return (prev && exists) ? prev : actualProperties[0].name;
-                    });
-                } else if (!API.isValid()) {
-                    // Fallback to mock data ONLY if API is not configured (local dev)
+                    if (actualProperties.length === 0) {
+                        const foundNames = [...rawUnits, ...rawTenants, ...rawBills, ...rawTasks, ...rawMessages]
+                            .map(item => item?.propertyName)
+                            .filter(Boolean)
+                            .map(n => String(n).trim());
+                        
+                        const uniqueNames = Array.from(new Set(foundNames));
+                        actualProperties = uniqueNames.map((name, idx) => ({ id: `cloud-${idx}`, name, address: 'Synced Property' }));
+                    }
+
+                    if (actualProperties.length > 0) {
+                        setProperties(actualProperties);
+                        setActiveProperty(prev => {
+                            const exists = actualProperties.some(p => p.name === prev);
+                            return (prev && exists) ? prev : actualProperties[0].name;
+                        });
+                        
+                        if (Array.isArray(data.tenants)) setTenants(data.tenants);
+                        if (Array.isArray(data.units)) setPropertyUnits(data.units);
+                        if (Array.isArray(data.bills)) setUtilityBills(data.bills);
+                        if (Array.isArray(data.tasks)) setTasks(data.tasks);
+                        if (Array.isArray(data.messages)) setTenantMessages(data.messages);
+                        
+                        if (rawUnits.length === 0 && rawTenants.length === 0) {
+                            setGlobalMessage("Connected, but no units/tenants found in Sheets.");
+                        }
+                    } else if (API.isValid()) {
+                        setGlobalMessage("Sync OK, but no properties found. Check your 'propertyName' columns.");
+                    } else {
+                        // Offline/Local mode
+                        setProperties(INITIAL_PROPERTIES);
+                        setTenants(INITIAL_TENANTS);
+                        setPropertyUnits(INITIAL_UNITS);
+                        setUtilityBills(INITIAL_BILLS);
+                        setTenantMessages(INITIAL_MESSAGES);
+                        setActiveProperty(INITIAL_PROPERTIES[0].name);
+                    }
+                } else if (API.isValid()) {
+                    setGlobalMessage("Connectivity Alert: Google Sheet responded with empty data.");
+                } else {
+                    // Fallback to mock data for dev
                     setProperties(INITIAL_PROPERTIES);
                     setTenants(INITIAL_TENANTS);
                     setPropertyUnits(INITIAL_UNITS);
                     setUtilityBills(INITIAL_BILLS);
-                    setTenantMessages([
-                        { id: 'M1', tenantId: 'T1', content: 'The aircon in the master bedroom is leaking slightly.', timestamp: '2026-03-18T10:30:00Z', propertyName: 'Skyline Residency' },
-                        { id: 'M2', tenantId: 'T2', content: 'When will the utility bills for March be posted?', timestamp: '2026-03-18T14:45:00Z', propertyName: 'Skyline Residency' }
-                    ]);
+                    setTenantMessages(INITIAL_MESSAGES);
                     setActiveProperty(INITIAL_PROPERTIES[0].name);
                 }
-
-                if (Array.isArray(data.tenants)) setTenants(data.tenants);
-                if (Array.isArray(data.units)) setPropertyUnits(data.units);
-                if (Array.isArray(data.bills)) setUtilityBills(data.bills);
-                if (Array.isArray(data.tasks)) setTasks(data.tasks);
-                if (Array.isArray(data.messages)) setTenantMessages(data.messages);
+            } catch (err) {
+                console.error('Core sync failure:', err);
+                setGlobalMessage("Cloud Connection Blocked - Please check Script permissions.");
             }
             setIsLoading(false);
         };
