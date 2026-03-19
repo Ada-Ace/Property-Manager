@@ -521,6 +521,13 @@ export default function App() {
         setTimeout(() => setGlobalMessage(null), 3000);
     };
 
+    const editUnitInCatalog = async (updatedUnit) => {
+        setPropertyUnits(prev => prev.map(u => u.id === updatedUnit.id ? { ...u, ...updatedUnit } : u));
+        await API.saveToSheet('UPDATE', 'Units', updatedUnit);
+        setGlobalMessage({ type: 'success', text: `Unit ${updatedUnit.unitNumber} updated successfully` });
+        setTimeout(() => setGlobalMessage(null), 3000);
+    };
+
     const addTenant = async (newTenant) => {
         const tenantData = {
             ...newTenant,
@@ -696,6 +703,7 @@ export default function App() {
                                     tenantMessages={filteredMessages}
                                     currency={activeCurrency}
                                     onAddUnit={addUnitToCatalog}
+                                    onEditUnit={editUnitInCatalog}
                                     onAddTenant={addTenant}
                                     onEditTenant={editTenant}
                                     onUpdateFittings={updateUnitFittings}
@@ -719,11 +727,12 @@ export default function App() {
 
 // --- Manager Components ---
 
-function ManagerDashboard({ tenants, propertyUnits, utilityBills, tasks, tenantMessages, currency = 'USD', onAddUnit, onAddTenant, onEditTenant, onUpdateFittings, onAddBill, onAddTask }) {
+function ManagerDashboard({ tenants, propertyUnits, utilityBills, tasks, tenantMessages, currency = 'USD', onAddUnit, onEditUnit, onAddTenant, onEditTenant, onUpdateFittings, onAddBill, onAddTask }) {
     const [activeTab, setActiveTab] = useState('rents');
     const [showLeaseModal, setShowLeaseModal] = useState(false);
     const [editingTenant, setEditingTenant] = useState(null);
     const [showUnitModal, setShowUnitModal] = useState(false);
+    const [editingUnit, setEditingUnit] = useState(null);
 
     const totalRevenue = useMemo(() => (Array.isArray(tenants) ? tenants.reduce((a, b) => a + (Number(b?.baseRent) || 0), 0) : 0), [tenants]);
     const vacantUnits = useMemo(() => (Array.isArray(propertyUnits) ? propertyUnits.filter(u => u?.status === 'Available').length : 0), [propertyUnits]);
@@ -872,6 +881,7 @@ function ManagerDashboard({ tenants, propertyUnits, utilityBills, tasks, tenantM
                                         tenantName={tenant?.name}
                                         tenantLeaseEnd={tenant?.leaseEnd}
                                         onUpdateFittings={(newFittings) => onUpdateFittings(unit.id, newFittings)}
+                                        onEditUnit={() => setEditingUnit(unit)}
                                     />
                                 );
                             })}
@@ -895,6 +905,7 @@ function ManagerDashboard({ tenants, propertyUnits, utilityBills, tasks, tenantM
             </AnimatePresence>
 
             {showUnitModal && <UnitModal onClose={() => setShowUnitModal(false)} onSubmit={onAddUnit} />}
+            {editingUnit && <UnitModal initialData={editingUnit} onClose={() => setEditingUnit(null)} onSubmit={(data) => { onEditUnit(data); setEditingUnit(null); }} />}
             {showLeaseModal && <LeaseModal availableUnits={propertyUnits.filter(u => u.status === 'Available')} onClose={() => setShowLeaseModal(false)} onSubmit={onAddTenant} />}
             {editingTenant && <LeaseModal initialData={editingTenant} availableUnits={propertyUnits.filter(u => u.status === 'Available' || u.unitNumber === editingTenant.unit)} onClose={() => setEditingTenant(null)} onSubmit={(data) => { onEditTenant(data); setEditingTenant(null); }} />}
         </div>
@@ -1887,7 +1898,7 @@ function FittingsModal({ fittings, onClose, onSave }) {
     );
 }
 
-function UnitCard({ unit, actualRent, tenantName, tenantLeaseEnd, onUpdateFittings }) {
+function UnitCard({ unit, actualRent, tenantName, tenantLeaseEnd, onUpdateFittings, onEditUnit }) {
     const [activeSubTab, setActiveSubTab] = useState('info');
     const [showInventoryModal, setShowInventoryModal] = useState(false);
     const isOccupied = unit.status === 'Occupied' || !!tenantName;
@@ -1912,6 +1923,15 @@ function UnitCard({ unit, actualRent, tenantName, tenantLeaseEnd, onUpdateFittin
                 }`}>
                     {isOccupied ? 'Occupied' : 'Available'}
                 </div>
+                <Motion.button
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.9 }}
+                    onClick={() => onEditUnit(unit)}
+                    title="Edit Unit Properties"
+                    className="absolute top-6 left-6 p-2 rounded-xl text-slate-400 hover:text-white bg-slate-900/40 border border-white/10 hover:border-white/30 backdrop-blur-xl shadow-2xl z-20 transition-all opacity-0 group-hover:opacity-100"
+                >
+                    <Settings className="w-5 h-5" />
+                </Motion.button>
             </div>
 
             <div className="p-8 flex-1 flex flex-col relative">
@@ -2033,20 +2053,25 @@ function UnitCard({ unit, actualRent, tenantName, tenantLeaseEnd, onUpdateFittin
     );
 }
 
-function UnitModal({ onSubmit, onClose }) {
-    const [form, setForm] = useState({ unitNumber: '', size: '', expectedRent: '', status: 'Available', image: null });
+function UnitModal({ initialData, onSubmit, onClose }) {
+    const [form, setForm] = useState(initialData || { unitNumber: '', size: '', expectedRent: '', status: 'Available', image: null });
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-md animate-in fade-in duration-300">
             <div className="bg-slate-900 border border-white/10 w-full max-w-md rounded-[2.5rem] p-8 shadow-2xl relative">
                 <button onClick={onClose} className="absolute top-8 right-8 text-slate-500 hover:text-white transition-colors"><XCircle className="w-6 h-6" /></button>
-                <h2 className="text-2xl font-bold text-white italic mb-6 flex items-center gap-3"><Building2 className="w-6 h-6 text-indigo-500" /> Add Unit</h2>
+                <h2 className="text-2xl font-bold text-white italic mb-6 flex items-center gap-3">
+                    {initialData ? <Settings className="w-6 h-6 text-indigo-500" /> : <Building2 className="w-6 h-6 text-indigo-500" />}
+                    {initialData ? 'Edit Unit' : 'Add Unit'}
+                </h2>
                 <form onSubmit={(e) => { e.preventDefault(); onSubmit(form); }} className="space-y-5">
                     <input required className="w-full bg-slate-800 border-none rounded-xl p-3 text-white text-sm outline-none" placeholder="Unit Number" value={form.unitNumber} onChange={e => setForm({ ...form, unitNumber: e.target.value })} />
                     <div className="grid grid-cols-2 gap-4">
                         <input required type="number" className="w-full bg-slate-800 border-none rounded-xl p-3 text-white text-sm outline-none" placeholder="Size (SQFT)" value={form.size} onChange={e => setForm({ ...form, size: e.target.value })} />
                         <input required type="number" className="w-full bg-slate-800 border-none rounded-xl p-3 text-white text-sm outline-none" placeholder="Target Rent ($)" value={form.expectedRent} onChange={e => setForm({ ...form, expectedRent: e.target.value })} />
                     </div>
-                    <button type="submit" className="w-full py-4 bg-indigo-600 hover:bg-indigo-500 text-white font-black rounded-2xl uppercase tracking-widest text-[10px]">Save Unit</button>
+                    <button type="submit" className="w-full py-4 bg-indigo-600 hover:bg-indigo-500 text-white font-black rounded-2xl uppercase tracking-widest text-[10px]">
+                        {initialData ? 'Save Changes' : 'Save Unit'}
+                    </button>
                 </form>
             </div>
         </div>
