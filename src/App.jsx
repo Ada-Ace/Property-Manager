@@ -800,7 +800,7 @@ function MessagesManager({ tenants, messages }) {
                     ) : (
                         messages.map(msg => {
                             const tenant = tenants.find(t => t.id === msg.tenantId);
-                            const waReplyLink = tenant ? `https://wa.me/${tenant.mobile.replace(/\D/g, '')}?text=${encodeURIComponent(`Hi ${tenant.name.split(' ')[0]}, received your message: "${msg.content}". \n\n`)}` : '#';
+                            const waReplyLink = tenant ? `https://wa.me/${String(tenant.mobile || '').replace(/\D/g, '')}?text=${encodeURIComponent(`Hi ${String(tenant.name || 'Tenant').split(' ')[0]}, received your message: "${msg.content}". \n\n`)}` : '#';
 
                             return (
                                 <div key={msg.id} className="bg-white/5 rounded-3xl p-6 border border-white/5 group hover:border-indigo-500/30 transition-all">
@@ -862,8 +862,8 @@ function WhatsAppRentButton({ tenant }) {
     const dueDate = calculateNextRentDue(tenant.leaseStart).toISOString().split('T')[0];
     const daysUntil = getDaysUntilDue(tenant.leaseStart);
     
-    const message = encodeURIComponent(`Hi ${tenant.name.split(' ')[0]},\n\nJust a friendly reminder that your monthly rent of *$${tenant.baseRent.toLocaleString()}* for Unit *${tenant.unit}* is due on *${dueDate}*.\n\nPlease ensure payment is made before the deadline to avoid any late fees.\n\nThank you!`);
-    const waLink = `https://wa.me/${tenant.mobile.replace(/\D/g, '')}?text=${message}`;
+    const message = encodeURIComponent(`Hi ${String(tenant.name || 'Tenant').split(' ')[0]},\n\nJust a friendly reminder that your monthly rent of *$${(Number(tenant.baseRent) || 0).toLocaleString()}* for Unit *${tenant.unit}* is due on *${dueDate}*.\n\nPlease ensure payment is made before the deadline to avoid any late fees.\n\nThank you!`);
+    const waLink = `https://wa.me/${String(tenant.mobile || '').replace(/\D/g, '')}?text=${message}`;
 
     const isUrgent = daysUntil <= 3;
 
