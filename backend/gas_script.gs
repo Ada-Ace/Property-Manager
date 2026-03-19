@@ -103,11 +103,16 @@ function doPost(e) {
     const nameIndex = headers.indexOf("name"); // Fallback for Settings persistence
     
     for (let i = 0; i < rows.length; i++) {
-      // Logic for properties fallback (as we often key by name instead of generated ID)
-      const isPropertyMatch = (sheetName === "Properties" && data.name && String(rows[i][nameIndex]) === String(data.name));
-      const isIdMatch = (data.id && String(rows[i][idIndex]) === String(data.id));
+        // Normalised comparison (trim + String + lowercase)
+        const normDataId = data.id ? String(data.id).trim().toLowerCase() : null;
+        const normRowId = rows[i][idIndex] ? String(rows[i][idIndex]).trim().toLowerCase() : null;
+        const normDataName = data.name ? String(data.name).trim().toLowerCase() : null;
+        const normRowName = nameIndex !== -1 ? String(rows[i][nameIndex]).trim().toLowerCase() : null;
+        
+        const isPropertyMatch = (sheetName === "Properties" && normDataName && normRowName === normDataName);
+        const isIdMatch = (normDataId && normRowId === normDataId);
 
-      if (isIdMatch || isPropertyMatch) {
+        if (isIdMatch || isPropertyMatch) {
         const range = sheet.getRange(i + 2, 1, 1, headers.length);
         const updatedRow = headers.map(header => {
           let val = data[header];

@@ -698,15 +698,17 @@ export default function App() {
                     {/* Controls */}
                     <div className="flex items-center gap-3">
                         {view === 'manager' && (
-                            <div className="flex items-center gap-3 bg-white/5 border border-white/10 rounded-2xl px-4 py-2.5 hover:bg-white/10 transition-all">
+                            <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-2xl px-4 py-2.5 hover:bg-white/10 transition-all">
                                 <div className="flex flex-col items-end gap-0.5 pr-2 border-r border-white/10">
                                     <div className="flex items-center gap-1.5 leading-none">
-                                        <p className="text-[8px] text-slate-500 font-black uppercase tracking-tight">Cloud Sync</p>
-                                        {isRefreshing ? (
-                                            <div className="w-1.5 h-1.5 border-2 border-indigo-500/20 border-t-indigo-400 rounded-full animate-spin"></div>
-                                        ) : (
-                                            <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full shadow-[0_0_5px_rgba(16,185,129,0.5)]"></div>
-                                        )}
+                                        <p className="text-[7px] text-slate-500 font-black uppercase tracking-tight">Cloud Link</p>
+                                        <button 
+                                            onClick={() => syncWithCloud()} 
+                                            title="Force Refresh Data"
+                                            className={`p-0.5 hover:scale-110 active:scale-95 transition-all ${isRefreshing ? 'animate-spin text-indigo-400' : 'text-slate-500 hover:text-emerald-400'}`}
+                                        >
+                                            <RefreshCcw className="w-2.5 h-2.5" />
+                                        </button>
                                     </div>
                                     <p className="text-[7px] text-slate-600 font-black uppercase tracking-tight tabular-nums">
                                         {lastSyncTime ? lastSyncTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '...'}
@@ -714,13 +716,12 @@ export default function App() {
                                 </div>
                                 <Building2 className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
                                 <select 
-                                    className="bg-transparent border-none text-[10px] font-black uppercase tracking-widest outline-none cursor-pointer text-indigo-200 max-w-[120px] md:max-w-[200px]"
+                                    className="bg-transparent border-none text-[10px] font-black uppercase tracking-widest outline-none cursor-pointer text-indigo-400 max-w-[120px] md:max-w-[200px]"
                                     value={activeProperty}
                                     onChange={(e) => setActiveProperty(e.target.value)}
                                 >
                                     {Array.isArray(properties) && properties.map(p => <option key={p?.id || p} value={p?.name || p} className="bg-slate-900">{p?.name || p}</option>)}
                                 </select>
-                                <ChevronDown className="w-3 h-3 text-slate-500 shrink-0" />
                             </div>
                         )}
                         {view === 'manager' && (
