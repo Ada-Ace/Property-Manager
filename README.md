@@ -64,7 +64,7 @@ Create a new Google Sheet and add the following tabs (with matching headers):
 - **Bills**: `id`, `type`, `date`, `amount`, `mode`, `allocations`, `propertyName`
 - **Tasks**: `id`, `title`, `tenantId`, `status`, `dateOptions`, `propertyName`
 - **Messages**: `id`, `tenantId`, `content`, `timestamp`, `photoUrl`, `propertyName`
-- **Properties**: `id`, `name`, `address`
+- **Properties**: `id`, `name`, `address`, `currency`
 
 ### 2. Deploy Google Apps Script
 1. Open your Sheet and go to **Extensions > Apps Script**.

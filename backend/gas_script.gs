@@ -8,7 +8,7 @@
  *    - Bills (Headers: id, type, date, amount, mode, allocations, fileName, fileUrl, propertyName)
  *    - Tasks (Headers: id, title, tenantId, status, dateOptions, propertyName)
  *    - Messages (Headers: id, tenantId, content, timestamp, photoUrl, propertyName)
- *    - Properties (Headers: id, name, address)
+ *    - Properties (Headers: id, name, address, currency)
  * 2. In Google Drive, create a folder for uploads and COPY THE FOLDER ID.
  * 3. In Google Sheets: Extensions > Apps Script.
  * 4. Paste this code and ADD YOUR FOLDER ID to the constant below.
@@ -100,13 +100,19 @@ function doPost(e) {
     const rows = sheet.getDataRange().getValues();
     const headers = rows.shift();
     const idIndex = headers.indexOf("id");
+    const nameIndex = headers.indexOf("name"); // Fallback for Settings persistence
     
     for (let i = 0; i < rows.length; i++) {
-      if (rows[i][idIndex] === data.id) {
+      // Logic for properties fallback (as we often key by name instead of generated ID)
+      const isPropertyMatch = (sheetName === "Properties" && data.name && rows[i][nameIndex] === data.name);
+      const isIdMatch = (data.id && rows[i][idIndex] === data.id);
+
+      if (isIdMatch || isPropertyMatch) {
         const range = sheet.getRange(i + 2, 1, 1, headers.length);
         const updatedRow = headers.map(header => {
           let val = data[header];
           if (typeof val === 'object' && val !== null) val = JSON.stringify(val);
+          // Preserve existing value if not provided in update
           return val !== undefined ? val : rows[i][headers.indexOf(header)];
         });
         range.setValues([updatedRow]);

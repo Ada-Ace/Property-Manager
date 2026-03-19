@@ -339,8 +339,15 @@ export default function App() {
     }, [properties, activeProperty]);
 
     const updatePropertyCurrency = (currency) => {
-        setProperties(prev => prev.map(p => p.name === activeProperty ? { ...p, currency } : p));
-        API.saveToSheet('UPDATE', 'Properties', { name: activeProperty, currency });
+        const prop = Array.isArray(properties) ? properties.find(p => p.name === activeProperty) : null;
+        if (!prop) {
+            // Backup for local/unsynced properties
+            API.saveToSheet('UPDATE', 'Properties', { id: `cloud-${Date.now()}`, name: activeProperty, currency });
+            return;
+        }
+        const updatedProp = { ...prop, currency };
+        setProperties(prev => prev.map(p => p.name === activeProperty ? updatedProp : p));
+        API.saveToSheet('UPDATE', 'Properties', updatedProp);
     };
 
     // Computed filtered lists based on selected property (ensure arrays exist)
@@ -381,7 +388,11 @@ export default function App() {
                 const data = await API.getAllData();
                 if (data && typeof data === 'object') {
                     // Hardened Property Extraction
-                    let actualProperties = Array.isArray(data.properties) ? data.properties.map(p => ({ ...p, name: String(p.name || '').trim() })) : [];
+                    let actualProperties = Array.isArray(data.properties) ? data.properties.map(p => ({ 
+                        ...p, 
+                        name: String(p.name || '').trim(),
+                        currency: p.currency || 'USD' 
+                    })) : [];
                     
                     const rawUnits = Array.isArray(data.units) ? data.units : [];
                     const rawTenants = Array.isArray(data.tenants) ? data.tenants : [];
