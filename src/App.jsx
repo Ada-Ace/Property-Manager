@@ -525,7 +525,7 @@ export default function App() {
             </AnimatePresence>
 
             <nav className="border-b border-white/5 bg-slate-900/50 backdrop-blur-md sticky top-0 z-50">
-                <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
+                <div className="w-full px-6 md:px-12 h-20 flex items-center justify-between">
                     <div className="flex items-center gap-2 font-bold text-white">
                         <div className="bg-indigo-600 p-1.5 rounded-lg">
                             <Home className="w-5 h-5" />
@@ -553,7 +553,7 @@ export default function App() {
                 </div>
             </nav>
 
-            <main className="max-w-7xl mx-auto p-4 md:p-8">
+            <main className="w-full px-6 md:px-12 py-8">
                 {isLoading ? (
                     <div className="flex flex-col items-center justify-center py-20">
                         <div className="w-12 h-12 border-4 border-indigo-500/20 border-t-indigo-500 rounded-full animate-spin mb-4"></div>
