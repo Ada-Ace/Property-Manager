@@ -1582,18 +1582,18 @@ function FittingsModal({ fittings, onClose, onSave }) {
 function UnitCard({ unit, actualRent, tenantName, onUpdateFittings }) {
     const [activeSubTab, setActiveSubTab] = useState('info');
     const [showInventoryModal, setShowInventoryModal] = useState(false);
-    const isOccupied = unit.status === 'Occupied';
+    const isOccupied = unit.status === 'Occupied' || !!tenantName;
 
     return (
         <div className="bg-slate-900/50 rounded-[2.5rem] border border-white/5 overflow-hidden group hover:border-indigo-500/30 transition-all shadow-xl flex flex-col">
-            <div className="h-44 bg-slate-800 relative flex items-center justify-center">
+            <div className={`h-44 bg-slate-800 relative flex items-center justify-center ${!isOccupied ? 'p-0' : 'p-0'}`}>
                 <div className="text-slate-700 flex flex-col items-center gap-2">
                     <ImageIcon className="w-12 h-12 opacity-20" />
                     <span className="text-[10px] font-black uppercase tracking-widest opacity-40">Unit {unit.unitNumber} Preview</span>
                 </div>
-                <div className={`absolute top-6 right-6 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border backdrop-blur-md ${unit.status === 'Available' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-slate-900/60 text-indigo-300 border-white/5'
+                <div className={`absolute top-6 right-6 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border backdrop-blur-md ${!isOccupied ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-indigo-600/20 text-indigo-400 border-indigo-500/20'
                     }`}>
-                    {unit.status}
+                    {isOccupied ? 'Occupied' : 'Available'}
                 </div>
             </div>
 
@@ -1611,13 +1611,35 @@ function UnitCard({ unit, actualRent, tenantName, onUpdateFittings }) {
 
                 <div className="flex-1">
                     {activeSubTab === 'info' ? (
-                        <div className="flex justify-between items-center h-full">
-                            <div className="space-y-3">
-                                {isOccupied && <div className="flex items-center gap-2 text-indigo-400 font-bold bg-indigo-500/5 px-3 py-1.5 rounded-xl border border-indigo-500/10 w-fit"><User className="w-4 h-4" /><span className="text-xs">{tenantName}</span></div>}
+                        <div className="flex justify-between items-end h-full">
+                            <div className="space-y-3 pb-1">
+                                {isOccupied ? (
+                                    <div className="flex items-center gap-2 text-indigo-400 font-bold bg-indigo-500/5 px-3 py-1.5 rounded-xl border border-indigo-500/10 w-fit">
+                                        <User className="w-4 h-4" />
+                                        <span className="text-xs uppercase tracking-tight">{tenantName || 'Active Lease'}</span>
+                                    </div>
+                                ) : (
+                                    <div className="flex items-center gap-2 text-emerald-500 font-bold bg-emerald-500/5 px-3 py-1.5 rounded-xl border border-emerald-500/10 w-fit">
+                                        <LayoutGrid className="w-4 h-4" />
+                                        <span className="text-[9px] uppercase tracking-widest">Vacant & Ready</span>
+                                    </div>
+                                )}
                             </div>
-                            <div className="text-right flex items-center gap-6">
-                                <div className="flex flex-col items-end"><p className="text-[9px] font-black text-slate-600 uppercase tracking-widest mb-1">Target</p><p className="text-xl font-black text-slate-500">${unit.expectedRent}</p></div>
-                                {isOccupied && <div className="flex flex-col items-end bg-indigo-500/10 px-4 py-2 rounded-2xl border border-indigo-500/20"><p className="text-[9px] font-black text-indigo-400 uppercase tracking-widest mb-1">Actual</p><p className="text-2xl font-black text-white">${actualRent}</p></div>}
+                            <div className="flex items-center gap-4">
+                                <div className="text-right">
+                                    <p className="text-[9px] font-black text-slate-600 uppercase tracking-widest mb-0.5">Target</p>
+                                    <p className={`text-xl font-black tracking-tighter ${isOccupied ? 'text-slate-500 line-through opacity-50' : 'text-white'}`}>
+                                        ${Number(unit.expectedRent).toLocaleString()}
+                                    </p>
+                                </div>
+                                {isOccupied && (
+                                    <div className="text-right bg-indigo-600/10 px-4 py-2 rounded-2xl border border-indigo-500/20">
+                                        <p className="text-[9px] font-black text-indigo-400 uppercase tracking-widest mb-0.5">Actual</p>
+                                        <p className="text-2xl font-black text-white tracking-tighter">
+                                            ${Number(actualRent).toLocaleString()}
+                                        </p>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     ) : (
