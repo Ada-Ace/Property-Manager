@@ -54,7 +54,8 @@ import {
     XCircle,
     Zap,
     Flame,
-    PieChart
+    PieChart,
+    LayoutGrid
 } from 'lucide-react';
 
 // --- Mock Initial Data ---
