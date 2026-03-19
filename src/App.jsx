@@ -792,27 +792,28 @@ function ManagerDashboard({ tenants, propertyUnits, utilityBills, tasks, tenantM
 
     return (
         <div className="space-y-8 animate-in fade-in duration-700">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <StatCard index={0} title="Monthly Revenue" value={cur(totalRevenue)} icon={<CreditCard className="text-emerald-400" />} />
-                <StatCard index={1} title="Occupancy Rate" value={totalUnits > 0 ? `${Math.round((occupiedUnits / totalUnits) * 100)}%` : '0%'} icon={<Users className="text-blue-400" />} />
-                <StatCard index={2} title="Available Units" value={vacantUnits || 0} icon={<Building2 className="text-sky-400" />} />
-                <StatCard index={3} title="Active Maintenance" value={(tasksCount || 0).toString()} icon={<Wrench className="text-amber-400" />} />
+            <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <StatCard index={0} title="Monthly Revenue" value={cur(totalRevenue)} icon={<CreditCard className="text-emerald-400 group-hover:text-emerald-300 transition-colors" />} />
+                <StatCard index={1} title="Occupancy Rate" value={totalUnits > 0 ? `${Math.round((occupiedUnits / totalUnits) * 100)}%` : '0%'} icon={<Users className="text-blue-400 group-hover:text-blue-300 transition-colors" />} />
+                <StatCard index={2} title="Available Units" value={vacantUnits || 0} icon={<Building2 className="text-sky-400 group-hover:text-sky-300 transition-colors" />} />
+                <StatCard index={3} title="Active Maintenance" value={(tasksCount || 0).toString()} icon={<Wrench className="text-amber-400 group-hover:text-amber-300 transition-colors" />} />
             </div>
 
-            <div className="flex bg-slate-900/50 p-1 rounded-2xl border border-white/5 w-fit overflow-x-auto max-w-full relative">
+            <div className="flex bg-slate-900/40 p-1 rounded-2xl border border-white/5 w-full md:w-fit overflow-x-auto no-scrollbar snap-x relative backdrop-blur-md">
                 {(Array.isArray(tenants) ? [
-                    { id: 'rents', icon: <Receipt className="w-4 h-4" />, label: 'Rent Summary' },
-                    { id: 'inventory', icon: <Building2 className="w-4 h-4" />, label: 'Property Catalog' },
-                    { id: 'utilities', icon: <Droplets className="w-4 h-4" />, label: 'Utilities Share' },
-                    { id: 'tasks', icon: <Hammer className="w-4 h-4" />, label: 'Maintenance' },
-                    { id: 'messages', icon: <MessageSquare className="w-4 h-4" />, label: 'Messages', badge: (tenantMessages?.length > 0) }
+                    { id: 'rents', icon: <Receipt className="w-3.5 h-3.5" />, label: 'Rent Summary' },
+                    { id: 'inventory', icon: <Building2 className="w-3.5 h-3.5" />, label: 'Property Catalog' },
+                    { id: 'utilities', icon: <Droplets className="w-3.5 h-3.5" />, label: 'Utilities Share' },
+                    { id: 'tasks', icon: <Hammer className="w-3.5 h-3.5" />, label: 'Maintenance' },
+                    { id: 'messages', icon: <MessageSquare className="w-3.5 h-3.5" />, label: 'Messages', badge: (tenantMessages?.length > 0) }
                 ] : []).map((tab) => (
                     <Motion.button 
                         key={tab.id}
-                        whileHover={{ y: -2 }}
-                        whileTap={{ scale: 0.95 }}
+                        layout
+                        whileHover={{ y: -1 }}
+                        whileTap={{ scale: 0.98 }}
                         onClick={() => setActiveTab(tab.id)} 
-                        className={`relative px-6 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-2 shrink-0 z-10 ${activeTab === tab.id ? 'text-white' : 'text-slate-500 hover:text-slate-300'}`}
+                        className={`relative px-5 md:px-7 py-3 rounded-xl text-[10px] md:text-xs font-black transition-all flex items-center justify-center gap-2.5 shrink-0 z-10 snap-start uppercase tracking-widest ${activeTab === tab.id ? 'text-white' : 'text-slate-500 hover:text-slate-300'}`}
                     >
                         {tab.icon} {tab.label}
                         {tab.badge && <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>}
@@ -839,7 +840,7 @@ function ManagerDashboard({ tenants, propertyUnits, utilityBills, tasks, tenantM
                     {activeTab === 'messages' && <MessagesManager tenants={tenants} messages={tenantMessages} />}
                     {activeTab === 'tasks' && <TasksManager tenants={tenants} tasks={tasks} onAddTask={onAddTask} />}
                     {activeTab === 'inventory' && (
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 md:gap-8">
                             {propertyUnits.map(unit => {
                                 const tenant = tenants.find(t => t.unit === unit.unitNumber);
                                 return (
@@ -2188,18 +2189,20 @@ function LeaseModal({ initialData, availableUnits, onClose, onSubmit }) {
 function StatCard({ title, value, icon, index }) {
     return (
         <Motion.div 
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: index * 0.1, duration: 0.5 }}
-            whileHover={{ y: -8, scale: 1.02 }}
-            className="premium-card p-8 rounded-[2rem] relative overflow-hidden group"
+            initial={{ opacity: 0, scale: 0.9, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            transition={{ delay: index * 0.05, duration: 0.5, type: "spring", stiffness: 100 }}
+            whileHover={{ y: -5, scale: 1.02 }}
+            className="premium-card p-6 md:p-8 rounded-[2rem] relative overflow-hidden group border border-white/5 hover:border-white/10"
         >
-            <div className="absolute top-0 right-0 w-24 h-24 bg-indigo-600/5 blur-3xl rounded-full -mr-12 -mt-12 group-hover:bg-indigo-600/10 transition-colors" />
+            <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-600/5 blur-3xl rounded-full -mr-16 -mt-16 group-hover:bg-indigo-600/10 transition-all duration-700" />
+            <div className="absolute bottom-0 left-0 w-24 h-24 bg-emerald-600/5 blur-3xl rounded-full -ml-12 -mb-12 group-hover:opacity-100 transition-opacity" />
+            
             <div className="flex justify-between items-start mb-6">
-                <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">{title}</p>
-                <div className="p-3 bg-slate-800/50 rounded-2xl border border-white/5 shadow-inner group-hover:bg-indigo-500/10 group-hover:border-indigo-500/20 transition-all">{icon}</div>
+                <p className="text-[9px] font-black text-slate-500 uppercase tracking-[0.2em] group-hover:text-slate-400 transition-colors">{title}</p>
+                <div className="p-3.5 bg-slate-800/60 rounded-2xl border border-white/5 shadow-inner group-hover:bg-slate-700/60 group-hover:border-indigo-500/20 group-hover:rotate-6 transition-all duration-300">{icon}</div>
             </div>
-            <p className="text-4xl font-black text-white tracking-tighter leading-none">{value}</p>
+            <p className="text-3xl md:text-4xl font-black text-white tracking-tighter leading-none group-hover:scale-[1.03] transition-transform origin-left">{value}</p>
         </Motion.div>
     );
 }
