@@ -446,25 +446,30 @@ export default function App() {
         loadInitialData();
     }, []);
 
-    const handleLogin = (email, password) => {
+    const handleLogin = (mobileInput, password) => {
         // Force-clear landing delay if logging in manually
         setIsLoading(false); 
         
-        if (email === MANAGER_CREDENTIALS.email && password === MANAGER_CREDENTIALS.password) {
+        // Strip out any non-numeric/plus characters to make matching robust
+        const cleanMobile = (str) => String(str || '').replace(/[^\d+]/g, '');
+        const inputMobileCleaned = cleanMobile(mobileInput);
+        
+        if (inputMobileCleaned === cleanMobile(MANAGER_CREDENTIALS.mobile) && password === MANAGER_CREDENTIALS.password) {
             const firstProp = (Array.isArray(properties) && properties[0]?.name) || INITIAL_PROPERTIES[0]?.name;
             setActiveProperty(firstProp);
             setView('manager');
             setIsLoading(false);
             return { success: true };
         }
-        const tenant = tenants.find(t => t.email.toLowerCase() === email.toLowerCase() && t.password === password);
+        
+        const tenant = tenants.find(t => cleanMobile(t.mobile) === inputMobileCleaned && t.password === password);
         if (tenant) {
             setActiveTenantId(tenant.id);
             setActiveProperty(tenant.propertyName);
             setView('tenant');
             return { success: true };
         }
-        return { success: false, message: 'Invalid email or password' };
+        return { success: false, message: 'Invalid mobile number or password' };
     };
 
     const logout = () => {
@@ -2043,7 +2048,7 @@ function UnitModal({ onSubmit, onClose }) {
 }
 
 function LeaseModal({ initialData, availableUnits, onClose, onSubmit }) {
-    const [leaseForm, setLeaseForm] = useState(initialData || { name: '', unit: '', email: '', mobile: '', password: 'password123', baseRent: '', deposit: '', leaseStart: '', leaseEnd: '' });
+    const [leaseForm, setLeaseForm] = useState(initialData || { name: '', unit: '', mobile: '', password: '', baseRent: '', deposit: '', leaseStart: '', leaseEnd: '' });
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-md">
             <div className="bg-slate-900 border border-white/10 w-full max-w-lg rounded-[2.5rem] p-8 shadow-2xl">
@@ -2063,7 +2068,7 @@ function LeaseModal({ initialData, availableUnits, onClose, onSubmit }) {
                         </select>
                     </div>
                     <div className="grid grid-cols-2 gap-4">
-                        <input required type="email" className="w-full bg-slate-800 border-none rounded-xl p-3 text-white text-sm" placeholder="Email Address" value={leaseForm.email} onChange={e => setLeaseForm({ ...leaseForm, email: e.target.value })} />
+                        <input required type="text" className="w-full bg-slate-800 border-none rounded-xl p-3 text-white text-sm" placeholder="Password" value={leaseForm.password} onChange={e => setLeaseForm({ ...leaseForm, password: e.target.value })} />
                         <input required type="tel" className="w-full bg-slate-800 border-none rounded-xl p-3 text-white text-sm" placeholder="WhatsApp Number" value={leaseForm.mobile} onChange={e => setLeaseForm({ ...leaseForm, mobile: e.target.value })} />
                     </div>
                     <div className="grid grid-cols-2 gap-4">
@@ -2107,13 +2112,13 @@ function StatCard({ title, value, icon, index }) {
 }
 
 function LoginPage({ onLogin }) {
-    const [email, setEmail] = useState('');
+    const [mobile, setMobile] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     
     const handleSubmit = (e) => { 
         e.preventDefault(); 
-        const res = onLogin(email, password); 
+        const res = onLogin(mobile, password); 
         if (!res.success) setError(res.message); 
     };
 
@@ -2154,14 +2159,14 @@ function LoginPage({ onLogin }) {
                     
                     <form onSubmit={handleSubmit} className="space-y-5">
                         <div className="space-y-2">
-                            <label className="text-[10px] text-slate-500 font-black uppercase tracking-widest ml-1 opacity-60">Identity / Email</label>
+                            <label className="text-[10px] text-slate-500 font-black uppercase tracking-widest ml-1 opacity-60">Identity / Mobile</label>
                             <input 
-                                type="email" 
+                                type="tel" 
                                 required 
                                 className="w-full bg-slate-950/50 border border-white/5 rounded-2xl py-5 px-6 text-white outline-none focus:ring-2 ring-indigo-500/40 transition-all placeholder:text-slate-700 text-sm" 
-                                placeholder="portal.admin@service.com" 
-                                value={email} 
-                                onChange={(e) => setEmail(e.target.value)} 
+                                placeholder="+1555000111" 
+                                value={mobile} 
+                                onChange={(e) => setMobile(e.target.value)} 
                             />
                         </div>
 
@@ -2190,8 +2195,8 @@ function LoginPage({ onLogin }) {
                     <div className="pt-8 border-t border-white/5 flex flex-col items-center">
                         <p className="text-[9px] text-slate-700 font-black uppercase tracking-widest mb-6">Simulation access</p>
                         <div className="flex gap-4 w-full">
-                            <button type="button" onClick={() => { setEmail('admin@propmanage.com'); setPassword('admin') }} className="flex-1 py-4 rounded-2xl bg-indigo-500/5 text-indigo-400 text-[10px] font-black border border-indigo-500/10 hover:bg-indigo-600 hover:text-white transition-all uppercase tracking-tighter">Admin Portal</button>
-                            <button type="button" onClick={() => { setEmail('alice@example.com'); setPassword('password123') }} className="flex-1 py-4 rounded-2xl bg-emerald-500/5 text-emerald-400 text-[10px] font-black border border-emerald-500/10 hover:bg-emerald-600 hover:text-white transition-all uppercase tracking-tighter">Tenant View</button>
+                            <button type="button" onClick={() => { setMobile('+1555000111'); setPassword('admin') }} className="flex-1 py-4 rounded-2xl bg-indigo-500/5 text-indigo-400 text-[10px] font-black border border-indigo-500/10 hover:bg-indigo-600 hover:text-white transition-all uppercase tracking-tighter">Admin Portal</button>
+                            <button type="button" onClick={() => { setMobile('+1234567890'); setPassword('password123') }} className="flex-1 py-4 rounded-2xl bg-emerald-500/5 text-emerald-400 text-[10px] font-black border border-emerald-500/10 hover:bg-emerald-600 hover:text-white transition-all uppercase tracking-tighter">Tenant View</button>
                         </div>
                     </div>
                 </div>
