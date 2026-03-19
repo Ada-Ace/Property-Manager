@@ -1307,9 +1307,9 @@ function TasksManager({ tenants, tasks, onAddTask }) {
                     const tenant = isAll ? { name: 'All Tenants', unit: 'All', mobile: '' } : tenants.find(t => t.id === task.tenantId);
                     if (!tenant) return null;
 
-                    const waMessage = encodeURIComponent(`Hi ${isAll ? 'there' : tenant.name.split(' ')[0]},\n\nA new maintenance task is required: *${task.title}*.\n\nPlease let me know which of the following time slots works best for you:\n${task.dateOptions.map((d, i) => `${i + 1}. ${d}`).join('\n')}\n\nThank you!`);
-                    const waLink = `https://wa.me/${tenant.mobile?.replace(/\D/g, '') || ''}?text=${waMessage}`;
-                    const waCheckLink = `https://wa.me/${tenant.mobile?.replace(/\D/g, '') || ''}`;
+                    const waMessage = encodeURIComponent(`Hi ${isAll ? 'there' : String(tenant.name || 'Tenant').split(' ')[0]},\n\nA new maintenance task is required: *${task.title}*.\n\nPlease let me know which of the following time slots works best for you:\n${task.dateOptions.map((d, i) => `${i + 1}. ${d}`).join('\n')}\n\nThank you!`);
+                    const waLink = `https://wa.me/${String(tenant.mobile || '').replace(/\D/g, '')}?text=${waMessage}`;
+                    const waCheckLink = `https://wa.me/${String(tenant.mobile || '').replace(/\D/g, '')}`;
 
                     return (
                         <div key={task.id} className="bg-slate-900/50 rounded-3xl p-6 border border-white/5 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
@@ -1355,7 +1355,7 @@ function TenantDashboard({ tenant, unit, onSendMessage }) {
         <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 pb-2 border-b border-white/5">
                 <div>
-                    <h2 className="text-4xl font-black text-white tracking-tighter italic">Howdy, {tenant.name.split(' ')[0]}</h2>
+                    <h2 className="text-4xl font-black text-white tracking-tighter italic">Howdy, {String(tenant.name || 'Tenant').split(' ')[0]}</h2>
                     <div className="flex items-center gap-4 mt-2">
                         <div className="flex items-center gap-2 bg-indigo-500/10 px-3 py-1 rounded-full border border-indigo-500/20">
                             <Home className="w-3.5 h-3.5 text-indigo-400" />
