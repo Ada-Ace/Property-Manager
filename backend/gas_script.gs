@@ -104,8 +104,8 @@ function doPost(e) {
     
     for (let i = 0; i < rows.length; i++) {
       // Logic for properties fallback (as we often key by name instead of generated ID)
-      const isPropertyMatch = (sheetName === "Properties" && data.name && rows[i][nameIndex] === data.name);
-      const isIdMatch = (data.id && rows[i][idIndex] === data.id);
+      const isPropertyMatch = (sheetName === "Properties" && data.name && String(rows[i][nameIndex]) === String(data.name));
+      const isIdMatch = (data.id && String(rows[i][idIndex]) === String(data.id));
 
       if (isIdMatch || isPropertyMatch) {
         const range = sheet.getRange(i + 2, 1, 1, headers.length);
