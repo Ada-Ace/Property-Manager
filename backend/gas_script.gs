@@ -121,6 +121,24 @@ function doPost(e) {
     }
   }
 
+  // Handle DELETE Action
+  if (action === "DELETE") {
+    // If it's the last row, getLastRow() - 1 will be 0. We need to handle that.
+    const lastRow = sheet.getLastRow();
+    if (lastRow <= 1) return errorResponse("Sheet empty");
+    
+    const rows = sheet.getRange(2, 1, lastRow - 1, headers.length).getValues();
+    const idIndex = headers.indexOf("id");
+    
+    for (let i = 0; i < rows.length; i++) {
+        if (String(rows[i][idIndex]) === String(data.id)) {
+            sheet.deleteRow(i + 2);
+            return successResponse("Deleted successfully from " + sheetName);
+        }
+    }
+    return errorResponse("Record not found to delete (" + data.id + ")");
+  }
+
   return errorResponse("Invalid action provided");
 }
 

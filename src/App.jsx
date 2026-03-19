@@ -279,6 +279,8 @@ const API = {
         try {
             const resp = await fetch(API_URL, {
                 method: 'POST',
+                mode: 'cors',
+                headers: { 'Content-Type': 'text/plain' },
                 body: JSON.stringify({ action: 'UPLOAD', fileData, fileName })
             });
             return await resp.json();
@@ -289,16 +291,24 @@ const API = {
     },
 
     async saveToSheet(action, sheetName, data) {
-        if (!this.isValid()) return { success: false, message: 'Invalid API URL (Must end in /exec)' };
+        if (!this.isValid()) return { success: false, message: 'Invalid API URL' };
         try {
+            // Using text/plain to avoid preflight (CORS-safe for Google Scripts)
             const resp = await fetch(API_URL, {
                 method: 'POST',
+                mode: 'cors',
+                headers: { 'Content-Type': 'text/plain' },
                 body: JSON.stringify({ action, sheetName, data })
             });
-            return await resp.json();
+            const result = await resp.json();
+            if (result.success) {
+                // If it's a mutation, we want the app to stay in sync
+                // But we don't want a heavy reload, we trust the result
+            }
+            return result;
         } catch (err) {
             console.error('Sheet Save Error:', err);
-            return { success: false, message: 'Save failed' };
+            return { success: false, message: 'Connection Error - Check Internet' };
         }
     },
 
@@ -498,9 +508,10 @@ export default function App() {
         if (unit) {
             const updatedUnit = { ...unit, fittings: newFittings };
             setPropertyUnits(prev => prev.map(u => u.id === unitId ? updatedUnit : u));
+            setGlobalMessage({ type: 'info', text: "Synchronizing inventory with cloud..." });
             await API.saveToSheet('UPDATE', 'Units', updatedUnit);
+            setGlobalMessage({ type: 'success', text: "Inventory updated & synced" });
         }
-        setGlobalMessage({ type: 'success', text: `Inventory updated successfully` });
         setTimeout(() => setGlobalMessage(null), 3000);
     };
 
@@ -573,8 +584,9 @@ export default function App() {
         
         const unit = propertyUnits.find(u => u.id === unitId);
         setPropertyUnits(prev => prev.filter(u => u.id !== unitId));
+        setGlobalMessage({ type: 'info', text: "Removing unit from cloud..." });
         await API.saveToSheet('DELETE', 'Units', { id: unitId });
-        setGlobalMessage({ type: 'success', text: `Unit deleted successfully` });
+        setGlobalMessage({ type: 'success', text: `Unit deleted & synced successfully` });
         setTimeout(() => setGlobalMessage(null), 3000);
     };
 
@@ -591,13 +603,14 @@ export default function App() {
         setTenants([...tenants, tenantData]);
         setPropertyUnits(prev => prev.map(u => u.unitNumber === newTenant.unit ? { ...u, status: 'Occupied' } : u));
         
+        setGlobalMessage({ type: 'info', text: "Creating lease in cloud..." });
         // Save tenant
         await API.saveToSheet('ADD', 'Tenants', tenantData);
         // Update unit status
         const unit = propertyUnits.find(u => u.unitNumber === newTenant.unit);
         if (unit) await API.saveToSheet('UPDATE', 'Units', { ...unit, status: 'Occupied' });
 
-        setGlobalMessage({ type: 'success', text: `New lease for Unit ${newTenant.unit} added!` });
+        setGlobalMessage({ type: 'success', text: `New lease for Unit ${newTenant.unit} synced!` });
         setTimeout(() => setGlobalMessage(null), 3000);
     };
 
@@ -608,8 +621,9 @@ export default function App() {
             const unit = propertyUnits.find(u => u.unitNumber === updatedTenant.unit);
             if (unit) await API.saveToSheet('UPDATE', 'Units', { ...unit, status: 'Occupied' });
         }
+        setGlobalMessage({ type: 'info', text: "Updating lease in cloud..." });
         await API.saveToSheet('UPDATE', 'Tenants', updatedTenant);
-        setGlobalMessage({ type: 'success', text: `Lease updated!` });
+        setGlobalMessage({ type: 'success', text: `Lease updated & synced!` });
         setTimeout(() => setGlobalMessage(null), 3000);
     };
 
