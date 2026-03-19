@@ -525,7 +525,22 @@ export default function App() {
     };
 
     const addUnitToCatalog = async (unitData) => {
-        const newUnit = { ...unitData, id: `U${Date.now()}`, fittings: [], propertyName: activeProperty };
+        let imageUrl = unitData.image;
+        if (unitData.newImageFile) {
+            setGlobalMessage({ type: 'info', text: "Uploading unit photo..." });
+            const uploadRes = await API.uploadToDrive(unitData.newImageFile, `unit_${unitData.unitNumber}_${Date.now()}.png`);
+            if (uploadRes.success) imageUrl = uploadRes.url;
+        }
+
+        const newUnit = { 
+            ...unitData, 
+            id: `U${Date.now()}`, 
+            fittings: [], 
+            propertyName: activeProperty,
+            image: imageUrl 
+        };
+        delete newUnit.newImageFile; // Clean up for state/sheet
+
         setPropertyUnits([...propertyUnits, newUnit]);
         await API.saveToSheet('ADD', 'Units', newUnit);
         setGlobalMessage({ type: 'success', text: `Unit ${unitData.unitNumber} added to catalog` });
@@ -533,9 +548,29 @@ export default function App() {
     };
 
     const editUnitInCatalog = async (updatedUnit) => {
-        setPropertyUnits(prev => prev.map(u => u.id === updatedUnit.id ? { ...u, ...updatedUnit } : u));
-        await API.saveToSheet('UPDATE', 'Units', updatedUnit);
-        setGlobalMessage({ type: 'success', text: `Unit ${updatedUnit.unitNumber} updated successfully` });
+        let imageUrl = updatedUnit.image;
+        if (updatedUnit.newImageFile) {
+            setGlobalMessage({ type: 'info', text: "Updating unit photo..." });
+            const uploadRes = await API.uploadToDrive(updatedUnit.newImageFile, `unit_${updatedUnit.unitNumber}_${Date.now()}.png`);
+            if (uploadRes.success) imageUrl = uploadRes.url;
+        }
+
+        const finalUnit = { ...updatedUnit, image: imageUrl };
+        delete finalUnit.newImageFile; // Clean up
+
+        setPropertyUnits(prev => prev.map(u => u.id === finalUnit.id ? finalUnit : u));
+        await API.saveToSheet('UPDATE', 'Units', finalUnit);
+        setGlobalMessage({ type: 'success', text: `Unit ${finalUnit.unitNumber} updated successfully` });
+        setTimeout(() => setGlobalMessage(null), 3000);
+    };
+
+    const deleteUnit = async (unitId) => {
+        if (!window.confirm("Are you sure you want to PERMANENTLY delete this unit? This cannot be undone.")) return;
+        
+        const unit = propertyUnits.find(u => u.id === unitId);
+        setPropertyUnits(prev => prev.filter(u => u.id !== unitId));
+        await API.saveToSheet('DELETE', 'Units', { id: unitId });
+        setGlobalMessage({ type: 'success', text: `Unit deleted successfully` });
         setTimeout(() => setGlobalMessage(null), 3000);
     };
 
@@ -715,6 +750,7 @@ export default function App() {
                                     currency={activeCurrency}
                                     onAddUnit={addUnitToCatalog}
                                     onEditUnit={editUnitInCatalog}
+                                    onDeleteUnit={deleteUnit}
                                     onAddTenant={addTenant}
                                     onEditTenant={editTenant}
                                     onUpdateFittings={updateUnitFittings}
@@ -738,7 +774,7 @@ export default function App() {
 
 // --- Manager Components ---
 
-function ManagerDashboard({ tenants, propertyUnits, utilityBills, tasks, tenantMessages, currency = 'USD', onAddUnit, onEditUnit, onAddTenant, onEditTenant, onUpdateFittings, onAddBill, onAddTask }) {
+function ManagerDashboard({ tenants, propertyUnits, utilityBills, tasks, tenantMessages, currency = 'USD', onAddUnit, onEditUnit, onDeleteUnit, onAddTenant, onEditTenant, onUpdateFittings, onAddBill, onAddTask }) {
     const [activeTab, setActiveTab] = useState('rents');
     const [showLeaseModal, setShowLeaseModal] = useState(false);
     const [editingTenant, setEditingTenant] = useState(null);
@@ -814,6 +850,7 @@ function ManagerDashboard({ tenants, propertyUnits, utilityBills, tasks, tenantM
                                         currency={currency}
                                         onUpdateFittings={(newFittings) => onUpdateFittings(unit.id, newFittings)}
                                         onEditUnit={() => setEditingUnit(unit)}
+                                        onDeleteUnit={() => onDeleteUnit(unit.id)}
                                         onAddLease={() => setEditingTenant({ unit: unit.unitNumber })}
                                         onEditLease={() => setEditingTenant(tenant)}
                                     />
@@ -1832,7 +1869,7 @@ function FittingsModal({ fittings, onClose, onSave }) {
     );
 }
 
-function UnitCard({ unit, tenant, currency = 'USD', onUpdateFittings, onEditUnit, onAddLease, onEditLease }) {
+function UnitCard({ unit, tenant, currency = 'USD', onUpdateFittings, onEditUnit, onDeleteUnit, onAddLease, onEditLease }) {
     const [activeSubTab, setActiveSubTab] = useState('info');
     const tenantName = tenant?.name;
     const tenantLeaseEnd = tenant?.leaseEnd;
@@ -1848,11 +1885,17 @@ function UnitCard({ unit, tenant, currency = 'USD', onUpdateFittings, onEditUnit
             className="premium-card rounded-[2.5rem] overflow-hidden group flex flex-col h-full"
         >
             <div className={`h-48 relative flex items-center justify-center overflow-hidden bg-slate-800/50`}>
-                <div className="absolute inset-0 bg-gradient-to-b from-transparent to-slate-900/80" />
-                <div className="text-slate-700 flex flex-col items-center gap-2 relative z-10 transition-transform group-hover:scale-110 duration-700">
-                    <ImageIcon className="w-16 h-16 opacity-10" />
-                    <span className="text-[10px] font-black uppercase tracking-[0.3em] opacity-30">Unit {unit.unitNumber}</span>
-                </div>
+                <div className="absolute inset-0 bg-gradient-to-b from-transparent to-slate-900/80 z-10" />
+                
+                {unit.image ? (
+                    <img src={unit.image} alt="" className="absolute inset-0 w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
+                ) : (
+                    <div className="text-slate-700 flex flex-col items-center gap-2 relative z-0 transition-transform group-hover:scale-110 duration-700">
+                        <ImageIcon className="w-16 h-16 opacity-10" />
+                        <span className="text-[10px] font-black uppercase tracking-[0.3em] opacity-30">Unit {unit.unitNumber}</span>
+                    </div>
+                )}
+
                 <div className={`absolute top-6 right-6 px-4 py-2 rounded-2xl text-[10px] font-black uppercase tracking-widest border backdrop-blur-xl shadow-2xl z-20 ${
                     !isOccupied 
                     ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' 
@@ -1860,15 +1903,27 @@ function UnitCard({ unit, tenant, currency = 'USD', onUpdateFittings, onEditUnit
                 }`}>
                     {isOccupied ? 'Occupied' : 'Available'}
                 </div>
-                <Motion.button
-                    whileHover={{ scale: 1.1 }}
-                    whileTap={{ scale: 0.9 }}
-                    onClick={() => onEditUnit(unit)}
-                    title="Edit Unit Properties"
-                    className="absolute top-6 left-6 p-2 rounded-xl text-slate-400 hover:text-white bg-slate-900/40 border border-white/10 hover:border-white/30 backdrop-blur-xl shadow-2xl z-20 transition-all opacity-0 group-hover:opacity-100"
-                >
-                    <Settings className="w-5 h-5" />
-                </Motion.button>
+
+                <div className="absolute top-6 left-6 flex gap-2 z-20 opacity-0 group-hover:opacity-100 transition-all">
+                    <Motion.button
+                        whileHover={{ scale: 1.1 }}
+                        whileTap={{ scale: 0.9 }}
+                        onClick={() => onEditUnit(unit)}
+                        title="Edit Unit Properties"
+                        className="p-2.5 rounded-xl text-slate-400 hover:text-white bg-slate-900/60 border border-white/10 hover:border-white/30 backdrop-blur-xl shadow-2xl transition-all"
+                    >
+                        <Settings className="w-5 h-5" />
+                    </Motion.button>
+                    <Motion.button
+                        whileHover={{ scale: 1.1, backgroundColor: 'rgba(239, 68, 68, 0.2)' }}
+                        whileTap={{ scale: 0.9 }}
+                        onClick={onDeleteUnit}
+                        title="Delete Unit"
+                        className="p-2.5 rounded-xl text-red-500/50 hover:text-red-400 bg-slate-900/60 border border-white/10 hover:border-red-500/30 backdrop-blur-xl shadow-2xl transition-all"
+                    >
+                        <Trash2 className="w-5 h-5" />
+                    </Motion.button>
+                </div>
             </div>
 
             <div className="p-8 flex-1 flex flex-col relative">
@@ -2021,21 +2076,62 @@ function UnitCard({ unit, tenant, currency = 'USD', onUpdateFittings, onEditUnit
 
 function UnitModal({ initialData, onSubmit, onClose }) {
     const [form, setForm] = useState(initialData || { unitNumber: '', size: '', expectedRent: '', status: 'Available', image: null });
+    const [imagePreview, setImagePreview] = useState(initialData?.image || null);
+
+    const handleFileChange = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setImagePreview(reader.result);
+                // We'll pass the base64/file to onSubmit handler to upload via API
+                setForm({ ...form, newImageFile: reader.result });
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-md animate-in fade-in duration-300">
-            <div className="bg-slate-900 border border-white/10 w-full max-w-md rounded-[2.5rem] p-8 shadow-2xl relative">
+            <div className="bg-slate-900 border border-white/10 w-full max-w-lg rounded-[2.5rem] p-8 shadow-2xl relative">
                 <button onClick={onClose} className="absolute top-8 right-8 text-slate-500 hover:text-white transition-colors"><XCircle className="w-6 h-6" /></button>
                 <h2 className="text-2xl font-bold text-white italic mb-6 flex items-center gap-3">
                     {initialData ? <Settings className="w-6 h-6 text-indigo-500" /> : <Building2 className="w-6 h-6 text-indigo-500" />}
                     {initialData ? 'Edit Unit' : 'Add Unit'}
                 </h2>
-                <form onSubmit={(e) => { e.preventDefault(); onSubmit(form); }} className="space-y-5">
-                    <input required className="w-full bg-slate-800 border-none rounded-xl p-3 text-white text-sm outline-none" placeholder="Unit Number" value={form.unitNumber} onChange={e => setForm({ ...form, unitNumber: e.target.value })} />
-                    <div className="grid grid-cols-2 gap-4">
-                        <input required type="number" className="w-full bg-slate-800 border-none rounded-xl p-3 text-white text-sm outline-none" placeholder="Size (SQFT)" value={form.size} onChange={e => setForm({ ...form, size: e.target.value })} />
-                        <input required type="number" className="w-full bg-slate-800 border-none rounded-xl p-3 text-white text-sm outline-none" placeholder="Target Rent ($)" value={form.expectedRent} onChange={e => setForm({ ...form, expectedRent: e.target.value })} />
+                <form onSubmit={(e) => { e.preventDefault(); onSubmit(form); }} className="space-y-6">
+                    <div className="flex flex-col md:flex-row gap-6">
+                        <div className="w-full md:w-32 h-32 rounded-3xl bg-slate-800 flex items-center justify-center overflow-hidden border border-white/5 relative group shrink-0">
+                            {imagePreview ? (
+                                <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
+                            ) : (
+                                <ImageIcon className="w-8 h-8 text-slate-600" />
+                            )}
+                            <input 
+                                type="file" 
+                                accept="image/*" 
+                                onChange={handleFileChange} 
+                                className="absolute inset-0 opacity-0 cursor-pointer z-10" 
+                            />
+                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
+                                <Plus className="w-5 h-5 text-white" />
+                            </div>
+                        </div>
+                        <div className="flex-1 space-y-4">
+                            <input required className="w-full bg-slate-800 border-none rounded-xl p-3 text-white text-sm outline-none" placeholder="Unit Number" value={form.unitNumber} onChange={e => setForm({ ...form, unitNumber: e.target.value })} />
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-1">
+                                    <label className="text-[10px] text-slate-500 font-bold uppercase tracking-widest pl-1">Size (SQFT)</label>
+                                    <input required type="number" className="w-full bg-slate-800 border-none rounded-xl p-3 text-white text-sm outline-none" placeholder="1200" value={form.size} onChange={e => setForm({ ...form, size: e.target.value })} />
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="text-[10px] text-slate-500 font-bold uppercase tracking-widest pl-1">Target Rent</label>
+                                    <input required type="number" className="w-full bg-slate-800 border-none rounded-xl p-3 text-white text-sm outline-none" placeholder="2500" value={form.expectedRent} onChange={e => setForm({ ...form, expectedRent: e.target.value })} />
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                    <button type="submit" className="w-full py-4 bg-indigo-600 hover:bg-indigo-500 text-white font-black rounded-2xl uppercase tracking-widest text-[10px]">
+                    <button type="submit" className="w-full py-4 bg-indigo-600 hover:bg-indigo-500 text-white font-black rounded-2xl uppercase tracking-widest text-[10px] shadow-lg shadow-indigo-600/20">
                         {initialData ? 'Save Changes' : 'Save Unit'}
                     </button>
                 </form>
