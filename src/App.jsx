@@ -202,15 +202,27 @@ const formatDate = (date, includeTime = false) => {
     }
 };
 
-// Shorthand: convert an ISO/date string → dd-MMM-yyyy, stripping time part first
 const fmtDate = (str) => {
     if (!str) return '—';
     try {
-        // Handle strings like "2024-06-01T00:00:00Z" or "2024-06-01"
-        const clean = String(str).split('T')[0];
-        const [y, m, d] = clean.split('-');
-        if (!y || !m || !d) return '—';
-        return `${d.padStart(2,'0')}-${MONTHS_SHORT[parseInt(m,10)-1]}-${y}`;
+        const strVal = String(str).trim();
+        const clean = strVal.split('T')[0];
+        const parts = clean.split('-');
+        
+        // Handle yyyy-mm-dd or similar standard iso prefixes
+        if (parts.length === 3) {
+            const [y, m, d] = parts;
+            if (y.length === 4 && !isNaN(m) && !isNaN(d)) {
+                return `${d.padStart(2,'0')}-${MONTHS_SHORT[parseInt(m,10)-1]}-${y}`;
+            }
+        }
+        
+        // Fallback for JS date string formats natively
+        const d = new Date(strVal);
+        if (!isNaN(d.getTime())) {
+            return formatDate(d, false);
+        }
+        return '—';
     } catch (e) {
         return '—';
     }
@@ -786,7 +798,7 @@ function ManagerDashboard({ tenants, propertyUnits, utilityBills, tasks, tenantM
                                         <tr className="text-[10px] uppercase text-slate-500 font-black tracking-[0.2em] border-b border-white/5">
                                             <th className="pb-6 pl-2">Tenant</th>
                                             <th className="pb-6">Unit</th>
-                                            <th className="pb-6">Contract End</th>
+                                            <th className="pb-6">Lease Period</th>
                                             <th className="pb-6 text-center">Next Rent Due</th>
                                             <th className="pb-6 text-right">Base Rent ({currency})</th>
                                             <th className="pb-6 text-right pr-2">Action</th>
@@ -802,8 +814,14 @@ function ManagerDashboard({ tenants, propertyUnits, utilityBills, tasks, tenantM
                                                 <tr key={t.id} className="group hover:bg-white/[0.02] transition-colors">
                                                     <td className="py-6 pl-2 font-black text-white">{t.name}</td>
                                                     <td className="py-6"><span className="text-indigo-400 font-mono text-xs bg-indigo-500/5 px-2 py-1 rounded-md border border-indigo-500/10">Unit {t.unit}</span></td>
-                                                    <td className="py-6 text-slate-400 text-xs font-bold">{fmtDate(t.leaseEnd)}</td>
+                                                    <td className="py-6">
+                                                        <div className="flex flex-col">
+                                                            <span className="text-white text-sm font-bold tracking-tight">{fmtDate(t.leaseStart)}</span>
+                                                            <span className="text-slate-500 text-[10px] font-black uppercase tracking-widest mt-0.5">to {fmtDate(t.leaseEnd)}</span>
+                                                        </div>
+                                                    </td>
                                                     <td className="py-6 text-center">
+
                                                         <div className="flex flex-col items-center">
                                                             <span className={`text-[10px] font-black uppercase tracking-tight ${daysUntil <= 3 ? 'text-orange-400 animate-pulse' : 'text-slate-400'}`}>
                                                                 {dueDateStr}
@@ -1406,7 +1424,7 @@ function UtilityManager({ tenants, utilityBills, onAddBill, currency = 'USD' }) 
                                                 {breakdowns.map((b, i) => (
                                                     <div key={i} className="flex justify-between items-center bg-white/5 px-4 py-2.5 rounded-xl border border-white/5">
                                                         <span className="text-slate-400 font-black uppercase tracking-widest text-[9px] flex items-center gap-2">
-                                                            {b.type === 'Electricity' ? <Zap className="w-3 h-3 text-amber-400" /> : b.type === 'Water' ? <Droplets className="w-3 h-3 text-blue-400" /> : <Flame className="w-3 h-3 text-orange-400" />}
+                                                            {b.type === 'Electricity' ? <Zap className="w-3 h-3 text-amber-400" /> : b.type === 'Water' ? <Droplets className="w-3 h-3 text-blue-400" /> : b.type === 'Gas' ? <Flame className="w-3 h-3 text-orange-400" /> : null}
                                                             {b.type}
                                                         </span>
                                                         <span className="text-white font-black text-sm">{currency} {b.amount.toFixed(2)}</span>
