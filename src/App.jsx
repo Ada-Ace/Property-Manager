@@ -386,80 +386,67 @@ export default function App() {
         return tasks.filter(t => t && String(t.propertyName || '').trim().toLowerCase() === normActive);
     }, [tasks, activeProperty]);
 
-    // Initial Data Fetch
-    useEffect(() => {
-        const loadInitialData = async () => {
-            try {
-                const data = await API.getAllData();
-                if (data && typeof data === 'object') {
-                    // Hardened Property Extraction
-                    let actualProperties = Array.isArray(data.properties) ? data.properties.map(p => ({ 
-                        ...p, 
-                        name: String(p.name || '').trim(),
-                        currency: p.currency || 'USD' 
-                    })) : [];
+    const [lastSyncTime, setLastSyncTime] = useState(null);
+    const [isRefreshing, setIsRefreshing] = useState(false);
+
+    const syncWithCloud = async (isBackground = false) => {
+        if (!API.isValid()) return;
+        if (!isBackground) setIsLoading(true);
+        else setIsRefreshing(true);
+        
+        try {
+            const data = await API.getAllData();
+            if (data && typeof data === 'object') {
+                // Hardened Property Extraction
+                let actualProperties = Array.isArray(data.properties) ? data.properties.map(p => ({ 
+                    ...p, 
+                    name: String(p.name || '').trim(),
+                    currency: p.currency || 'USD' 
+                })) : [];
+                
+                const rawUnits = Array.isArray(data.units) ? data.units : [];
+                const rawTenants = Array.isArray(data.tenants) ? data.tenants : [];
+                const rawBills = Array.isArray(data.bills) ? data.bills : [];
+                const rawTasks = Array.isArray(data.tasks) ? data.tasks : [];
+                const rawMessages = Array.isArray(data.messages) ? data.messages : [];
+
+                if (actualProperties.length === 0) {
+                    const foundNames = [...rawUnits, ...rawTenants, ...rawBills, ...rawTasks, ...rawMessages]
+                        .map(item => item?.propertyName)
+                        .filter(Boolean)
+                        .map(n => String(n).trim());
                     
-                    const rawUnits = Array.isArray(data.units) ? data.units : [];
-                    const rawTenants = Array.isArray(data.tenants) ? data.tenants : [];
-                    const rawBills = Array.isArray(data.bills) ? data.bills : [];
-                    const rawTasks = Array.isArray(data.tasks) ? data.tasks : [];
-                    const rawMessages = Array.isArray(data.messages) ? data.messages : [];
-
-                    if (actualProperties.length === 0) {
-                        const foundNames = [...rawUnits, ...rawTenants, ...rawBills, ...rawTasks, ...rawMessages]
-                            .map(item => item?.propertyName)
-                            .filter(Boolean)
-                            .map(n => String(n).trim());
-                        
-                        const uniqueNames = Array.from(new Set(foundNames));
-                        actualProperties = uniqueNames.map((name, idx) => ({ id: `cloud-${idx}`, name, address: 'Synced Property' }));
-                    }
-
-                    if (actualProperties.length > 0) {
-                        setProperties(actualProperties);
-                        setActiveProperty(prev => {
-                            const exists = actualProperties.some(p => p.name === prev);
-                            return (prev && exists) ? prev : actualProperties[0].name;
-                        });
-                        
-                        if (Array.isArray(data.tenants)) setTenants(data.tenants);
-                        if (Array.isArray(data.units)) setPropertyUnits(data.units);
-                        if (Array.isArray(data.bills)) setUtilityBills(data.bills);
-                        if (Array.isArray(data.tasks)) setTasks(data.tasks);
-                        if (Array.isArray(data.messages)) setTenantMessages(data.messages);
-                        
-                        if (rawUnits.length === 0 && rawTenants.length === 0) {
-                            setGlobalMessage("Connected, but no units/tenants found in Sheets.");
-                        }
-                    } else if (API.isValid()) {
-                        setGlobalMessage("Sync OK, but no properties found. Check your 'propertyName' columns.");
-                    } else {
-                        // Offline/Local mode
-                        setProperties(INITIAL_PROPERTIES);
-                        setTenants(INITIAL_TENANTS);
-                        setPropertyUnits(INITIAL_UNITS);
-                        setUtilityBills(INITIAL_BILLS);
-                        setTenantMessages(INITIAL_MESSAGES);
-                        setActiveProperty(INITIAL_PROPERTIES[0].name);
-                    }
-                } else if (API.isValid()) {
-                    setGlobalMessage("Connectivity Alert: Google Sheet responded with empty data.");
-                } else {
-                    // Fallback to mock data for dev
-                    setProperties(INITIAL_PROPERTIES);
-                    setTenants(INITIAL_TENANTS);
-                    setPropertyUnits(INITIAL_UNITS);
-                    setUtilityBills(INITIAL_BILLS);
-                    setTenantMessages(INITIAL_MESSAGES);
-                    setActiveProperty(INITIAL_PROPERTIES[0].name);
+                    const uniqueNames = Array.from(new Set(foundNames));
+                    actualProperties = uniqueNames.map((name, idx) => ({ id: `cloud-${idx}`, name, address: 'Synced Property' }));
                 }
-            } catch (err) {
-                console.error('Core sync failure:', err);
-                setGlobalMessage("Cloud Connection Blocked - Please check Script permissions.");
+
+                if (actualProperties.length > 0) {
+                    setProperties(actualProperties);
+                    setTenants(rawTenants);
+                    setPropertyUnits(rawUnits);
+                    setUtilityBills(rawBills);
+                    setTasks(rawTasks);
+                    setTenantMessages(rawMessages);
+                    setLastSyncTime(new Date());
+                    
+                    if (!activeProperty) {
+                        setActiveProperty(actualProperties[0].name);
+                    }
+                }
             }
+        } catch (err) {
+            console.error('Background Sync Error:', err);
+        } finally {
             setIsLoading(false);
-        };
-        loadInitialData();
+            setIsRefreshing(false);
+        }
+    };
+
+    // Auto-Sync Heartbeat (Every 60s)
+    useEffect(() => {
+        syncWithCloud(); // Initial
+        const interval = setInterval(() => syncWithCloud(true), 60000);
+        return () => clearInterval(interval);
     }, []);
 
     const handleLogin = (mobileInput, password) => {
@@ -697,11 +684,23 @@ export default function App() {
                     {/* Controls */}
                     <div className="flex items-center gap-3">
                         {view === 'manager' && (
-                            <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-2xl px-4 py-2.5 hover:bg-white/10 transition-all">
-                                <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0"></div>
+                            <div className="flex items-center gap-3 bg-white/5 border border-white/10 rounded-2xl px-4 py-2.5 hover:bg-white/10 transition-all">
+                                <div className="flex flex-col items-end gap-0.5 pr-2 border-r border-white/10">
+                                    <div className="flex items-center gap-1.5 leading-none">
+                                        <p className="text-[8px] text-slate-500 font-black uppercase tracking-tight">Cloud Sync</p>
+                                        {isRefreshing ? (
+                                            <div className="w-1.5 h-1.5 border-2 border-indigo-500/20 border-t-indigo-400 rounded-full animate-spin"></div>
+                                        ) : (
+                                            <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full shadow-[0_0_5px_rgba(16,185,129,0.5)]"></div>
+                                        )}
+                                    </div>
+                                    <p className="text-[7px] text-slate-600 font-black uppercase tracking-tight tabular-nums">
+                                        {lastSyncTime ? lastSyncTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '...'}
+                                    </p>
+                                </div>
                                 <Building2 className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
                                 <select 
-                                    className="bg-transparent border-none text-[10px] font-black uppercase tracking-widest outline-none cursor-pointer text-indigo-200 max-w-[120px] md:max-w-xs"
+                                    className="bg-transparent border-none text-[10px] font-black uppercase tracking-widest outline-none cursor-pointer text-indigo-200 max-w-[120px] md:max-w-[200px]"
                                     value={activeProperty}
                                     onChange={(e) => setActiveProperty(e.target.value)}
                                 >
