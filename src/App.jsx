@@ -301,23 +301,35 @@ export default function App() {
             const data = await API.getAllData();
             if (data && typeof data === 'object') {
                 // Determine actual properties from data (highest priority is Properties sheet, fallback is unique property names in units/tenants)
-                let actualProperties = Array.isArray(data.properties) ? data.properties : [];
+                // Hardened Property Extraction
+                let actualProperties = Array.isArray(data.properties) ? data.properties.map(p => ({ ...p, name: String(p.name || '').trim() })) : [];
                 
                 const rawUnits = Array.isArray(data.units) ? data.units : [];
                 const rawTenants = Array.isArray(data.tenants) ? data.tenants : [];
+                const rawBills = Array.isArray(data.bills) ? data.bills : [];
+                const rawTasks = Array.isArray(data.tasks) ? data.tasks : [];
+                const rawMessages = Array.isArray(data.messages) ? data.messages : [];
 
                 if (actualProperties.length === 0) {
-                    const uniqueNames = new Set([
-                        ...rawUnits.map(u => u.propertyName).filter(Boolean),
-                        ...rawTenants.map(t => t.propertyName).filter(Boolean)
-                    ]);
-                    actualProperties = Array.from(uniqueNames).map((name, idx) => ({ id: idx + 1, name, address: 'Live Property' }));
+                    const foundNames = [
+                        ...rawUnits.map(u => u.propertyName),
+                        ...rawTenants.map(t => t.propertyName),
+                        ...rawBills.map(b => b.propertyName),
+                        ...rawTasks.map(t => t.propertyName),
+                        ...rawMessages.map(m => m.propertyName)
+                    ].filter(Boolean).map(n => String(n).trim());
+                    
+                    const uniqueNames = Array.from(new Set(foundNames));
+                    actualProperties = uniqueNames.map((name, idx) => ({ id: `cloud-${idx}`, name, address: 'Synced Property' }));
                 }
 
-                // If we found ANY real data at all, we should clear the mock properties
                 if (actualProperties.length > 0) {
                     setProperties(actualProperties);
-                    if (!activeProperty) setActiveProperty(actualProperties[0].name);
+                    // Force set active property if currently null or not in the list
+                    setActiveProperty(prev => {
+                        const exists = actualProperties.some(p => p.name === prev);
+                        return (prev && exists) ? prev : actualProperties[0].name;
+                    });
                 } else if (!API.isValid()) {
                     // Fallback to mock data ONLY if API is not configured (local dev)
                     setProperties(INITIAL_PROPERTIES);
