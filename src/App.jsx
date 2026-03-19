@@ -735,7 +735,7 @@ function ManagerDashboard({ tenants, propertyUnits, utilityBills, tasks, tenantM
     const [editingUnit, setEditingUnit] = useState(null);
 
     const totalRevenue = useMemo(() => (Array.isArray(tenants) ? tenants.reduce((a, b) => a + (Number(b?.baseRent) || 0), 0) : 0), [tenants]);
-    const vacantUnits = useMemo(() => (Array.isArray(propertyUnits) ? propertyUnits.filter(u => u?.status === 'Available').length : 0), [propertyUnits]);
+    const vacantUnits = useMemo(() => (Array.isArray(propertyUnits) ? propertyUnits.filter(u => !tenants.some(t => t.unit === u.unitNumber)).length : 0), [propertyUnits, tenants]);
     const tasksCount = Array.isArray(tasks) ? tasks.length : 0;
 
     // Currency tag helper — prepends ISO code as a label
