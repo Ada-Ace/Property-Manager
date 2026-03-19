@@ -248,13 +248,13 @@ export default function App() {
     useEffect(() => {
         const loadInitialData = async () => {
             const data = await API.getAllData();
-            if (data) {
-                if (data.properties?.length) setProperties(data.properties);
-                if (data.tenants?.length) setTenants(data.tenants);
-                if (data.units?.length) setPropertyUnits(data.units);
-                if (data.bills?.length) setUtilityBills(data.bills);
-                if (data.tasks?.length) setTasks(data.tasks);
-                if (data.messages?.length) setTenantMessages(data.messages);
+            if (data && typeof data === 'object') {
+                if (Array.isArray(data.properties)) setProperties(data.properties);
+                if (Array.isArray(data.tenants)) setTenants(data.tenants);
+                if (Array.isArray(data.units)) setPropertyUnits(data.units);
+                if (Array.isArray(data.bills)) setUtilityBills(data.bills);
+                if (Array.isArray(data.tasks)) setTasks(data.tasks);
+                if (Array.isArray(data.messages)) setTenantMessages(data.messages);
             }
             setIsLoading(false);
         };
@@ -530,14 +530,14 @@ function ManagerDashboard({ tenants, propertyUnits, utilityBills, tasks, tenantM
             </div>
 
             <div className="flex bg-slate-900/50 p-1 rounded-2xl border border-white/5 w-fit overflow-x-auto max-w-full relative">
-                {[
+                {(Array.isArray(tenants) ? [
                     { id: 'rents', icon: <Receipt className="w-4 h-4" />, label: 'Rent Summary' },
                     { id: 'leases', icon: <FileText className="w-4 h-4" />, label: 'Lease Directory' },
                     { id: 'inventory', icon: <Building2 className="w-4 h-4" />, label: 'Property Catalog' },
                     { id: 'utilities', icon: <Droplets className="w-4 h-4" />, label: 'Utilities Share' },
                     { id: 'tasks', icon: <Hammer className="w-4 h-4" />, label: 'Maintenance' },
-                    { id: 'messages', icon: <MessageSquare className="w-4 h-4" />, label: 'Messages', badge: tenantMessages.length > 0 }
-                ].map((tab) => (
+                    { id: 'messages', icon: <MessageSquare className="w-4 h-4" />, label: 'Messages', badge: (tenantMessages?.length > 0) }
+                ] : []).map((tab) => (
                     <button 
                         key={tab.id}
                         onClick={() => setActiveTab(tab.id)} 
@@ -659,19 +659,25 @@ function ManagerDashboard({ tenants, propertyUnits, utilityBills, tasks, tenantM
 
 // --- Rent Summary Tab ---
 function RentSummaryTab({ tenants }) {
-    const today = getLocalDate();
-    const currentMonthLabel = today.toLocaleString(LOCALE, { month: 'long', year: 'numeric', timeZone: APP_TIMEZONE });
+    const today = getLocalDate() || new Date();
+    const currentMonthLabel = (today && typeof today.toLocaleString === 'function') ? today.toLocaleString(LOCALE, { month: 'long', year: 'numeric', timeZone: APP_TIMEZONE }) : 'Current Month';
 
     const upcomingRents = useMemo(() => {
+        if (!Array.isArray(tenants)) return [];
         return tenants.map(t => {
             try {
+                if (!t.leaseStart) throw new Error();
                 const dueDate = calculateNextRentDue(t.leaseStart);
                 const daysUntil = getDaysUntilDue(t.leaseStart);
                 return { ...t, dueDate, daysUntil };
             } catch (e) {
                 return { ...t, dueDate: new Date(), daysUntil: 0 };
             }
-        }).sort((a, b) => (a.dueDate || 0) - (b.dueDate || 0));
+        }).sort((a, b) => {
+            const da = (a.dueDate instanceof Date && !isNaN(a.dueDate)) ? a.dueDate.getTime() : 0;
+            const db = (b.dueDate instanceof Date && !isNaN(b.dueDate)) ? b.dueDate.getTime() : 0;
+            return da - db;
+        });
     }, [tenants]);
 
     const totalRevenueThisCycle = useMemo(() => upcomingRents.reduce((a, b) => a + b.baseRent, 0), [upcomingRents]);
