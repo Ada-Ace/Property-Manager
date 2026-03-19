@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { motion as Motion, AnimatePresence } from 'framer-motion';
+import { motion, motion as Motion, AnimatePresence } from 'framer-motion';
 import {
     LayoutDashboard,
     Users,
@@ -546,7 +546,7 @@ function ManagerDashboard({ tenants, propertyUnits, utilityBills, tasks, tenantM
                         {tab.icon} {tab.label}
                         {tab.badge && <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>}
                         {activeTab === tab.id && (
-                            <motion.div 
+                            <Motion.div 
                                 layoutId="activeTab"
                                 className="absolute inset-0 bg-indigo-600 rounded-xl -z-10 shadow-lg shadow-indigo-600/20"
                                 transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
