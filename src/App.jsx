@@ -683,7 +683,7 @@ function ManagerDashboard({ tenants, propertyUnits, utilityBills, tasks, tenantM
                                         <tr key={t.id} className="group hover:bg-white/5 transition-colors">
                                             <td className="py-4 pl-2 font-bold text-white">{t.name}</td>
                                             <td className="py-4"><span className="text-indigo-400 font-mono text-xs">{t.unit}</span></td>
-                                            <td className="py-4 text-slate-400 text-xs">{t.leaseEnd}</td>
+                                            <td className="py-4 text-slate-400 text-xs">{String(t.leaseEnd || '').split('T')[0]}</td>
                                             <td className="py-4 text-center">
                                                 <div className="flex flex-col items-center">
                                                     <span className={`text-[10px] font-black uppercase tracking-tight ${daysUntil <= 3 ? 'text-orange-400 animate-pulse' : 'text-slate-400'}`}>
@@ -800,7 +800,7 @@ function RentSummaryTab({ tenants }) {
                                 <div className="w-12 h-12 bg-indigo-600 rounded-2xl flex items-center justify-center font-black text-xs shadow-lg shadow-indigo-600/20">{rent.unit}</div>
                                 <div>
                                     <p className="text-sm font-black text-white">{rent.name}</p>
-                                    <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Lease Cycle Started: {rent.leaseStart}</p>
+                                    <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Lease Cycle Started: {String(rent.leaseStart || '').split('T')[0]}</p>
                                 </div>
                             </div>
 
@@ -1271,7 +1271,7 @@ function UtilityManager({ tenants, utilityBills, onAddBill }) {
                                                         </span>
                                                     )}
                                                 </h4>
-                                                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1"><span className="text-indigo-400">{bill.date}</span> • {bill.mode === 'equal' ? 'Standard Split' : 'Designated Split'}</p>
+                                                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1"><span className="text-indigo-400">{String(bill.date || '').split('T')[0]}</span> • {bill.mode === 'equal' ? 'Standard Split' : 'Designated Split'}</p>
                                             </div>
                                         </div>
                                         <div className="text-right">
