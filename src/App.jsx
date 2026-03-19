@@ -524,31 +524,47 @@ export default function App() {
             )}
             </AnimatePresence>
 
-            <nav className="border-b border-white/5 bg-slate-900/50 backdrop-blur-md sticky top-0 z-50">
-                <div className="w-full px-6 md:px-12 h-20 flex items-center justify-between">
-                    <div className="flex items-center gap-2 font-bold text-white">
-                        <div className="bg-indigo-600 p-1.5 rounded-lg">
-                            <Home className="w-5 h-5" />
+            <nav className="border-b border-white/5 bg-slate-900/60 backdrop-blur-xl sticky top-0 z-50 shadow-2xl shadow-black/20">
+                <div className="w-full px-6 md:px-12 h-[72px] flex items-center justify-between">
+                    {/* Brand */}
+                    <div className="flex items-center gap-3">
+                        <div className="bg-indigo-600 p-2 rounded-xl shadow-lg shadow-indigo-600/30 border border-indigo-400/20">
+                            <Home className="w-5 h-5 text-white" />
                         </div>
-                        <span>{import.meta.env.VITE_APP_NAME || "PropManage"} <span className="text-indigo-400 font-normal italic">Pro</span></span>
+                        <div className="flex flex-col leading-none">
+                            <span className="text-white font-black text-base tracking-tight">
+                                {import.meta.env.VITE_APP_NAME || "PropManage"}
+                                <span className="text-indigo-400 font-light italic ml-1 text-sm">Pro</span>
+                            </span>
+                            <span className="text-[9px] text-slate-600 font-black uppercase tracking-[0.2em] mt-0.5">Enterprise Suite</span>
+                        </div>
                     </div>
-                    <div className="flex items-center gap-4">
+
+                    {/* Controls */}
+                    <div className="flex items-center gap-3">
                         {view === 'manager' && (
-                            <div className="relative group flex items-center gap-2">
-                                <Building2 className="w-4 h-4 text-indigo-400" />
+                            <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-2xl px-4 py-2.5 hover:bg-white/10 transition-all">
+                                <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0"></div>
+                                <Building2 className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
                                 <select 
-                                    className="bg-white/5 border border-white/10 rounded-xl px-3 py-1.5 text-[10px] font-black uppercase tracking-widest outline-none hover:bg-white/10 transition-all cursor-pointer text-indigo-200"
+                                    className="bg-transparent border-none text-[10px] font-black uppercase tracking-widest outline-none cursor-pointer text-indigo-200 max-w-[120px] md:max-w-xs"
                                     value={activeProperty}
                                     onChange={(e) => setActiveProperty(e.target.value)}
                                 >
                                     {Array.isArray(properties) && properties.map(p => <option key={p?.id || p} value={p?.name || p} className="bg-slate-900">{p?.name || p}</option>)}
                                 </select>
+                                <ChevronDown className="w-3 h-3 text-slate-500 shrink-0" />
                             </div>
                         )}
-                        <button onClick={logout} className="flex items-center gap-2 text-[10px] uppercase tracking-widest text-red-400 hover:text-red-300 transition-colors bg-red-500/10 px-4 py-2 rounded-xl border border-red-500/20 font-black">
+                        <Motion.button 
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            onClick={logout} 
+                            className="flex items-center gap-2 text-[10px] uppercase tracking-widest text-red-400 hover:text-white hover:bg-red-600 transition-all bg-red-500/10 px-5 py-2.5 rounded-2xl border border-red-500/20 font-black"
+                        >
                             <Power className="w-3.5 h-3.5" />
-                            Sign Out
-                        </button>
+                            <span className="hidden md:inline">Sign Out</span>
+                        </Motion.button>
                     </div>
                 </div>
             </nav>
@@ -627,8 +643,10 @@ function ManagerDashboard({ tenants, propertyUnits, utilityBills, tasks, tenantM
                     { id: 'tasks', icon: <Hammer className="w-4 h-4" />, label: 'Maintenance' },
                     { id: 'messages', icon: <MessageSquare className="w-4 h-4" />, label: 'Messages', badge: (tenantMessages?.length > 0) }
                 ] : []).map((tab) => (
-                    <button 
+                    <Motion.button 
                         key={tab.id}
+                        whileHover={{ y: -2 }}
+                        whileTap={{ scale: 0.95 }}
                         onClick={() => setActiveTab(tab.id)} 
                         className={`relative px-6 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-2 shrink-0 z-10 ${activeTab === tab.id ? 'text-white' : 'text-slate-500 hover:text-slate-300'}`}
                     >
@@ -637,107 +655,130 @@ function ManagerDashboard({ tenants, propertyUnits, utilityBills, tasks, tenantM
                         {activeTab === tab.id && (
                             <Motion.div 
                                 layoutId="activeTab"
-                                className="absolute inset-0 bg-indigo-600 rounded-xl -z-10 shadow-lg shadow-indigo-600/20"
+                                className="absolute inset-0 bg-indigo-600 rounded-xl -z-10 shadow-lg shadow-indigo-600/40"
                                 transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
                             />
                         )}
-                    </button>
+                    </Motion.button>
                 ))}
             </div>
 
-            {activeTab === 'rents' && <RentSummaryTab tenants={tenants} />}
-            {activeTab === 'messages' && <MessagesManager tenants={tenants} messages={tenantMessages} />}
-
-            {activeTab === 'tasks' && <TasksManager tenants={tenants} tasks={tasks} onAddTask={onAddTask} />}
-
-            {activeTab === 'leases' && (
-                <div className="bg-slate-900/50 rounded-3xl border border-white/5 p-6 backdrop-blur-sm shadow-xl">
-                    <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-6 gap-4">
-                        <h3 className="font-bold text-lg flex items-center gap-2 text-white italic">
-                            <Users className="w-5 h-5 text-indigo-400" />
-                            Active Leases
-                        </h3>
-                        <button onClick={() => setShowLeaseModal(true)} className="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-2 shadow-lg shadow-emerald-600/10">
-                            <PlusCircle className="w-3.5 h-3.5" /> Create Lease
-                        </button>
-                    </div>
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-left">
-                            <thead>
-                                <tr className="text-[10px] uppercase text-slate-500 font-black tracking-widest border-b border-white/5">
-                                    <th className="pb-4 pl-2">Tenant</th>
-                                    <th className="pb-4">Unit</th>
-                                    <th className="pb-4">Contract End</th>
-                                    <th className="pb-4 text-center">Next Rent Due</th>
-                                    <th className="pb-4 text-right">Base Rent</th>
-                                    <th className="pb-4 text-right pr-2">Action</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-white/5">
-                                {tenants.map(t => {
-                                    const daysUntil = getDaysUntilDue(t.leaseStart);
-                                    const dueDate = calculateNextRentDue(t.leaseStart);
-                                    const dueDateStr = (dueDate instanceof Date && !isNaN(dueDate)) ? dueDate.toISOString().split('T')[0] : 'N/A';
-                                    
-                                    return (
-                                        <tr key={t.id} className="group hover:bg-white/5 transition-colors">
-                                            <td className="py-4 pl-2 font-bold text-white">{t.name}</td>
-                                            <td className="py-4"><span className="text-indigo-400 font-mono text-xs">{t.unit}</span></td>
-                                            <td className="py-4 text-slate-400 text-xs">{String(t.leaseEnd || '').split('T')[0]}</td>
-                                            <td className="py-4 text-center">
-                                                <div className="flex flex-col items-center">
-                                                    <span className={`text-[10px] font-black uppercase tracking-tight ${daysUntil <= 3 ? 'text-orange-400 animate-pulse' : 'text-slate-400'}`}>
-                                                        {dueDateStr}
-                                                    </span>
-                                                    <span className="text-[8px] font-bold text-slate-600 uppercase">
-                                                        {isNaN(daysUntil) ? 'Invalid Date' : daysUntil === 0 ? 'Due Today' : `${daysUntil} days left`}
-                                                    </span>
-                                                </div>
-                                            </td>
-                                            <td className="py-4 text-right font-black text-white">${t.baseRent}</td>
-                                            <td className="py-4 text-right pr-2">
-                                                <div className="flex items-center justify-end gap-2">
-                                                    {t.mobile && (
-                                                        <WhatsAppRentButton tenant={t} mode="renewal" />
-                                                    )}
-                                                    <button onClick={() => setEditingTenant(t)} className="text-slate-500 hover:text-indigo-400 text-[10px] uppercase font-black tracking-widest bg-white/5 px-3 py-1.5 rounded-lg border border-white/5 hover:border-indigo-500/30 transition-all flex items-center gap-1.5">
-                                                        <Settings className="w-3 h-3" /> Edit
-                                                    </button>
-                                                </div>
-                                            </td>
+            <AnimatePresence mode="wait">
+                <Motion.div
+                    key={activeTab}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    transition={{ duration: 0.2 }}
+                >
+                    {activeTab === 'rents' && <RentSummaryTab tenants={tenants} />}
+                    {activeTab === 'messages' && <MessagesManager tenants={tenants} messages={tenantMessages} />}
+                    {activeTab === 'tasks' && <TasksManager tenants={tenants} tasks={tasks} onAddTask={onAddTask} />}
+                    {activeTab === 'leases' && (
+                        <div className="premium-card rounded-[2.5rem] p-8">
+                            <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-8 gap-4 pb-6 border-b border-white/5">
+                                <h3 className="font-bold text-xl flex items-center gap-3 text-white italic">
+                                    <Users className="w-6 h-6 text-indigo-400" />
+                                    Active Lease Directory
+                                </h3>
+                                <Motion.button 
+                                    whileHover={{ scale: 1.02 }}
+                                    whileTap={{ scale: 0.98 }}
+                                    onClick={() => setShowLeaseModal(true)} 
+                                    className="bg-emerald-600 hover:bg-emerald-500 text-white px-6 py-3 rounded-2xl text-[10px] font-black tracking-widest uppercase transition-all flex items-center gap-2 shadow-xl shadow-emerald-600/20"
+                                >
+                                    <PlusCircle className="w-4 h-4" /> Create New Lease
+                                </Motion.button>
+                            </div>
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-left">
+                                    <thead>
+                                        <tr className="text-[10px] uppercase text-slate-500 font-black tracking-[0.2em] border-b border-white/5">
+                                            <th className="pb-6 pl-2">Tenant</th>
+                                            <th className="pb-6">Unit</th>
+                                            <th className="pb-6">Contract End</th>
+                                            <th className="pb-6 text-center">Next Rent Due</th>
+                                            <th className="pb-6 text-right">Base Rent</th>
+                                            <th className="pb-6 text-right pr-2">Action</th>
                                         </tr>
-                                    );
-                                })}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            )}
-
-            {activeTab === 'inventory' && (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-8">
-                    {propertyUnits.map(unit => {
-                        const tenant = tenants.find(t => t.unit === unit.unitNumber);
-                        return (
-                            <UnitCard
-                                key={unit.id}
-                                unit={unit}
-                                actualRent={tenant?.baseRent}
-                                tenantName={tenant?.name}
-                                onUpdateFittings={(newFittings) => onUpdateFittings(unit.id, newFittings)}
-                            />
-                        );
-                    })}
-                    <button onClick={() => setShowUnitModal(true)} className="h-full min-h-[300px] border-2 border-dashed border-white/5 rounded-[2.5rem] flex flex-col items-center justify-center gap-3 text-slate-500 hover:text-indigo-400 hover:border-indigo-500/30 transition-all group">
-                        <PlusCircle className="w-10 h-10 transition-transform group-hover:scale-110" />
-                        <span className="text-xs font-black uppercase tracking-widest">Add New Unit</span>
-                    </button>
-                </div>
-            )}
-
-            {activeTab === 'utilities' && (
-                <UtilityManager tenants={tenants} utilityBills={utilityBills} onAddBill={onAddBill} />
-            )}
+                                    </thead>
+                                    <tbody className="divide-y divide-white/5">
+                                        {tenants.map(t => {
+                                            const daysUntil = getDaysUntilDue(t.leaseStart);
+                                            const dueDate = calculateNextRentDue(t.leaseStart);
+                                            const dueDateStr = (dueDate instanceof Date && !isNaN(dueDate)) ? dueDate.toISOString().split('T')[0] : 'N/A';
+                                            
+                                            return (
+                                                <tr key={t.id} className="group hover:bg-white/[0.02] transition-colors">
+                                                    <td className="py-6 pl-2 font-black text-white">{t.name}</td>
+                                                    <td className="py-6"><span className="text-indigo-400 font-mono text-xs bg-indigo-500/5 px-2 py-1 rounded-md border border-indigo-500/10">Unit {t.unit}</span></td>
+                                                    <td className="py-6 text-slate-400 text-xs font-bold">{String(t.leaseEnd || '').split('T')[0]}</td>
+                                                    <td className="py-6 text-center">
+                                                        <div className="flex flex-col items-center">
+                                                            <span className={`text-[10px] font-black uppercase tracking-tight ${daysUntil <= 3 ? 'text-orange-400 animate-pulse' : 'text-slate-400'}`}>
+                                                                {dueDateStr}
+                                                            </span>
+                                                            <span className="text-[8px] font-bold text-slate-600 uppercase mt-0.5">
+                                                                {isNaN(daysUntil) ? 'Invalid Date' : daysUntil === 0 ? 'Due Today' : `${daysUntil} days left`}
+                                                            </span>
+                                                        </div>
+                                                    </td>
+                                                    <td className="py-6 text-right font-black text-white tracking-widest">${t.baseRent}</td>
+                                                    <td className="py-6 text-right pr-2">
+                                                        <div className="flex items-center justify-end gap-3">
+                                                            {t.mobile && (
+                                                                <WhatsAppRentButton tenant={t} mode="renewal" />
+                                                            )}
+                                                            <Motion.button 
+                                                                whileHover={{ scale: 1.05 }}
+                                                                whileTap={{ scale: 0.95 }}
+                                                                onClick={() => setEditingTenant(t)} 
+                                                                className="text-slate-400 hover:text-white p-2 rounded-xl bg-white/5 hover:bg-indigo-600 transition-all border border-white/5"
+                                                            >
+                                                                <Settings className="w-4 h-4" />
+                                                            </Motion.button>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    )}
+                    {activeTab === 'inventory' && (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                            {propertyUnits.map(unit => {
+                                const tenant = tenants.find(t => t.unit === unit.unitNumber);
+                                return (
+                                    <UnitCard
+                                        key={unit.id}
+                                        unit={unit}
+                                        actualRent={tenant?.baseRent}
+                                        tenantName={tenant?.name}
+                                        onUpdateFittings={(newFittings) => onUpdateFittings(unit.id, newFittings)}
+                                    />
+                                );
+                            })}
+                            <Motion.button 
+                                whileHover={{ y: -5, scale: 1.01 }}
+                                whileTap={{ scale: 0.98 }}
+                                onClick={() => setShowUnitModal(true)} 
+                                className="h-full min-h-[300px] border-2 border-dashed border-white/5 bg-white/[0.02] rounded-[2.5rem] flex flex-col items-center justify-center gap-4 text-slate-500 hover:text-indigo-400 hover:border-indigo-500/30 transition-all group shadow-xl"
+                            >
+                                <div className="p-5 bg-slate-800 rounded-3xl group-hover:bg-indigo-600 transition-colors">
+                                    <PlusCircle className="w-10 h-10 group-hover:text-white" />
+                                </div>
+                                <span className="text-[10px] font-black uppercase tracking-[0.3em]">Add New Unit</span>
+                            </Motion.button>
+                        </div>
+                    )}
+                    {activeTab === 'utilities' && (
+                        <UtilityManager tenants={tenants} utilityBills={utilityBills} onAddBill={onAddBill} />
+                    )}
+                </Motion.div>
+            </AnimatePresence>
 
             {showUnitModal && <UnitModal onClose={() => setShowUnitModal(false)} onSubmit={onAddUnit} />}
             {showLeaseModal && <LeaseModal availableUnits={propertyUnits.filter(u => u.status === 'Available')} onClose={() => setShowLeaseModal(false)} onSubmit={onAddTenant} />}
@@ -773,57 +814,86 @@ function RentSummaryTab({ tenants }) {
     const soonDueCount = upcomingRents.filter(r => r && (Number(r?.daysUntil) || 0) <= 3).length;
 
     return (
-        <div className="space-y-8 animate-in fade-in duration-700">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <StatCard title="Expected Revenue" value={`$${totalRevenueThisCycle.toLocaleString()}`} icon={<DollarSign className="text-emerald-400" />} />
-                <StatCard title="Upcoming Collections" value={upcomingRents.length} icon={<CalendarRange className="text-blue-400" />} />
-                <StatCard title="Action Required" value={soonDueCount} icon={<BellRing className={soonDueCount > 0 ? "text-orange-400 animate-bounce" : "text-slate-500"} />} />
+        <div className="space-y-8">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <StatCard index={0} title="Expected Revenue" value={`$${totalRevenueThisCycle.toLocaleString()}`} icon={<DollarSign className="text-emerald-400" />} />
+                <StatCard index={1} title="Collections Due" value={upcomingRents.length} icon={<CalendarRange className="text-blue-400" />} />
+                <StatCard index={2} title="Action Required" value={soonDueCount} icon={<BellRing className={soonDueCount > 0 ? "text-orange-400 animate-bounce" : "text-slate-500"} />} />
             </div>
 
-            <div className="bg-slate-900/50 rounded-3xl border border-white/5 p-8 backdrop-blur-sm shadow-xl">
-                <div className="flex justify-between items-center mb-10 pb-6 border-b border-white/5">
+            <div className="premium-card rounded-[2.5rem] p-8">
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 pb-6 border-b border-white/5 gap-4">
                     <div>
-                        <h3 className="font-bold text-xl text-white italic flex items-center gap-3">
-                            <CreditCard className="w-6 h-6 text-indigo-400" />
-                            Monthly Rent Summary: <span className="text-indigo-400 underline decoration-indigo-400/30 decoration-dashed">{currentMonthLabel}</span>
+                        <h3 className="font-black text-2xl text-white italic tracking-tight flex items-center gap-3">
+                            <CreditCard className="w-7 h-7 text-indigo-400" />
+                            Rent Collection
                         </h3>
-                        <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest mt-2 flex items-center gap-2">
-                             <Info className="w-3 h-3" /> Rents are generated based on lease start days
+                        <p className="text-[10px] text-slate-500 font-black uppercase tracking-[0.2em] mt-2">
+                            {currentMonthLabel} · Sorted by urgency
                         </p>
                     </div>
+                    {soonDueCount > 0 && (
+                        <div className="flex items-center gap-2 bg-orange-500/10 border border-orange-500/20 px-5 py-2.5 rounded-2xl">
+                            <BellRing className="w-4 h-4 text-orange-400 animate-bounce" />
+                            <span className="text-[10px] font-black text-orange-400 uppercase tracking-widest">{soonDueCount} Urgent</span>
+                        </div>
+                    )}
                 </div>
 
                 <div className="space-y-4">
-                    {upcomingRents.map(rent => (
-                        <div key={rent.id} className="bg-white/5 rounded-2xl p-6 border border-white/5 flex flex-col md:flex-row items-center justify-between group hover:bg-white/10 transition-all">
-                            <div className="flex items-center gap-4 mb-4 md:mb-0">
-                                <div className="w-12 h-12 bg-indigo-600 rounded-2xl flex items-center justify-center font-black text-xs shadow-lg shadow-indigo-600/20">{rent.unit}</div>
-                                <div>
-                                    <p className="text-sm font-black text-white">{rent.name}</p>
-                                    <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Lease Cycle Started: {String(rent.leaseStart || '').split('T')[0]}</p>
+                    {upcomingRents.map((rent, idx) => {
+                        const isUrgent = rent.daysUntil <= 3;
+                        const isOverdue = rent.daysUntil < 0;
+                        const dueDateStr = (rent.dueDate instanceof Date && !isNaN(rent.dueDate)) ? rent.dueDate.toISOString().split('T')[0] : 'N/A';
+                        return (
+                            <Motion.div 
+                                key={rent.id} 
+                                initial={{ opacity: 0, x: -10 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                transition={{ delay: idx * 0.05 }}
+                                className={`rounded-3xl p-6 border flex flex-col md:flex-row items-start md:items-center justify-between gap-5 transition-all ${
+                                    isOverdue ? 'bg-red-500/5 border-red-500/20 hover:bg-red-500/10' :
+                                    isUrgent ? 'bg-orange-500/5 border-orange-500/20 hover:bg-orange-500/10' :
+                                    'bg-white/[0.03] border-white/5 hover:bg-white/[0.06]'
+                                }`}
+                            >
+                                {/* Left: avatar + info */}
+                                <div className="flex items-center gap-5">
+                                    <div className={`w-14 h-14 rounded-2xl flex items-center justify-center font-black text-xs shadow-lg shrink-0 ${
+                                        isOverdue ? 'bg-red-600 shadow-red-600/20' :
+                                        isUrgent ? 'bg-orange-500 shadow-orange-500/20' :
+                                        'bg-indigo-600 shadow-indigo-600/20'
+                                    }`}>{rent.unit}</div>
+                                    <div>
+                                        <p className="text-base font-black text-white tracking-tight">{rent.name}</p>
+                                        <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest mt-0.5">Cycle: {String(rent.leaseStart || '').split('T')[0]}</p>
+                                    </div>
                                 </div>
-                            </div>
 
-                            <div className="flex items-center gap-8 w-full md:w-auto justify-between md:justify-end">
-                                <div className="text-center md:text-right">
-                                    <p className="text-[9px] font-black text-slate-600 uppercase tracking-widest mb-1">Due Date</p>
-                                    <p className={`text-lg font-black tracking-tighter ${rent.daysUntil <= 3 ? 'text-orange-400' : 'text-slate-300'}`}>
-                                        {(rent.dueDate instanceof Date && !isNaN(rent.dueDate)) ? rent.dueDate.toISOString().split('T')[0] : 'N/A'}
-                                    </p>
-                                    <p className="text-[8px] font-black text-slate-500 uppercase">{rent.daysUntil === 0 ? 'TODAY' : rent.daysUntil < 0 ? 'OVERDUE' : `${rent.daysUntil} days left`}</p>
-                                </div>
+                                {/* Right: info + action */}
+                                <div className="flex flex-wrap items-center gap-4 md:gap-6 w-full md:w-auto">
+                                    <div className="text-left md:text-right">
+                                        <p className="text-[9px] font-black text-slate-600 uppercase tracking-widest mb-1">Due</p>
+                                        <p className={`text-sm font-black tracking-tight ${
+                                            isOverdue ? 'text-red-400' : isUrgent ? 'text-orange-400' : 'text-slate-300'
+                                        }`}>{dueDateStr}</p>
+                                        <p className={`text-[9px] font-black uppercase mt-0.5 ${
+                                            isOverdue ? 'text-red-500' : isUrgent ? 'text-orange-500' : 'text-slate-600'
+                                        }`}>
+                                            {rent.daysUntil === 0 ? '🔴 Due Today' : isOverdue ? `${Math.abs(rent.daysUntil)}d overdue` : `${rent.daysUntil}d left`}
+                                        </p>
+                                    </div>
 
-                                <div className="text-right">
-                                    <p className="text-[9px] font-black text-slate-600 uppercase tracking-widest mb-1">Rent Amount</p>
-                                    <p className="text-2xl font-black text-emerald-400 tracking-tighter">${rent.baseRent.toLocaleString()}</p>
-                                </div>
+                                    <div className="bg-white/5 px-5 py-3 rounded-2xl border border-white/5">
+                                        <p className="text-[9px] font-black text-slate-600 uppercase tracking-widest mb-1">Monthly Rent</p>
+                                        <p className="text-xl font-black text-emerald-400 tracking-tighter">${Number(rent.baseRent).toLocaleString()}</p>
+                                    </div>
 
-                                <div className="pl-4 border-l border-white/5 flex items-center gap-2">
                                     {rent.mobile && <WhatsAppRentButton tenant={rent} mode="rent" />}
                                 </div>
-                            </div>
-                        </div>
-                    ))}
+                            </Motion.div>
+                        );
+                    })}
                 </div>
             </div>
         </div>
@@ -832,80 +902,100 @@ function RentSummaryTab({ tenants }) {
 
 function MessagesManager({ tenants, messages }) {
     return (
-        <div className="space-y-6 animate-in fade-in slide-in-from-top-4 duration-700">
-            <div className="bg-slate-900/50 rounded-[2.5rem] border border-white/5 p-8 backdrop-blur-sm shadow-xl">
-                <div className="flex justify-between items-center mb-8 pb-6 border-b border-white/5">
-                    <h3 className="font-bold text-xl text-white italic flex items-center gap-3">
-                        <MessageSquare className="w-6 h-6 text-indigo-400" />
-                        Tenant Communications
-                    </h3>
-                    <div className="bg-indigo-600/10 text-indigo-400 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border border-indigo-500/20">
-                        {messages.length} Total Messages
+        <div className="space-y-6">
+            <div className="premium-card rounded-[2.5rem] p-8">
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 pb-6 border-b border-white/5 gap-4">
+                    <div>
+                        <h3 className="font-black text-2xl text-white italic tracking-tight flex items-center gap-3">
+                            <MessageSquare className="w-7 h-7 text-indigo-400" />
+                            Communications
+                        </h3>
+                        <p className="text-[10px] text-slate-500 font-black uppercase tracking-[0.2em] mt-2">Tenant inbox · All messages</p>
+                    </div>
+                    <div className={`px-5 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest border ${
+                        messages.length > 0 
+                        ? 'bg-indigo-600/10 text-indigo-400 border-indigo-500/20' 
+                        : 'bg-white/5 text-slate-500 border-white/5'
+                    }`}>
+                        {messages.length} {messages.length === 1 ? 'Message' : 'Messages'}
                     </div>
                 </div>
 
-                <div className="space-y-4">
-                    {messages.length === 0 ? (
-                        <div className="text-center py-12 text-slate-500">
-                            <MessageSquare className="w-12 h-12 mx-auto mb-4 opacity-20" />
-                            <p className="text-sm font-bold uppercase tracking-widest">No messages from tenants</p>
+                {messages.length === 0 ? (
+                    <div className="text-center py-24 text-slate-600">
+                        <div className="w-20 h-20 bg-white/5 rounded-[2rem] flex items-center justify-center mx-auto mb-6 border border-white/5">
+                            <MessageSquare className="w-10 h-10 opacity-30" />
                         </div>
-                    ) : (
-                        messages.map(msg => {
+                        <p className="text-sm font-black uppercase tracking-[0.3em]">Inbox is empty</p>
+                        <p className="text-[10px] text-slate-700 font-bold mt-2">Messages sent by tenants will appear here</p>
+                    </div>
+                ) : (
+                    <div className="space-y-5">
+                        {messages.map((msg, idx) => {
                             const tenant = tenants.find(t => t.id === msg.tenantId);
                             const waReplyLink = tenant ? `https://wa.me/${String(tenant.mobile || '').replace(/\D/g, '')}?text=${encodeURIComponent(`Hi ${String(tenant.name || 'Tenant').split(' ')[0]}, received your message: "${msg.content}". \n\n`)}` : '#';
+                            const initials = (tenant?.name || '??').split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
 
                             return (
-                                <div key={msg.id} className="bg-white/5 rounded-3xl p-6 border border-white/5 group hover:border-indigo-500/30 transition-all">
+                                <Motion.div 
+                                    key={msg.id} 
+                                    initial={{ opacity: 0, y: 10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ delay: idx * 0.05 }}
+                                    className="bg-white/[0.03] rounded-3xl p-6 border border-white/5 hover:border-indigo-500/20 hover:bg-white/[0.05] transition-all group"
+                                >
                                     <div className="flex flex-col md:flex-row justify-between items-start gap-6">
                                         <div className="flex-1">
-                                            <div className="flex items-center gap-3 mb-3">
-                                                <div className="bg-indigo-600 w-10 h-10 rounded-xl flex items-center justify-center font-black text-[10px] text-white">
-                                                    {tenant?.unit || '??'}
+                                            <div className="flex items-center gap-4 mb-5">
+                                                <div className="w-12 h-12 bg-gradient-to-br from-indigo-600 to-violet-700 rounded-2xl flex items-center justify-center font-black text-sm text-white shadow-lg shadow-indigo-600/20 shrink-0">
+                                                    {initials}
                                                 </div>
-                                                <div>
-                                                    <h4 className="font-black text-white text-sm">{tenant?.name || 'Unknown Tenant'}</h4>
-                                                    <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">
+                                                <div className="flex-1">
+                                                    <div className="flex items-center gap-3">
+                                                        <h4 className="font-black text-white">{tenant?.name || 'Unknown Tenant'}</h4>
+                                                        <span className="text-[9px] text-indigo-400 font-black uppercase bg-indigo-500/10 px-2 py-0.5 rounded-md border border-indigo-500/10">Unit {tenant?.unit}</span>
+                                                    </div>
+                                                    <p className="text-[10px] text-slate-600 font-black uppercase tracking-widest mt-1">
                                                         {formatDate(msg.timestamp, true)}
                                                     </p>
                                                 </div>
                                             </div>
-                                            <div className="bg-slate-950/50 p-4 rounded-2xl border border-white/5 text-slate-300 text-sm italic leading-relaxed mb-4">
-                                                "{msg.content}"
+                                            <div className="bg-slate-950/60 p-5 rounded-2xl border border-white/5 text-slate-300 text-sm italic leading-relaxed">
+                                                <span className="text-slate-600 mr-1 text-lg leading-none">"</span>
+                                                {msg.content}
+                                                <span className="text-slate-600 ml-1 text-lg leading-none">"</span>
                                             </div>
                                             {msg.photoUrl && (
-                                                 <div className="mb-4">
-                                                     <a href={msg.photoUrl} target="_blank" rel="noopener noreferrer" className="inline-block relative group">
-                                                         <img 
-                                                             src={msg.photoUrl} 
-                                                             alt="Attachment" 
-                                                             className="h-32 w-auto rounded-2xl border border-white/10 shadow-lg group-hover:scale-[1.02] transition-transform" 
-                                                         />
-                                                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-2xl">
+                                                <div className="mt-4">
+                                                    <a href={msg.photoUrl} target="_blank" rel="noopener noreferrer" className="inline-block relative">
+                                                        <img src={msg.photoUrl} alt="Attachment" className="h-36 w-auto rounded-2xl border border-white/10 shadow-xl group-hover:scale-[1.02] transition-transform" />
+                                                        <div className="absolute inset-0 bg-black/40 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center rounded-2xl">
                                                             <ExternalLink className="w-5 h-5 text-white" />
                                                         </div>
                                                     </a>
                                                 </div>
                                             )}
                                         </div>
-                                        <div className="w-full md:w-auto self-end md:self-center">
+                                        <div className="w-full md:w-auto self-end flex-shrink-0">
                                             {tenant && (
-                                                <a
+                                                <Motion.a
+                                                    whileHover={{ scale: 1.04 }}
+                                                    whileTap={{ scale: 0.96 }}
                                                     href={waReplyLink}
                                                     target="_blank"
                                                     rel="noopener noreferrer"
-                                                    className="w-full md:w-auto bg-emerald-600 hover:bg-emerald-500 text-white px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/10 transition-all"
+                                                    className="w-full md:w-auto bg-emerald-600 hover:bg-emerald-500 text-white px-7 py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 shadow-xl shadow-emerald-600/20 transition-all"
                                                 >
-                                                    <MessageSquare className="w-4 h-4" /> Reply via WhatsApp
-                                                </a>
+                                                    <MessageSquare className="w-4 h-4" /> Reply on WhatsApp
+                                                </Motion.a>
                                             )}
                                         </div>
                                     </div>
-                                </div>
+                                </Motion.div>
                             );
-                        })
-                    )}
-                </div>
+                        })}
+                    </div>
+                )}
             </div>
         </div>
     );
@@ -1178,19 +1268,24 @@ function UtilityManager({ tenants, utilityBills, onAddBill }) {
             )}
 
             {activeTab === 'monthly' && (
-                <div className="bg-slate-900/50 rounded-[2.5rem] border border-white/5 p-8 backdrop-blur-sm shadow-xl animate-in fade-in slide-in-from-top-4">
-                    <div className="flex justify-between items-center mb-8 border-b border-white/5 pb-6">
-                        <h3 className="font-bold text-lg flex items-center gap-2 text-white italic"><Calendar className="w-5 h-5 text-indigo-400" /> Monthly Summary</h3>
+                <div className="premium-card rounded-[2.5rem] p-8">
+                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 border-b border-white/5 pb-6 gap-4">
+                        <div>
+                            <h3 className="font-black text-2xl text-white italic tracking-tight flex items-center gap-3">
+                                <Calendar className="w-6 h-6 text-indigo-400" /> Monthly Utility Breakdown
+                            </h3>
+                            <p className="text-[10px] text-slate-500 font-black uppercase tracking-[0.2em] mt-2">Bills per tenant · {new Date(effectiveMonth + '-01').toLocaleString('default', { month: 'long', year: 'numeric' })}</p>
+                        </div>
                         <div className="flex items-center gap-3">
-                            <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Select Month</span>
-                            <select className="bg-slate-800 border border-white/10 hover:border-indigo-500/50 rounded-xl px-4 py-2 text-white text-sm font-bold outline-none cursor-pointer" value={effectiveMonth} onChange={e => setSelectedMonth(e.target.value)}>
+                            <span className="text-[10px] font-black text-slate-600 uppercase tracking-widest hidden md:inline">Period</span>
+                            <select className="bg-slate-950/60 border border-white/10 hover:border-indigo-500/40 rounded-2xl px-5 py-3 text-white text-xs font-black outline-none cursor-pointer transition-all" value={effectiveMonth} onChange={e => setSelectedMonth(e.target.value)}>
                                 {uniqueMonths.map(m => <option key={m} value={m}>{new Date(m + '-01').toLocaleString('default', { month: 'long', year: 'numeric' })}</option>)}
                             </select>
                         </div>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {Array.isArray(tenants) && tenants.map(t => {
+                        {Array.isArray(tenants) && tenants.map((t, idx) => {
                             const billsInMonth = (Array.isArray(utilityBills) ? utilityBills.filter(b => b && typeof b.date === 'string' && b.date.startsWith(effectiveMonth)) : []);
                             const breakdowns = billsInMonth.reduce((acc, bill) => {
                                 const alloc = bill.allocations.find(a => a.tenantId === t.id);
@@ -1200,45 +1295,60 @@ function UtilityManager({ tenants, utilityBills, onAddBill }) {
                             const totalOwed = breakdowns.reduce((sum, item) => sum + item.amount, 0);
 
                             return (
-                                <div key={t.id} className="bg-white/5 rounded-3xl p-6 border border-white/5 flex flex-col justify-between hover:bg-white/10 transition-colors">
+                                <Motion.div 
+                                    key={t.id} 
+                                    initial={{ opacity: 0, y: 15 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ delay: idx * 0.08 }}
+                                    className="bg-white/[0.03] rounded-3xl p-6 border border-white/5 flex flex-col hover:border-indigo-500/20 hover:bg-white/[0.06] transition-all group"
+                                >
                                     <div className="flex items-center gap-4 mb-6">
-                                        <div className="w-12 h-12 bg-indigo-600/20 text-indigo-400 border border-indigo-500/20 rounded-2xl flex items-center justify-center font-black text-sm">{t.unit}</div>
+                                        <div className="w-12 h-12 bg-indigo-600/20 text-indigo-400 border border-indigo-500/20 rounded-2xl flex items-center justify-center font-black text-sm shrink-0">{t.unit}</div>
                                         <div>
-                                            <p className="text-sm font-black text-white">{t.name}</p>
-                                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{t.mobile || 'No Contact'}</p>
+                                            <p className="font-black text-white">{t.name}</p>
+                                            <p className="text-[10px] text-slate-600 font-black uppercase tracking-widest mt-0.5">{t.mobile || 'No Contact'}</p>
                                         </div>
                                     </div>
-                                    {breakdowns.length > 0 ? (
-                                        <div className="space-y-2 mb-6 flex-1">
-                                            {breakdowns.map((b, i) => (
-                                                <div key={i} className="flex justify-between items-center text-xs">
-                                                    <span className="text-slate-400 font-bold uppercase tracking-widest text-[9px]">{b.type}</span>
-                                                    <span className="text-slate-300 font-black">${b.amount.toFixed(2)}</span>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    ) : (
-                                        <div className="flex-1 flex items-center justify-center py-4 mb-6">
-                                            <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">No Bills Allocated</p>
-                                        </div>
-                                    )}
-                                    <div className="pt-4 border-t border-white/5">
-                                        <div className={`${t.mobile && totalOwed > 0 ? 'mb-4' : ''} flex justify-between items-end`}>
-                                            <span className="text-[10px] text-slate-500 font-black uppercase tracking-widest">Total Due</span>
-                                            <span className="text-xl font-black text-emerald-400 tracking-tighter">${totalOwed.toFixed(2)}</span>
+
+                                    <div className="flex-1">
+                                        {breakdowns.length > 0 ? (
+                                            <div className="space-y-2.5">
+                                                {breakdowns.map((b, i) => (
+                                                    <div key={i} className="flex justify-between items-center bg-white/5 px-4 py-2.5 rounded-xl border border-white/5">
+                                                        <span className="text-slate-400 font-black uppercase tracking-widest text-[9px] flex items-center gap-2">
+                                                            {b.type === 'Electricity' ? <Zap className="w-3 h-3 text-amber-400" /> : b.type === 'Water' ? <Droplets className="w-3 h-3 text-blue-400" /> : <Flame className="w-3 h-3 text-orange-400" />}
+                                                            {b.type}
+                                                        </span>
+                                                        <span className="text-white font-black text-sm">${b.amount.toFixed(2)}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            <div className="flex-1 flex items-center justify-center py-8 border border-dashed border-white/5 rounded-2xl">
+                                                <p className="text-[9px] text-slate-600 font-black uppercase tracking-widest">No Bills Allocated</p>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    <div className="pt-5 mt-5 border-t border-white/5">
+                                        <div className="flex justify-between items-center mb-4">
+                                            <span className="text-[10px] text-slate-500 font-black uppercase tracking-widest">Utility Total</span>
+                                            <span className={`text-2xl font-black tracking-tighter ${totalOwed > 0 ? 'text-emerald-400' : 'text-slate-600'}`}>${totalOwed.toFixed(2)}</span>
                                         </div>
                                         {t.mobile && totalOwed > 0 && (
-                                            <a
+                                            <Motion.a
+                                                whileHover={{ scale: 1.02 }}
+                                                whileTap={{ scale: 0.98 }}
                                                 href={`https://wa.me/${String(t.mobile || '').replace(/\D/g, '')}?text=${encodeURIComponent(`Hi ${String(t.name || 'Tenant').split(' ')[0]},\n\nYour utility bill summary for ${new Date(effectiveMonth + '-01').toLocaleString('default', { month: 'long', year: 'numeric' })} is:\n${breakdowns.map(b => `- ${b.type}: $${b.amount.toFixed(2)}`).join('\n')}\n\n*Total Due: $${totalOwed.toFixed(2)}*`)}`}
                                                 target="_blank"
                                                 rel="noopener noreferrer"
-                                                className="w-full bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest flex justify-center items-center gap-2 transition-all"
+                                                className="w-full bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-widest flex justify-center items-center gap-2 transition-all shadow-lg shadow-emerald-600/5"
                                             >
-                                                <MessageSquare className="w-3.5 h-3.5" /> Send WhatsApp
-                                            </a>
+                                                <MessageSquare className="w-3.5 h-3.5" /> Send Utility Alert
+                                            </Motion.a>
                                         )}
                                     </div>
-                                </div>
+                                </Motion.div>
                             );
                         })}
                     </div>
@@ -1669,75 +1779,138 @@ function UnitCard({ unit, actualRent, tenantName, onUpdateFittings }) {
     const isOccupied = unit.status === 'Occupied' || !!tenantName;
 
     return (
-        <div className="bg-slate-900/50 rounded-[2.5rem] border border-white/5 overflow-hidden group hover:border-indigo-500/30 transition-all shadow-xl flex flex-col">
-            <div className={`h-44 bg-slate-800 relative flex items-center justify-center ${!isOccupied ? 'p-0' : 'p-0'}`}>
-                <div className="text-slate-700 flex flex-col items-center gap-2">
-                    <ImageIcon className="w-12 h-12 opacity-20" />
-                    <span className="text-[10px] font-black uppercase tracking-widest opacity-40">Unit {unit.unitNumber} Preview</span>
+        <Motion.div 
+            layout
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="premium-card rounded-[2.5rem] overflow-hidden group flex flex-col h-full"
+        >
+            <div className={`h-48 relative flex items-center justify-center overflow-hidden bg-slate-800/50`}>
+                <div className="absolute inset-0 bg-gradient-to-b from-transparent to-slate-900/80" />
+                <div className="text-slate-700 flex flex-col items-center gap-2 relative z-10 transition-transform group-hover:scale-110 duration-700">
+                    <ImageIcon className="w-16 h-16 opacity-10" />
+                    <span className="text-[10px] font-black uppercase tracking-[0.3em] opacity-30">Unit {unit.unitNumber}</span>
                 </div>
-                <div className={`absolute top-6 right-6 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border backdrop-blur-md ${!isOccupied ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-indigo-600/20 text-indigo-400 border-indigo-500/20'
-                    }`}>
+                <div className={`absolute top-6 right-6 px-4 py-2 rounded-2xl text-[10px] font-black uppercase tracking-widest border backdrop-blur-xl shadow-2xl z-20 ${
+                    !isOccupied 
+                    ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' 
+                    : 'bg-indigo-600/30 text-indigo-400 border-indigo-500/30'
+                }`}>
                     {isOccupied ? 'Occupied' : 'Available'}
                 </div>
             </div>
 
-            <div className="p-8 flex-1 flex flex-col">
-                <div className="flex justify-between items-start mb-6">
+            <div className="p-8 flex-1 flex flex-col relative">
+                <div className="flex justify-between items-start mb-8">
                     <div>
                         <h4 className="text-2xl font-black text-white tracking-tighter italic">Unit {unit.unitNumber}</h4>
-                        <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest flex items-center gap-1.5 mt-1"><Maximize className="w-3.5 h-3.5" /> {unit.size} SQFT</p>
+                        <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest flex items-center gap-2 mt-1.5 opacity-60">
+                            <Maximize className="w-3.5 h-3.5" /> {unit.size} SQFT Space
+                        </p>
                     </div>
-                    <div className="flex bg-slate-800/50 p-1 rounded-xl border border-white/5">
-                        <button onClick={() => setActiveSubTab('info')} className={`px-3 py-1.5 rounded-lg text-[9px] font-black transition-all uppercase ${activeSubTab === 'info' ? 'bg-indigo-600 text-white' : 'text-slate-500'}`}>Finance</button>
-                        <button onClick={() => setActiveSubTab('fittings')} className={`px-3 py-1.5 rounded-lg text-[9px] font-black transition-all uppercase ${activeSubTab === 'fittings' ? 'bg-indigo-600 text-white' : 'text-slate-500'}`}>Fittings</button>
+                    <div className="flex bg-slate-950/40 p-1 rounded-2xl border border-white/5 shadow-inner">
+                        {[
+                            { id: 'info', label: 'Finance' },
+                            { id: 'fittings', label: 'Inventory' }
+                        ].map(st => (
+                            <button 
+                                key={st.id}
+                                onClick={() => setActiveSubTab(st.id)} 
+                                className={`px-4 py-2 rounded-xl text-[9px] font-black transition-all uppercase tracking-tight ${
+                                    activeSubTab === st.id 
+                                    ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20' 
+                                    : 'text-slate-500 hover:text-slate-300'
+                                }`}
+                            >
+                                {st.label}
+                            </button>
+                        ))}
                     </div>
                 </div>
 
-                <div className="flex-1">
-                    {activeSubTab === 'info' ? (
-                        <div className="flex justify-between items-end h-full">
-                            <div className="space-y-3 pb-1">
-                                {isOccupied ? (
-                                    <div className="flex items-center gap-2 text-indigo-400 font-bold bg-indigo-500/5 px-3 py-1.5 rounded-xl border border-indigo-500/10 w-fit">
-                                        <User className="w-4 h-4" />
-                                        <span className="text-xs uppercase tracking-tight">{tenantName || 'Active Lease'}</span>
+                <div className="flex-1 min-h-[140px]">
+                    <AnimatePresence mode="wait">
+                        <Motion.div
+                            key={activeSubTab}
+                            initial={{ opacity: 0, x: 5 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            exit={{ opacity: 0, x: -5 }}
+                            transition={{ duration: 0.15 }}
+                            className="h-full"
+                        >
+                            {activeSubTab === 'info' ? (
+                                <div className="flex justify-between items-end h-full pt-2">
+                                    <div className="space-y-4">
+                                        {isOccupied ? (
+                                            <div className="space-y-1">
+                                                <p className="text-[8px] font-black text-slate-600 uppercase tracking-widest ml-1">Current Resident</p>
+                                                <div className="flex items-center gap-2.5 text-indigo-400 font-black bg-indigo-500/5 px-4 py-2 rounded-2xl border border-indigo-500/10">
+                                                    <User className="w-4 h-4" />
+                                                    <span className="text-xs uppercase tracking-tight truncate max-w-[120px]">{tenantName}</span>
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <div className="flex items-center gap-2.5 text-emerald-500 font-black bg-emerald-500/5 px-4 py-2 rounded-2xl border border-emerald-500/10">
+                                                <LayoutGrid className="w-4 h-4" />
+                                                <span className="text-[9px] uppercase tracking-widest">Market Ready</span>
+                                            </div>
+                                        )}
                                     </div>
-                                ) : (
-                                    <div className="flex items-center gap-2 text-emerald-500 font-bold bg-emerald-500/5 px-3 py-1.5 rounded-xl border border-emerald-500/10 w-fit">
-                                        <LayoutGrid className="w-4 h-4" />
-                                        <span className="text-[9px] uppercase tracking-widest">Vacant & Ready</span>
+                                    <div className="flex items-center gap-4">
+                                        <div className="text-right">
+                                            <p className="text-[8px] font-black text-slate-600 uppercase tracking-widest mb-1.5 px-1 truncate">Market Target</p>
+                                            <p className={`text-2xl font-black tracking-tighter leading-none ${isOccupied ? 'text-slate-700 decoration-slate-800' : 'text-white'}`}>
+                                                <span className="text-xs">$</span>{Number(unit.expectedRent).toLocaleString()}
+                                            </p>
+                                        </div>
+                                        {isOccupied && (
+                                            <div className="text-right bg-indigo-600/10 px-5 py-3 rounded-2xl border border-indigo-500/20 shadow-xl shadow-indigo-600/5">
+                                                <p className="text-[8px] font-black text-indigo-400 uppercase tracking-widest mb-1.5 px-1 truncate">Actual Lease</p>
+                                                <p className="text-3xl font-black text-white tracking-tighter leading-none">
+                                                    <span className="text-sm text-indigo-500 mr-0.5">$</span>{Number(actualRent).toLocaleString()}
+                                                </p>
+                                            </div>
+                                        )}
                                     </div>
-                                )}
-                            </div>
-                            <div className="flex items-center gap-4">
-                                <div className="text-right">
-                                    <p className="text-[9px] font-black text-slate-600 uppercase tracking-widest mb-0.5">Target</p>
-                                    <p className={`text-xl font-black tracking-tighter ${isOccupied ? 'text-slate-500 line-through opacity-50' : 'text-white'}`}>
-                                        ${Number(unit.expectedRent).toLocaleString()}
-                                    </p>
                                 </div>
-                                {isOccupied && (
-                                    <div className="text-right bg-indigo-600/10 px-4 py-2 rounded-2xl border border-indigo-500/20">
-                                        <p className="text-[9px] font-black text-indigo-400 uppercase tracking-widest mb-0.5">Actual</p>
-                                        <p className="text-2xl font-black text-white tracking-tighter">
-                                            ${Number(actualRent).toLocaleString()}
-                                        </p>
+                            ) : (
+                                <div className="space-y-4 h-full flex flex-col">
+                                    <div className="flex flex-wrap gap-2 pt-1">
+                                        {unit.fittings?.length > 0 ? (
+                                            unit.fittings.map((fit, idx) => (
+                                                <span key={idx} className="bg-slate-800/40 border border-white/5 text-slate-400 text-[9px] font-black px-3 py-2 rounded-xl uppercase tracking-tight flex items-center gap-2">
+                                                    <CheckCircle2 className="w-3 h-3 text-indigo-500" />
+                                                    {fit}
+                                                </span>
+                                            ))
+                                        ) : (
+                                            <div className="w-full py-6 text-center border border-dashed border-white/5 rounded-2xl text-slate-600">
+                                                <p className="text-[9px] font-black uppercase tracking-widest">No inventory items listed</p>
+                                            </div>
+                                        )}
                                     </div>
-                                )}
-                            </div>
-                        </div>
-                    ) : (
-                        <div className="space-y-4 h-full flex flex-col">
-                            <div className="flex flex-wrap gap-2">
-                                {unit.fittings?.map((fit, idx) => (<span key={idx} className="bg-white/5 border border-white/5 text-slate-400 text-[9px] font-black px-2.5 py-1.5 rounded-lg uppercase tracking-tight flex items-center gap-1.5"><CheckCircle2 className="w-2.5 h-2.5 text-indigo-500" />{fit}</span>))}
-                            </div>
-                            <button onClick={() => setShowInventoryModal(true)} className="w-full py-3 border-2 border-dashed border-white/5 rounded-2xl flex items-center justify-center gap-2 text-[10px] font-black uppercase text-slate-500 hover:text-indigo-400 mt-auto"><PlusCircle className="w-3.5 h-3.5" /> Manage Inventory</button>
-                        </div>
-                    )}
+                                    <Motion.button 
+                                        whileHover={{ scale: 1.02 }}
+                                        whileTap={{ scale: 0.98 }}
+                                        onClick={() => setShowInventoryModal(true)} 
+                                        className="w-full py-4 bg-white/5 hover:bg-white/10 rounded-2xl flex items-center justify-center gap-3 text-[10px] font-black uppercase text-slate-400 hover:text-white transition-all border border-white/5 mt-auto"
+                                    >
+                                        <PlusCircle className="w-4 h-4" /> Manage Catalog
+                                    </Motion.button>
+                                </div>
+                            )}
+                        </Motion.div>
+                    </AnimatePresence>
                 </div>
             </div>
-            {showInventoryModal && <FittingsModal fittings={unit.fittings || []} onClose={() => setShowInventoryModal(false)} onSave={(newFittings) => { onUpdateFittings(newFittings); setShowInventoryModal(false); }} />}
-        </div>
+            {showInventoryModal && (
+                <FittingsModal 
+                    fittings={unit.fittings || []} 
+                    onClose={() => setShowInventoryModal(false)} 
+                    onSave={(newFittings) => { onUpdateFittings(newFittings); setShowInventoryModal(false); }} 
+                />
+            )}
+        </Motion.div>
     );
 }
 
@@ -1809,17 +1982,18 @@ function LeaseModal({ initialData, availableUnits, onClose, onSubmit }) {
 function StatCard({ title, value, icon, index }) {
     return (
         <Motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: index * 0.1, duration: 0.5 }}
-            whileHover={{ y: -5, transition: { duration: 0.2 } }}
-            className="bg-slate-900/40 border border-white/5 p-6 rounded-3xl backdrop-blur-sm shadow-xl hover:bg-slate-900/60 hover:border-indigo-500/30 transition-colors"
+            whileHover={{ y: -8, scale: 1.02 }}
+            className="premium-card p-8 rounded-[2rem] relative overflow-hidden group"
         >
-            <div className="flex justify-between items-start mb-4">
+            <div className="absolute top-0 right-0 w-24 h-24 bg-indigo-600/5 blur-3xl rounded-full -mr-12 -mt-12 group-hover:bg-indigo-600/10 transition-colors" />
+            <div className="flex justify-between items-start mb-6">
                 <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">{title}</p>
-                <div className="p-2.5 bg-slate-800/80 rounded-2xl border border-white/5 shadow-inner">{icon}</div>
+                <div className="p-3 bg-slate-800/50 rounded-2xl border border-white/5 shadow-inner group-hover:bg-indigo-500/10 group-hover:border-indigo-500/20 transition-all">{icon}</div>
             </div>
-            <p className="text-3xl font-black text-white tracking-tighter leading-none">{value}</p>
+            <p className="text-4xl font-black text-white tracking-tighter leading-none">{value}</p>
         </Motion.div>
     );
 }
@@ -1836,94 +2010,83 @@ function LoginPage({ onLogin }) {
     };
 
     return (
-        <div className="min-h-screen bg-slate-950 flex items-center justify-center p-6 relative overflow-hidden">
-            {/* Background Decorative Elements */}
-            <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-indigo-600/10 blur-[120px] rounded-full animate-pulse" />
-            <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-emerald-600/10 blur-[120px] rounded-full" />
+        <div className="min-h-screen flex items-center justify-center p-6 relative overflow-hidden bg-[#020617]">
+            {/* Immersive Background Glows */}
+            <div className="absolute top-[-20%] left-[-10%] w-[60%] h-[60%] bg-indigo-600/10 blur-[150px] rounded-full animate-pulse" />
+            <div className="absolute bottom-[-20%] right-[-10%] w-[60%] h-[60%] bg-violet-600/5 blur-[150px] rounded-full" />
             
             <Motion.div 
-                initial={{ opacity: 0, y: 20 }}
+                initial={{ opacity: 0, y: 30 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.8 }}
+                transition={{ duration: 1, ease: "easeOut" }}
                 className="w-full max-w-md relative z-10"
             >
                 <div className="text-center mb-12">
                     <Motion.div 
-                        initial={{ scale: 0 }}
-                        animate={{ scale: 1, rotate: 3 }}
-                        transition={{ type: "spring", stiffness: 260, damping: 20, delay: 0.2 }}
-                        className="bg-gradient-to-tr from-indigo-600 to-violet-600 w-20 h-20 rounded-[2rem] flex items-center justify-center mx-auto mb-8 shadow-2xl shadow-indigo-600/40"
+                        animate={{ y: [0, -10, 0] }}
+                        transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+                        className="bg-indigo-600 w-24 h-24 rounded-[2.5rem] flex items-center justify-center mx-auto mb-8 shadow-[0_0_50px_rgba(79,70,229,0.3)] border border-indigo-400/20"
                     >
-                        <ShieldCheck className="w-10 h-10 text-white" />
+                        <ShieldCheck className="w-12 h-12 text-white" />
                     </Motion.div>
-                    <h1 className="text-5xl font-black text-white italic tracking-tighter mb-2">PropManage</h1>
-                    <p className="text-slate-500 font-bold uppercase tracking-[0.3em] text-[10px]">Premium Property Suite</p>
+                    <h1 className="text-6xl font-black text-white italic tracking-tighter mb-3 leading-none">PropManage</h1>
+                    <p className="text-slate-500 font-black uppercase tracking-[0.4em] text-[10px] opacity-70">The Enterprise Standard</p>
                 </div>
 
-                <div className="bg-slate-900/40 backdrop-blur-xl border border-white/10 p-10 rounded-[3rem] shadow-2xl space-y-6">
-                    {!API.isValid() && (
-                        <div className="bg-amber-500/10 text-amber-500/80 p-4 rounded-2xl text-[9px] font-black border border-amber-500/20 text-center uppercase tracking-widest leading-relaxed">
-                            ⚠️ API Mode: Offline / Library URL Detected<br/>
-                            <span className="opacity-60 font-medium lowercase">Please deploy as Web App and use /exec URL</span>
-                        </div>
-                    )}
-                    
+                <div className="premium-card p-12 rounded-[3.5rem] space-y-8">
                     {error && (
                         <Motion.div 
-                            initial={{ opacity: 0, x: -10 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            className="bg-red-500/10 text-red-400 p-4 rounded-2xl text-[10px] font-bold border border-red-500/20 text-center uppercase tracking-widest"
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            className="bg-red-500/10 text-red-400 p-4 rounded-2xl text-[10px] font-black border border-red-500/20 text-center uppercase tracking-widest"
                         >
                             {error}
                         </Motion.div>
                     )}
                     
-                    <form onSubmit={handleSubmit} className="space-y-4">
-
-                        <div className="space-y-1.5">
-                            <label className="text-[10px] text-slate-500 font-bold uppercase tracking-widest ml-1">Email Access</label>
+                    <form onSubmit={handleSubmit} className="space-y-5">
+                        <div className="space-y-2">
+                            <label className="text-[10px] text-slate-500 font-black uppercase tracking-widest ml-1 opacity-60">Identity / Email</label>
                             <input 
                                 type="email" 
                                 required 
-                                className="w-full bg-slate-800/50 border border-white/5 rounded-2xl py-4 px-5 text-white outline-none focus:ring-2 ring-indigo-500/50 transition-all placeholder:text-slate-600" 
-                                placeholder="admin@propmanage.com" 
+                                className="w-full bg-slate-950/50 border border-white/5 rounded-2xl py-5 px-6 text-white outline-none focus:ring-2 ring-indigo-500/40 transition-all placeholder:text-slate-700 text-sm" 
+                                placeholder="portal.admin@service.com" 
                                 value={email} 
                                 onChange={(e) => setEmail(e.target.value)} 
                             />
                         </div>
 
-                        <div className="space-y-1.5">
-                            <label className="text-[10px] text-slate-500 font-bold uppercase tracking-widest ml-1">Secure Pin</label>
+                        <div className="space-y-2">
+                            <label className="text-[10px] text-slate-500 font-black uppercase tracking-widest ml-1 opacity-60">Security Key</label>
                             <input 
                                 type="password" 
                                 required 
-                                className="w-full bg-slate-800/50 border border-white/5 rounded-2xl py-4 px-5 text-white outline-none focus:ring-2 ring-indigo-500/50 transition-all placeholder:text-slate-600" 
+                                className="w-full bg-slate-950/50 border border-white/5 rounded-2xl py-5 px-6 text-white outline-none focus:ring-2 ring-indigo-500/40 transition-all placeholder:text-slate-700 text-sm" 
                                 placeholder="••••••••" 
                                 value={password} 
                                 onChange={(e) => setPassword(e.target.value)} 
                             />
                         </div>
 
-                        <button 
+                        <Motion.button 
+                            whileHover={{ scale: 1.02, y: -2 }}
+                            whileTap={{ scale: 0.98 }}
                             type="submit" 
-                            className="w-full bg-white text-slate-950 font-black py-5 rounded-2xl mt-4 hover:bg-slate-200 transition-all uppercase tracking-widest text-[11px] shadow-xl active:scale-[0.98]"
+                            className="w-full bg-white text-slate-950 font-black py-5 rounded-2xl mt-4 hover:shadow-[0_0_30px_rgba(255,255,255,0.2)] transition-all uppercase tracking-[0.2em] text-[11px]"
                         >
-                            Launch Dashboard
-                        </button>
+                            Establish Connection
+                        </Motion.button>
                     </form>
 
-                    <div className="pt-8 border-t border-white/5 space-y-4">
-                        <p className="text-center text-[9px] text-slate-600 font-black uppercase tracking-widest">Quick Access Demo</p>
-                        <div className="flex gap-3">
-                            <button type="button" onClick={() => { setEmail('admin@propmanage.com'); setPassword('admin') }} className="flex-1 py-3 rounded-xl bg-indigo-500/5 text-indigo-400 text-[9px] font-black border border-indigo-500/10 hover:bg-indigo-500/10 uppercase transition-all tracking-tighter">Manager</button>
-                            <button type="button" onClick={() => { setEmail('alice@example.com'); setPassword('password123') }} className="flex-1 py-3 rounded-xl bg-emerald-500/5 text-emerald-400 text-[9px] font-black border border-emerald-500/10 hover:bg-emerald-500/10 uppercase transition-all tracking-tighter">Tenant</button>
+                    <div className="pt-8 border-t border-white/5 flex flex-col items-center">
+                        <p className="text-[9px] text-slate-700 font-black uppercase tracking-widest mb-6">Simulation access</p>
+                        <div className="flex gap-4 w-full">
+                            <button type="button" onClick={() => { setEmail('admin@propmanage.com'); setPassword('admin') }} className="flex-1 py-4 rounded-2xl bg-indigo-500/5 text-indigo-400 text-[10px] font-black border border-indigo-500/10 hover:bg-indigo-600 hover:text-white transition-all uppercase tracking-tighter">Admin Portal</button>
+                            <button type="button" onClick={() => { setEmail('alice@example.com'); setPassword('password123') }} className="flex-1 py-4 rounded-2xl bg-emerald-500/5 text-emerald-400 text-[10px] font-black border border-emerald-500/10 hover:bg-emerald-600 hover:text-white transition-all uppercase tracking-tighter">Tenant View</button>
                         </div>
                     </div>
                 </div>
-                
-                <p className="text-center mt-10 text-[9px] text-slate-700 font-bold uppercase tracking-widest">
-                    &copy; 2026 PROPMANAGE PRO &bull; ENTERPRISE GRADE
-                </p>
             </Motion.div>
         </div>
     );
@@ -1931,47 +2094,55 @@ function LoginPage({ onLogin }) {
 
 function PropertySelectView({ properties, onSelect }) {
     return (
-        <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-8 premium-gradient">
+        <div className="min-h-screen flex flex-col items-center justify-center p-8 bg-[#020617] relative overflow-hidden">
+             {/* Background Polish */}
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(79,70,229,0.05),transparent_70%)]" />
+            
             <Motion.div 
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
-                className="text-center mb-12"
+                className="text-center mb-16 relative z-10"
             >
-                <div className="bg-indigo-600 w-16 h-16 rounded-[1.5rem] flex items-center justify-center mx-auto mb-6 shadow-2xl shadow-indigo-500/20">
+                <div className="bg-indigo-600 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-8 shadow-2xl shadow-indigo-500/20 border border-indigo-400/20">
                     <Building2 className="w-8 h-8 text-white" />
                 </div>
-                <h2 className="text-3xl font-black text-white italic tracking-tighter mb-2">Select Management Portal</h2>
-                <p className="text-slate-500 text-[10px] uppercase font-black tracking-[0.3em]">Choose a property to continue</p>
+                <h2 className="text-4xl font-black text-white italic tracking-tighter mb-3 leading-none">Management Gate</h2>
+                <p className="text-slate-500 text-[11px] uppercase font-black tracking-[0.4em] opacity-60">Select designated property</p>
             </Motion.div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl w-full">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-5xl w-full relative z-10">
                 {properties.map((prop, idx) => (
                     <Motion.button
                         key={prop.id}
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: idx * 0.1 }}
+                        whileHover={{ y: -8, scale: 1.01 }}
+                        whileTap={{ scale: 0.98 }}
                         onClick={() => onSelect(prop.name)}
-                        className="group bg-slate-900/40 backdrop-blur-md border border-white/5 p-8 rounded-[2.5rem] text-left hover:border-indigo-500/40 transition-all hover:bg-slate-900/60 shadow-xl"
+                        className="premium-card p-10 text-left rounded-[3rem] group"
                     >
-                        <div className="flex justify-between items-start mb-6">
-                            <div className="bg-slate-800 p-3 rounded-2xl border border-white/5 group-hover:bg-indigo-600 group-hover:text-white transition-colors text-indigo-400">
-                                <Home className="w-6 h-6" />
+                        <div className="flex justify-between items-start mb-8">
+                            <div className="bg-slate-800 p-4 rounded-2xl border border-white/5 group-hover:bg-indigo-600 group-hover:text-white transition-colors text-indigo-400 shadow-inner">
+                                <Home className="w-8 h-8" />
                             </div>
-                            <ArrowUpRight className="w-5 h-5 text-slate-600 group-hover:text-indigo-400 group-hover:translate-x-1 group-hover:-translate-y-1 transition-all" />
+                            <div className="p-3 bg-white/5 rounded-xl opacity-0 group-hover:opacity-100 transition-all translate-x-4 group-hover:translate-x-0">
+                                <ArrowUpRight className="w-6 h-6 text-white" />
+                            </div>
                         </div>
-                        <h3 className="text-xl font-black text-white italic mb-1">{prop.name}</h3>
-                        <p className="text-slate-500 text-[10px] font-bold uppercase tracking-widest">{prop.address}</p>
+                        <h3 className="text-2xl font-black text-white italic mb-2 tracking-tight transition-colors group-hover:text-indigo-400">{prop.name}</h3>
+                        <p className="text-slate-500 text-[10px] font-black uppercase tracking-[0.2em] opacity-60 leading-relaxed">{prop.address}</p>
                     </Motion.button>
                 ))}
             </div>
 
-            <button 
+            <Motion.button 
+                whileHover={{ scale: 1.05 }}
                 onClick={() => window.location.reload()} 
-                className="mt-12 text-slate-600 hover:text-slate-400 text-[10px] font-black uppercase tracking-widest flex items-center gap-2 border-b border-white/5 pb-1 transition-all"
+                className="mt-16 text-slate-600 hover:text-white text-[10px] font-black uppercase tracking-[0.34em] flex items-center gap-3 border-b-2 border-transparent hover:border-indigo-500/50 pb-2 transition-all opacity-40 hover:opacity-100"
             >
-                <LogOut className="w-3 h-3" /> Back to Login
-            </button>
+                <LogOut className="w-4 h-4" /> Reset Authorization
+            </Motion.button>
         </div>
     );
 }
