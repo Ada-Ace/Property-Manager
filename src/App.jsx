@@ -1099,6 +1099,8 @@ function MessagesManager({ tenants, messages }) {
 }
 
 function WhatsAppRentButton({ tenant, mode = 'rent', currency = 'USD', fullWidth = false }) {
+    if (!tenant) return null;
+    
     if (mode === 'renewal') {
         const leaseEnd = fmtDate(tenant.leaseEnd) || 'the end of your contract';
         const message = encodeURIComponent(`Hi ${String(tenant.name || 'Tenant').split(' ')[0]},\n\nJust reaching out as your lease for Unit *${tenant.unit}* is scheduled to end on *${leaseEnd}*.\n\nWe would love to have you stay! Would you be interested in discussing a lease renewal?\n\nPlease let us know your thoughts.\n\nThank you!`);
@@ -1876,7 +1878,8 @@ function UnitCard({ unit, tenant, currency = 'USD', onUpdateFittings, onEditUnit
     const tenantLeaseEnd = tenant?.leaseEnd;
     const actualRent = tenant?.baseRent;
     const [showInventoryModal, setShowInventoryModal] = useState(false);
-    const isOccupied = unit.status === 'Occupied' || !!tenantName;
+    // Hardened Occupancy logic: Require both status AND matching tenant for resident view
+    const isOccupied = unit.status === 'Occupied' && !!tenant;
 
     return (
         <Motion.div 
