@@ -122,11 +122,46 @@ const INITIAL_UNITS = [
 ];
 
 const INITIAL_PROPERTIES = [
-    { id: 'P1', name: 'Skyline Residency', address: '123 Skyline St' },
-    { id: 'P2', name: 'Uptown@Farrer', address: '456 Uptown Rd' },
-    { id: 'P3', name: 'Emerald Heights', address: '789 Emerald Ave' },
-    { id: 'P4', name: 'Oakwood Terrace', address: '101 Oakwood Lane' }
+    { id: 'P1', name: 'Skyline Residency', address: '123 Skyline St', currency: 'USD' },
+    { id: 'P2', name: 'Uptown@Farrer', address: '456 Uptown Rd', currency: 'SGD' },
+    { id: 'P3', name: 'Emerald Heights', address: '789 Emerald Ave', currency: 'MYR' },
+    { id: 'P4', name: 'Oakwood Terrace', address: '101 Oakwood Lane', currency: 'GBP' }
 ];
+
+// ISO 4217 currency list for property settings
+const ISO_CURRENCIES = [
+    { code: 'USD', name: 'US Dollar' },
+    { code: 'EUR', name: 'Euro' },
+    { code: 'GBP', name: 'British Pound' },
+    { code: 'SGD', name: 'Singapore Dollar' },
+    { code: 'MYR', name: 'Malaysian Ringgit' },
+    { code: 'AED', name: 'UAE Dirham' },
+    { code: 'AUD', name: 'Australian Dollar' },
+    { code: 'CAD', name: 'Canadian Dollar' },
+    { code: 'CNY', name: 'Chinese Yuan' },
+    { code: 'HKD', name: 'Hong Kong Dollar' },
+    { code: 'IDR', name: 'Indonesian Rupiah' },
+    { code: 'INR', name: 'Indian Rupee' },
+    { code: 'JPY', name: 'Japanese Yen' },
+    { code: 'KRW', name: 'South Korean Won' },
+    { code: 'NZD', name: 'New Zealand Dollar' },
+    { code: 'PHP', name: 'Philippine Peso' },
+    { code: 'THB', name: 'Thai Baht' },
+    { code: 'TWD', name: 'Taiwan Dollar' },
+    { code: 'ZAR', name: 'South African Rand' },
+    { code: 'CHF', name: 'Swiss Franc' },
+    { code: 'SAR', name: 'Saudi Riyal' },
+    { code: 'QAR', name: 'Qatari Riyal' },
+    { code: 'BRL', name: 'Brazilian Real' },
+    { code: 'MXN', name: 'Mexican Peso' },
+    { code: 'SEK', name: 'Swedish Krona' },
+    { code: 'NOK', name: 'Norwegian Krone' },
+    { code: 'DKK', name: 'Danish Krone' },
+    { code: 'PKR', name: 'Pakistani Rupee' },
+    { code: 'BDT', name: 'Bangladeshi Taka' },
+    { code: 'VND', name: 'Vietnamese Dong' },
+];
+
 
 const INITIAL_BILLS = [];
 
@@ -282,6 +317,18 @@ export default function App() {
     const [globalMessage, setGlobalMessage] = useState(null);
     const [properties, setProperties] = useState([]);
     const [tenantMessages, setTenantMessages] = useState([]);
+    const [showPropertySettings, setShowPropertySettings] = useState(false);
+
+    // Get ISO 4217 currency for the currently active property
+    const activeCurrency = useMemo(() => {
+        const prop = Array.isArray(properties) ? properties.find(p => p.name === activeProperty) : null;
+        return prop?.currency || 'USD';
+    }, [properties, activeProperty]);
+
+    const updatePropertyCurrency = (currency) => {
+        setProperties(prev => prev.map(p => p.name === activeProperty ? { ...p, currency } : p));
+        API.saveToSheet('UPDATE', 'Properties', { name: activeProperty, currency });
+    };
 
     // Computed filtered lists based on selected property (ensure arrays exist)
     const filteredTenants = useMemo(() => {
@@ -575,6 +622,17 @@ export default function App() {
                                 <ChevronDown className="w-3 h-3 text-slate-500 shrink-0" />
                             </div>
                         )}
+                        {view === 'manager' && (
+                            <Motion.button
+                                whileHover={{ scale: 1.05, rotate: 30 }}
+                                whileTap={{ scale: 0.95 }}
+                                title="Property Settings"
+                                onClick={() => setShowPropertySettings(true)}
+                                className="p-2.5 text-slate-500 hover:text-indigo-400 bg-white/5 hover:bg-indigo-500/10 rounded-2xl border border-white/5 hover:border-indigo-500/20 transition-all"
+                            >
+                                <Settings className="w-4 h-4" />
+                            </Motion.button>
+                        )}
                         <Motion.button 
                             whileHover={{ scale: 1.05 }}
                             whileTap={{ scale: 0.95 }}
@@ -587,6 +645,14 @@ export default function App() {
                     </div>
                 </div>
             </nav>
+
+            {showPropertySettings && (
+                <PropertySettingsModal
+                    property={properties.find(p => p.name === activeProperty) || { name: activeProperty, currency: 'USD' }}
+                    onClose={() => setShowPropertySettings(false)}
+                    onSave={(currency) => { updatePropertyCurrency(currency); setShowPropertySettings(false); }}
+                />
+            )}
 
             <main className="w-full px-6 md:px-12 py-8">
                 {isLoading ? (
@@ -610,6 +676,7 @@ export default function App() {
                                     utilityBills={filteredBills}
                                     tasks={filteredTasks}
                                     tenantMessages={filteredMessages}
+                                    currency={activeCurrency}
                                     onAddUnit={addUnitToCatalog}
                                     onAddTenant={addTenant}
                                     onEditTenant={editTenant}
@@ -634,7 +701,7 @@ export default function App() {
 
 // --- Manager Components ---
 
-function ManagerDashboard({ tenants, propertyUnits, utilityBills, tasks, tenantMessages, onAddUnit, onAddTenant, onEditTenant, onUpdateFittings, onAddBill, onAddTask }) {
+function ManagerDashboard({ tenants, propertyUnits, utilityBills, tasks, tenantMessages, currency = 'USD', onAddUnit, onAddTenant, onEditTenant, onUpdateFittings, onAddBill, onAddTask }) {
     const [activeTab, setActiveTab] = useState('rents');
     const [showLeaseModal, setShowLeaseModal] = useState(false);
     const [editingTenant, setEditingTenant] = useState(null);
@@ -644,10 +711,13 @@ function ManagerDashboard({ tenants, propertyUnits, utilityBills, tasks, tenantM
     const vacantUnits = useMemo(() => (Array.isArray(propertyUnits) ? propertyUnits.filter(u => u?.status === 'Available').length : 0), [propertyUnits]);
     const tasksCount = Array.isArray(tasks) ? tasks.length : 0;
 
+    // Currency tag helper — prepends ISO code as a label
+    const cur = (amount) => `${currency} ${Number(amount || 0).toLocaleString()}`;
+
     return (
         <div className="space-y-8 animate-in fade-in duration-700">
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <StatCard index={0} title="Monthly Revenue" value={`$${(totalRevenue || 0).toLocaleString()}`} icon={<CreditCard className="text-emerald-400" />} />
+                <StatCard index={0} title="Monthly Revenue" value={cur(totalRevenue)} icon={<CreditCard className="text-emerald-400" />} />
                 <StatCard index={1} title="Occupancy Rate" value={(Array.isArray(propertyUnits) && propertyUnits.length > 0) ? `${Math.round(((propertyUnits.length - vacantUnits) / propertyUnits.length) * 100)}%` : '0%'} icon={<Users className="text-blue-400" />} />
                 <StatCard index={2} title="Available Units" value={vacantUnits || 0} icon={<Building2 className="text-sky-400" />} />
                 <StatCard index={3} title="Active Maintenance" value={(tasksCount || 0).toString()} icon={<Wrench className="text-amber-400" />} />
@@ -690,7 +760,7 @@ function ManagerDashboard({ tenants, propertyUnits, utilityBills, tasks, tenantM
                     exit={{ opacity: 0, y: -10 }}
                     transition={{ duration: 0.2 }}
                 >
-                    {activeTab === 'rents' && <RentSummaryTab tenants={tenants} />}
+                    {activeTab === 'rents' && <RentSummaryTab tenants={tenants} currency={currency} />}
                     {activeTab === 'messages' && <MessagesManager tenants={tenants} messages={tenantMessages} />}
                     {activeTab === 'tasks' && <TasksManager tenants={tenants} tasks={tasks} onAddTask={onAddTask} />}
                     {activeTab === 'leases' && (
@@ -717,7 +787,7 @@ function ManagerDashboard({ tenants, propertyUnits, utilityBills, tasks, tenantM
                                             <th className="pb-6">Unit</th>
                                             <th className="pb-6">Contract End</th>
                                             <th className="pb-6 text-center">Next Rent Due</th>
-                                            <th className="pb-6 text-right">Base Rent</th>
+                                            <th className="pb-6 text-right">Base Rent ({currency})</th>
                                             <th className="pb-6 text-right pr-2">Action</th>
                                         </tr>
                                     </thead>
@@ -742,11 +812,11 @@ function ManagerDashboard({ tenants, propertyUnits, utilityBills, tasks, tenantM
                                                             </span>
                                                         </div>
                                                     </td>
-                                                    <td className="py-6 text-right font-black text-white tracking-widest">${t.baseRent}</td>
+                                                    <td className="py-6 text-right font-black text-white tracking-widest">{cur(t.baseRent)}</td>
                                                     <td className="py-6 text-right pr-2">
                                                         <div className="flex items-center justify-end gap-3">
                                                             {t.mobile && (
-                                                                <WhatsAppRentButton tenant={t} mode="renewal" />
+                                                                <WhatsAppRentButton tenant={t} mode="renewal" currency={currency} />
                                                             )}
                                                             <Motion.button 
                                                                 whileHover={{ scale: 1.05 }}
@@ -794,7 +864,7 @@ function ManagerDashboard({ tenants, propertyUnits, utilityBills, tasks, tenantM
                         </div>
                     )}
                     {activeTab === 'utilities' && (
-                        <UtilityManager tenants={tenants} utilityBills={utilityBills} onAddBill={onAddBill} />
+                        <UtilityManager tenants={tenants} utilityBills={utilityBills} onAddBill={onAddBill} currency={currency} />
                     )}
                 </Motion.div>
             </AnimatePresence>
@@ -807,7 +877,7 @@ function ManagerDashboard({ tenants, propertyUnits, utilityBills, tasks, tenantM
 }
 
 // --- Rent Summary Tab ---
-function RentSummaryTab({ tenants }) {
+function RentSummaryTab({ tenants, currency = 'USD' }) {
     const today = getLocalDate() || new Date();
     const currentMonthLabel = (today && typeof today.toLocaleString === 'function') ? today.toLocaleString(LOCALE, { month: 'long', year: 'numeric', timeZone: APP_TIMEZONE }) : 'Current Month';
 
@@ -835,7 +905,7 @@ function RentSummaryTab({ tenants }) {
     return (
         <div className="space-y-8">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <StatCard index={0} title="Expected Revenue" value={`$${totalRevenueThisCycle.toLocaleString()}`} icon={<DollarSign className="text-emerald-400" />} />
+                <StatCard index={0} title="Expected Revenue" value={`${currency} ${totalRevenueThisCycle.toLocaleString()}`} icon={<DollarSign className="text-emerald-400" />} />
                 <StatCard index={1} title="Collections Due" value={upcomingRents.length} icon={<CalendarRange className="text-blue-400" />} />
                 <StatCard index={2} title="Action Required" value={soonDueCount} icon={<BellRing className={soonDueCount > 0 ? "text-orange-400 animate-bounce" : "text-slate-500"} />} />
             </div>
@@ -905,10 +975,10 @@ function RentSummaryTab({ tenants }) {
 
                                     <div className="bg-white/5 px-5 py-3 rounded-2xl border border-white/5">
                                         <p className="text-[9px] font-black text-slate-600 uppercase tracking-widest mb-1">Monthly Rent</p>
-                                        <p className="text-xl font-black text-emerald-400 tracking-tighter">${Number(rent.baseRent).toLocaleString()}</p>
+                                        <p className="text-xl font-black text-emerald-400 tracking-tighter">{currency} {Number(rent.baseRent).toLocaleString()}</p>
                                     </div>
 
-                                    {rent.mobile && <WhatsAppRentButton tenant={rent} mode="rent" />}
+                                    {rent.mobile && <WhatsAppRentButton tenant={rent} mode="rent" currency={currency} />}
                                 </div>
                             </Motion.div>
                         );
@@ -1020,9 +1090,9 @@ function MessagesManager({ tenants, messages }) {
     );
 }
 
-function WhatsAppRentButton({ tenant, mode = 'rent' }) {
+function WhatsAppRentButton({ tenant, mode = 'rent', currency = 'USD' }) {
     if (mode === 'renewal') {
-        const leaseEnd = tenant.leaseEnd || 'the end of your contract';
+        const leaseEnd = fmtDate(tenant.leaseEnd) || 'the end of your contract';
         const message = encodeURIComponent(`Hi ${String(tenant.name || 'Tenant').split(' ')[0]},\n\nJust reaching out as your lease for Unit *${tenant.unit}* is scheduled to end on *${leaseEnd}*.\n\nWe would love to have you stay! Would you be interested in discussing a lease renewal?\n\nPlease let us know your thoughts.\n\nThank you!`);
         const waLink = `https://wa.me/${String(tenant.mobile || '').replace(/\D/g, '')}?text=${message}`;
 
@@ -1056,7 +1126,7 @@ function WhatsAppRentButton({ tenant, mode = 'rent' }) {
     // Default: Rent Mode
     const dueDate = fmtDate(calculateNextRentDue(tenant.leaseStart).toISOString());
     const daysUntil = getDaysUntilDue(tenant.leaseStart);
-    const message = encodeURIComponent(`Hi ${String(tenant.name || 'Tenant').split(' ')[0]},\n\nJust a friendly reminder that your monthly rent of *$${(Number(tenant.baseRent) || 0).toLocaleString()}* for Unit *${tenant.unit}* is due on *${dueDate}*.\n\nPlease ensure payment is made before the deadline to avoid any late fees.\n\nThank you!`);
+    const message = encodeURIComponent(`Hi ${String(tenant.name || 'Tenant').split(' ')[0]},\n\nJust a friendly reminder that your monthly rent of *${currency} ${(Number(tenant.baseRent) || 0).toLocaleString()}* for Unit *${tenant.unit}* is due on *${dueDate}*.\n\nPlease ensure payment is made before the deadline to avoid any late fees.\n\nThank you!`);
     const waLink = `https://wa.me/${String(tenant.mobile || '').replace(/\D/g, '')}?text=${message}`;
     const isUrgent = daysUntil <= 3;
 
@@ -1080,7 +1150,7 @@ function WhatsAppRentButton({ tenant, mode = 'rent' }) {
 
 // --- Utility Components ---
 
-function UtilityManager({ tenants, utilityBills, onAddBill }) {
+function UtilityManager({ tenants, utilityBills, onAddBill, currency = 'USD' }) {
     const [activeTab, setActiveTab] = useState('new'); // 'new', 'monthly', or 'history'
 
     const uniqueMonths = useMemo(() => {
@@ -1234,7 +1304,7 @@ function UtilityManager({ tenants, utilityBills, onAddBill }) {
                             <div className="flex gap-4 items-center">
                                 <div className="text-right">
                                     <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Total Bill</p>
-                                    <p className="text-xl font-black text-white tracking-tighter">${totalBill.toFixed(2)}</p>
+                                    <p className="text-xl font-black text-white tracking-tighter">{currency} {totalBill.toFixed(2)}</p>
                                 </div>
                                 {mode === 'designated' && (
                                     <div className="bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest">
@@ -1271,7 +1341,7 @@ function UtilityManager({ tenants, utilityBills, onAddBill }) {
                                             )}
                                             <div className="text-right min-w-[80px]">
                                                 <p className="text-[9px] font-black text-slate-600 uppercase tracking-widest mb-0.5">Share Amount</p>
-                                                <p className="text-lg font-black text-indigo-400 tracking-tighter">${calculatedAmt.toFixed(2)}</p>
+                                                <p className="text-lg font-black text-indigo-400 tracking-tighter">{currency} {calculatedAmt.toFixed(2)}</p>
                                             </div>
                                         </div>
                                     </div>
@@ -1338,7 +1408,7 @@ function UtilityManager({ tenants, utilityBills, onAddBill }) {
                                                             {b.type === 'Electricity' ? <Zap className="w-3 h-3 text-amber-400" /> : b.type === 'Water' ? <Droplets className="w-3 h-3 text-blue-400" /> : <Flame className="w-3 h-3 text-orange-400" />}
                                                             {b.type}
                                                         </span>
-                                                        <span className="text-white font-black text-sm">${b.amount.toFixed(2)}</span>
+                                                        <span className="text-white font-black text-sm">{currency} {b.amount.toFixed(2)}</span>
                                                     </div>
                                                 ))}
                                             </div>
@@ -1352,13 +1422,13 @@ function UtilityManager({ tenants, utilityBills, onAddBill }) {
                                     <div className="pt-5 mt-5 border-t border-white/5">
                                         <div className="flex justify-between items-center mb-4">
                                             <span className="text-[10px] text-slate-500 font-black uppercase tracking-widest">Utility Total</span>
-                                            <span className={`text-2xl font-black tracking-tighter ${totalOwed > 0 ? 'text-emerald-400' : 'text-slate-600'}`}>${totalOwed.toFixed(2)}</span>
+                                            <span className={`text-2xl font-black tracking-tighter ${totalOwed > 0 ? 'text-emerald-400' : 'text-slate-600'}`}>{currency} {totalOwed.toFixed(2)}</span>
                                         </div>
                                         {t.mobile && totalOwed > 0 && (
                                             <Motion.a
                                                 whileHover={{ scale: 1.02 }}
                                                 whileTap={{ scale: 0.98 }}
-                                                href={`https://wa.me/${String(t.mobile || '').replace(/\D/g, '')}?text=${encodeURIComponent(`Hi ${String(t.name || 'Tenant').split(' ')[0]},\n\nYour utility bill summary for ${new Date(effectiveMonth + '-01').toLocaleString('default', { month: 'long', year: 'numeric' })} is:\n${breakdowns.map(b => `- ${b.type}: $${b.amount.toFixed(2)}`).join('\n')}\n\n*Total Due: $${totalOwed.toFixed(2)}*`)}`}
+                                                href={`https://wa.me/${String(t.mobile || '').replace(/\D/g, '')}?text=${encodeURIComponent(`Hi ${String(t.name || 'Tenant').split(' ')[0]},\n\nYour utility bill summary for ${new Date(effectiveMonth + '-01').toLocaleString('default', { month: 'long', year: 'numeric' })} is:\n${breakdowns.map(b => `- ${b.type}: ${currency} ${b.amount.toFixed(2)}`).join('\n')}\n\n*Total Due: ${currency} ${totalOwed.toFixed(2)}*`)}`}
                                                 target="_blank"
                                                 rel="noopener noreferrer"
                                                 className="w-full bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-widest flex justify-center items-center gap-2 transition-all shadow-lg shadow-emerald-600/5"
@@ -1405,7 +1475,7 @@ function UtilityManager({ tenants, utilityBills, onAddBill }) {
                                         </div>
                                         <div className="text-right">
                                             <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Total Amount</p>
-                                            <p className="text-3xl font-black text-white tracking-tighter">${bill.amount.toFixed(2)}</p>
+                                            <p className="text-3xl font-black text-white tracking-tighter">{currency} {bill.amount.toFixed(2)}</p>
                                         </div>
                                     </div>
                                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -1416,7 +1486,7 @@ function UtilityManager({ tenants, utilityBills, onAddBill }) {
                                                     <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3 flex items-center gap-2">Unit <span className="text-white">{t.unit}</span></p>
                                                     <div className="flex justify-between items-end">
                                                         <span className="text-xs font-bold text-slate-300">{t.name.split(' ')[0]}</span>
-                                                        <span className="text-lg font-black text-indigo-400 tracking-tighter">${alloc.amount.toFixed(2)}</span>
+                                                        <span className="text-lg font-black text-indigo-400 tracking-tighter">{currency} {alloc.amount.toFixed(2)}</span>
                                                     </div>
                                                 </div>
                                             ) : null;
@@ -2187,4 +2257,103 @@ class ErrorBoundary extends React.Component {
         }
         return this.props.children;
     }
+}
+// --- Property Settings Modal ---
+function PropertySettingsModal({ property, onClose, onSave }) {
+    const [selectedCurrency, setSelectedCurrency] = useState(property?.currency || 'USD');
+    const currentCurrencyInfo = ISO_CURRENCIES.find(c => c.code === selectedCurrency);
+
+    return (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <Motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="absolute inset-0 bg-black/70 backdrop-blur-md"
+                onClick={onClose}
+            />
+            <Motion.div
+                initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+                className="relative z-10 w-full max-w-md bg-slate-900 rounded-[2.5rem] border border-white/10 shadow-2xl shadow-black/50 overflow-hidden"
+            >
+                {/* Header */}
+                <div className="p-8 border-b border-white/5">
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-4">
+                            <div className="p-3 bg-indigo-600/20 rounded-2xl border border-indigo-500/20">
+                                <Settings className="w-5 h-5 text-indigo-400" />
+                            </div>
+                            <div>
+                                <h2 className="text-lg font-black text-white tracking-tight">Property Settings</h2>
+                                <p className="text-[10px] text-slate-500 font-black uppercase tracking-[0.2em] mt-0.5">{property?.name}</p>
+                            </div>
+                        </div>
+                        <Motion.button
+                            whileHover={{ scale: 1.1, rotate: 90 }}
+                            whileTap={{ scale: 0.9 }}
+                            onClick={onClose}
+                            className="p-2 text-slate-500 hover:text-white bg-white/5 rounded-xl border border-white/5 transition-all"
+                        >
+                            <X className="w-4 h-4" />
+                        </Motion.button>
+                    </div>
+                </div>
+
+                {/* Body */}
+                <div className="p-8 space-y-6">
+                    <div>
+                        <label className="text-[10px] text-slate-500 font-black uppercase tracking-[0.25em] mb-3 flex items-center gap-2">
+                            <DollarSign className="w-3 h-3" /> Currency (ISO 4217)
+                        </label>
+                        <select
+                            value={selectedCurrency}
+                            onChange={e => setSelectedCurrency(e.target.value)}
+                            className="w-full bg-slate-800 border border-white/10 hover:border-indigo-500/40 rounded-2xl px-5 py-4 text-white font-black text-sm outline-none cursor-pointer transition-all"
+                        >
+                            {ISO_CURRENCIES.map(c => (
+                                <option key={c.code} value={c.code} className="bg-slate-900">
+                                    {c.code} — {c.name}
+                                </option>
+                            ))}
+                        </select>
+
+                        {/* Live preview */}
+                        <div className="mt-4 bg-white/[0.03] rounded-2xl border border-white/5 p-5 flex items-center justify-between">
+                            <div>
+                                <p className="text-[9px] font-black text-slate-600 uppercase tracking-widest mb-1">Preview</p>
+                                <p className="text-white font-black text-sm">{currentCurrencyInfo?.name || selectedCurrency}</p>
+                            </div>
+                            <div className="text-right">
+                                <p className="text-[9px] font-black text-slate-600 uppercase tracking-widest mb-1">Sample Amount</p>
+                                <p className="text-2xl font-black text-emerald-400 tracking-tighter">{selectedCurrency} 2,500</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Footer */}
+                <div className="p-8 border-t border-white/5 flex gap-3">
+                    <Motion.button
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        onClick={onClose}
+                        className="flex-1 py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-widest text-slate-400 bg-white/5 border border-white/5 hover:bg-white/10 transition-all"
+                    >
+                        Cancel
+                    </Motion.button>
+                    <Motion.button
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        onClick={() => onSave(selectedCurrency)}
+                        className="flex-2 flex-grow py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-widest text-white bg-indigo-600 hover:bg-indigo-500 shadow-xl shadow-indigo-600/20 transition-all flex items-center justify-center gap-2"
+                    >
+                        <CheckCircle2 className="w-4 h-4" /> Save Currency
+                    </Motion.button>
+                </div>
+            </Motion.div>
+        </div>
+    );
 }
