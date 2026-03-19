@@ -450,50 +450,41 @@ export default function App() {
             </nav>
 
             <main className="max-w-7xl mx-auto p-4 md:p-8">
-                <AnimatePresence mode="wait">
-                    {isLoading ? (
-                        <Motion.div 
-                            key="loader"
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            className="flex flex-col items-center justify-center py-20"
-                        >
-                            <div className="w-12 h-12 border-4 border-indigo-500/20 border-t-indigo-500 rounded-full animate-spin mb-4"></div>
-                            <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest animate-pulse">Syncing with Cloud Database...</p>
-                        </Motion.div>
-                    ) : (
-                        <Motion.div
-                            key={view + activeTenantId}
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0 }}
-                            transition={{ duration: 0.4, ease: "easeOut" }}
-                        >
-                            {view === 'manager' ? (
-                                <ManagerDashboard
-                                    tenants={filteredTenants}
-                                    propertyUnits={filteredUnits}
-                                    utilityBills={filteredBills}
-                                    tasks={filteredTasks}
-                                    tenantMessages={filteredMessages}
-                                    onAddUnit={addUnitToCatalog}
-                                    onAddTenant={addTenant}
-                                    onEditTenant={editTenant}
-                                    onUpdateFittings={updateUnitFittings}
-                                    onAddBill={handleAddBill}
-                                    onAddTask={handleAddTask}
-                                />
-                            ) : (
-                                <TenantDashboard
-                                    tenant={tenants.find(t => t.id === activeTenantId)}
-                                    unit={propertyUnits.find(u => u.unitNumber === (tenants.find(t => t.id === activeTenantId)?.unit))}
-                                    onSendMessage={handleSendMessage}
-                                />
-                            )}
-                        </Motion.div>
-                    )}
-                </AnimatePresence>
+                {isLoading ? (
+                    <div className="flex flex-col items-center justify-center py-20">
+                        <div className="w-12 h-12 border-4 border-indigo-500/20 border-t-indigo-500 rounded-full animate-spin mb-4"></div>
+                        <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest animate-pulse">Syncing Cloud Dashboard...</p>
+                    </div>
+                ) : (
+                    <Motion.div
+                        key={view + activeProperty}
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ duration: 0.3 }}
+                    >
+                        {view === 'manager' ? (
+                            <ManagerDashboard
+                                tenants={filteredTenants}
+                                propertyUnits={filteredUnits}
+                                utilityBills={filteredBills}
+                                tasks={filteredTasks}
+                                tenantMessages={filteredMessages}
+                                onAddUnit={addUnitToCatalog}
+                                onAddTenant={addTenant}
+                                onEditTenant={editTenant}
+                                onUpdateFittings={updateUnitFittings}
+                                onAddBill={handleAddBill}
+                                onAddTask={handleAddTask}
+                            />
+                        ) : (
+                            <TenantDashboard
+                                tenant={tenants.find(t => t.id === activeTenantId)}
+                                unit={propertyUnits.find(u => u.unitNumber === (tenants.find(t => t.id === activeTenantId)?.unit))}
+                                onSendMessage={handleSendMessage}
+                            />
+                        )}
+                    </Motion.div>
+                )}
             </main>
         </div>
     );
