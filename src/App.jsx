@@ -535,8 +535,13 @@ export default function App() {
             const updatedUnit = { ...unit, fittings: newFittings };
             setPropertyUnits(prev => prev.map(u => u.id === unitId ? updatedUnit : u));
             setGlobalMessage({ type: 'info', text: "Synchronizing inventory with cloud..." });
-            await API.saveToSheet('UPDATE', 'Units', updatedUnit);
-            setGlobalMessage({ type: 'success', text: "Inventory updated & synced" });
+            const res = await API.saveToSheet('UPDATE', 'Units', updatedUnit);
+            if (res.success) {
+                setGlobalMessage({ type: 'success', text: "Inventory Verified & Cloud Synced" });
+                syncWithCloud(true);
+            } else {
+                setGlobalMessage({ type: 'error', text: `Sync Failed: ${res.message}` });
+            }
         }
         setTimeout(() => setGlobalMessage(null), 3000);
     };
@@ -583,8 +588,13 @@ export default function App() {
         delete newUnit.newImageFile; // Clean up for state/sheet
 
         setPropertyUnits([...propertyUnits, newUnit]);
-        await API.saveToSheet('ADD', 'Units', newUnit);
-        setGlobalMessage({ type: 'success', text: `Unit ${unitData.unitNumber} added to catalog` });
+        const res = await API.saveToSheet('ADD', 'Units', newUnit);
+        if (res.success) {
+            setGlobalMessage({ type: 'success', text: `Unit ${unitData.unitNumber} added & Cloud Synced` });
+            syncWithCloud(true);
+        } else {
+            setGlobalMessage({ type: 'error', text: `Cloud Save Failed: ${res.message}` });
+        }
         setTimeout(() => setGlobalMessage(null), 3000);
     };
 
@@ -630,13 +640,18 @@ export default function App() {
         setPropertyUnits(prev => prev.map(u => u.unitNumber === newTenant.unit ? { ...u, status: 'Occupied' } : u));
         
         setGlobalMessage({ type: 'info', text: "Creating lease in cloud..." });
-        // Save tenant
-        await API.saveToSheet('ADD', 'Tenants', tenantData);
-        // Update unit status
-        const unit = propertyUnits.find(u => u.unitNumber === newTenant.unit);
-        if (unit) await API.saveToSheet('UPDATE', 'Units', { ...unit, status: 'Occupied' });
+        const res = await API.saveToSheet('ADD', 'Tenants', tenantData);
+        
+        if (unit) {
+            await API.saveToSheet('UPDATE', 'Units', { ...unit, status: 'Occupied' });
+        }
 
-        setGlobalMessage({ type: 'success', text: `New lease for Unit ${newTenant.unit} synced!` });
+        if (res.success) {
+            setGlobalMessage({ type: 'success', text: `Lease for ${newTenant.unit} Created & Cloud Synced` });
+            syncWithCloud(true);
+        } else {
+            setGlobalMessage({ type: 'error', text: `Cloud Sync Error: ${res.message}` });
+        }
         setTimeout(() => setGlobalMessage(null), 3000);
     };
 
@@ -648,8 +663,13 @@ export default function App() {
             if (unit) await API.saveToSheet('UPDATE', 'Units', { ...unit, status: 'Occupied' });
         }
         setGlobalMessage({ type: 'info', text: "Updating lease in cloud..." });
-        await API.saveToSheet('UPDATE', 'Tenants', updatedTenant);
-        setGlobalMessage({ type: 'success', text: `Lease updated & synced!` });
+        const res = await API.saveToSheet('UPDATE', 'Tenants', updatedTenant);
+        if (res.success) {
+            setGlobalMessage({ type: 'success', text: `Lease updated & Cloud Synced` });
+            syncWithCloud(true);
+        } else {
+            setGlobalMessage({ type: 'error', text: `Cloud Save Failed: ${res.message}` });
+        }
         setTimeout(() => setGlobalMessage(null), 3000);
     };
 
