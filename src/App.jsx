@@ -735,7 +735,9 @@ function ManagerDashboard({ tenants, propertyUnits, utilityBills, tasks, tenantM
     const [editingUnit, setEditingUnit] = useState(null);
 
     const totalRevenue = useMemo(() => (Array.isArray(tenants) ? tenants.reduce((a, b) => a + (Number(b?.baseRent) || 0), 0) : 0), [tenants]);
-    const vacantUnits = useMemo(() => (Array.isArray(propertyUnits) ? propertyUnits.filter(u => !tenants.some(t => t.unit === u.unitNumber)).length : 0), [propertyUnits, tenants]);
+    const occupiedUnits = useMemo(() => (Array.isArray(propertyUnits) ? propertyUnits.filter(u => tenants.some(t => t.unit === u.unitNumber)).length : 0), [propertyUnits, tenants]);
+    const totalUnits = Array.isArray(propertyUnits) ? propertyUnits.length : 0;
+    const vacantUnits = totalUnits - occupiedUnits;
     const tasksCount = Array.isArray(tasks) ? tasks.length : 0;
 
     // Currency tag helper — prepends ISO code as a label
@@ -745,7 +747,7 @@ function ManagerDashboard({ tenants, propertyUnits, utilityBills, tasks, tenantM
         <div className="space-y-8 animate-in fade-in duration-700">
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <StatCard index={0} title="Monthly Revenue" value={cur(totalRevenue)} icon={<CreditCard className="text-emerald-400" />} />
-                <StatCard index={1} title="Occupancy Rate" value={(Array.isArray(propertyUnits) && propertyUnits.length > 0) ? `${Math.round(((propertyUnits.length - vacantUnits) / propertyUnits.length) * 100)}%` : '0%'} icon={<Users className="text-blue-400" />} />
+                <StatCard index={1} title="Occupancy Rate" value={totalUnits > 0 ? `${Math.round((occupiedUnits / totalUnits) * 100)}%` : '0%'} icon={<Users className="text-blue-400" />} />
                 <StatCard index={2} title="Available Units" value={vacantUnits || 0} icon={<Building2 className="text-sky-400" />} />
                 <StatCard index={3} title="Active Maintenance" value={(tasksCount || 0).toString()} icon={<Wrench className="text-amber-400" />} />
             </div>
