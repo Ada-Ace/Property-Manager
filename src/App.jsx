@@ -912,13 +912,22 @@ function MessagesManager({ tenants, messages }) {
 }
 
 function WhatsAppRentButton({ tenant }) {
-    const dueDate = calculateNextRentDue(tenant.leaseStart).toISOString().split('T')[0];
-    const daysUntil = getDaysUntilDue(tenant.leaseStart);
+    // Determine the lease end date (fallback to 'N/A')
+    const leaseEnd = tenant.leaseEnd || 'the end of your contract';
     
-    const message = encodeURIComponent(`Hi ${String(tenant.name || 'Tenant').split(' ')[0]},\n\nJust a friendly reminder that your monthly rent of *$${(Number(tenant.baseRent) || 0).toLocaleString()}* for Unit *${tenant.unit}* is due on *${dueDate}*.\n\nPlease ensure payment is made before the deadline to avoid any late fees.\n\nThank you!`);
+    // Friendly renewal message
+    const message = encodeURIComponent(`Hi ${String(tenant.name || 'Tenant').split(' ')[0]},\n\nJust reaching out as your lease for Unit *${tenant.unit}* is scheduled to end on *${leaseEnd}*.\n\nWe would love to have you stay! Would you be interested in discussing a lease renewal?\n\nPlease let us know your thoughts.\n\nThank you!`);
     const waLink = `https://wa.me/${String(tenant.mobile || '').replace(/\D/g, '')}?text=${message}`;
 
-    const isUrgent = daysUntil <= 3;
+    // Consider it urgent if lease ends within 90 days (approximate)
+    let isUrgent = false;
+    try {
+        const end = new Date(tenant.leaseEnd);
+        if (!isNaN(end)) {
+            const diff = end - new Date();
+            isUrgent = diff > 0 && diff < (90 * 24 * 60 * 60 * 1000);
+        }
+    } catch(e) {}
 
     return (
         <a 
@@ -927,13 +936,13 @@ function WhatsAppRentButton({ tenant }) {
             rel="noopener noreferrer" 
             className={`text-[10px] uppercase font-black tracking-widest px-4 py-2 rounded-xl border transition-all flex items-center gap-2 ${
                 isUrgent 
-                ? 'bg-orange-500/20 text-orange-400 border-orange-500/40 hover:bg-orange-500/30' 
+                ? 'bg-amber-500/20 text-amber-400 border-amber-500/40 hover:bg-amber-500/30 shadow-lg shadow-amber-500/10' 
                 : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/20'
             }`}
         >
             <MessageSquare className="w-3.5 h-3.5" /> 
-            {isUrgent ? 'Push Rent Alert' : 'Notify Rent'}
-            {isUrgent && <span className="flex h-1.5 w-1.5 rounded-full bg-orange-500"></span>}
+            Lease Renewal Alert
+            {isUrgent && <span className="flex h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse"></span>}
         </a>
     );
 }
