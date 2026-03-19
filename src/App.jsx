@@ -181,11 +181,11 @@ const getLocalDate = () => {
     }
 };
 
-// Standardised date formatter �?dd-MMM-yyyy (e.g. 19-Mar-2026)
+// Standardised date formatter → dd-MMM-yyyy (e.g. 19-Mar-2026)
 const MONTHS_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
 const formatDate = (date, includeTime = false) => {
-    if (!date) return '�?;
+    if (!date) return '—';
     try {
         const d = typeof date === 'string' ? new Date(date) : date;
         if (isNaN(d.getTime())) return 'N/A';
@@ -202,17 +202,17 @@ const formatDate = (date, includeTime = false) => {
     }
 };
 
-// Shorthand: convert an ISO/date string �?dd-MMM-yyyy, stripping time part first
+// Shorthand: convert an ISO/date string → dd-MMM-yyyy, stripping time part first
 const fmtDate = (str) => {
-    if (!str) return '�?;
+    if (!str) return '—';
     try {
         // Handle strings like "2024-06-01T00:00:00Z" or "2024-06-01"
         const clean = String(str).split('T')[0];
         const [y, m, d] = clean.split('-');
-        if (!y || !m || !d) return '�?;
+        if (!y || !m || !d) return '—';
         return `${d.padStart(2,'0')}-${MONTHS_SHORT[parseInt(m,10)-1]}-${y}`;
     } catch (e) {
-        return '�?;
+        return '—';
     }
 };
 
@@ -712,7 +712,7 @@ function ManagerDashboard({ tenants, propertyUnits, utilityBills, tasks, tenantM
     const vacantUnits = useMemo(() => (Array.isArray(propertyUnits) ? propertyUnits.filter(u => u?.status === 'Available').length : 0), [propertyUnits]);
     const tasksCount = Array.isArray(tasks) ? tasks.length : 0;
 
-    // Currency tag helper �?prepends ISO code as a label
+    // Currency tag helper — prepends ISO code as a label
     const cur = (amount) => `${currency} ${Number(amount || 0).toLocaleString()}`;
 
     return (
@@ -1471,7 +1471,7 @@ function UtilityManager({ tenants, utilityBills, onAddBill, currency = 'USD' }) 
                                                         </span>
                                                     )}
                                                 </h4>
-                                                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1"><span className="text-indigo-400">{fmtDate(bill.date)}</span> �?{bill.mode === 'equal' ? 'Standard Split' : 'Designated Split'}</p>
+                                                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1"><span className="text-indigo-400">{fmtDate(bill.date)}</span> • {bill.mode === 'equal' ? 'Standard Split' : 'Designated Split'}</p>
                                             </div>
                                         </div>
                                         <div className="text-right">
@@ -1599,7 +1599,7 @@ function TasksManager({ tenants, tasks, onAddTask }) {
                         <div key={task.id} className="bg-slate-900/50 rounded-3xl p-6 border border-white/5 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
                             <div>
                                 <h4 className="text-lg font-black text-white flex items-center gap-2">{task.title}</h4>
-                                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Tenant: <span className="text-indigo-400">{tenant.name}</span> �?Unit {tenant.unit}</p>
+                                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Tenant: <span className="text-indigo-400">{tenant.name}</span> • Unit {tenant.unit}</p>
                                 <div className="mt-3 flex gap-2 flex-wrap">
                                     {task.dateOptions.map((opt, i) => (
                                         <span key={i} className="bg-slate-800 text-slate-300 text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-md border border-white/5">{opt}</span>
@@ -1786,7 +1786,7 @@ function MessageModal({ onClose, onSubmit }) {
                         <MessageSquare className="w-6 h-6 text-indigo-500" />
                         Message Manager
                     </h2>
-                    <button onClick={onClose} className="text-slate-500 hover:text-white transition-colors">�?/button>
+                    <button onClick={onClose} className="text-slate-500 hover:text-white transition-colors">✕</button>
                 </div>
                 <form onSubmit={(e) => { e.preventDefault(); onSubmit(msg, photo); }} className="space-y-4">
                     <textarea
@@ -1841,7 +1841,7 @@ function FittingsModal({ fittings, onClose, onSave }) {
                     <h2 className="text-xl font-black text-white italic flex items-center gap-3">
                         <Box className="w-6 h-6 text-indigo-500" /> Inventory & Fittings
                     </h2>
-                    <button onClick={onClose} className="text-slate-500 hover:text-white transition-colors">�?/button>
+                    <button onClick={onClose} className="text-slate-500 hover:text-white transition-colors">✕</button>
                 </div>
                 <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
                     <div className="flex gap-2 mb-4">
@@ -2034,7 +2034,7 @@ function LeaseModal({ initialData, availableUnits, onClose, onSubmit }) {
                         {initialData ? <Settings className="w-6 h-6 text-indigo-500" /> : <PlusCircle className="w-6 h-6 text-emerald-500" />}
                         {initialData ? 'Edit Lease' : 'New Lease'}
                     </h2>
-                    <button onClick={onClose} className="text-slate-500 hover:text-white transition-colors">�?/button>
+                    <button onClick={onClose} className="text-slate-500 hover:text-white transition-colors">✕</button>
                 </div>
                 <form onSubmit={(e) => { e.preventDefault(); onSubmit(leaseForm); }} className="space-y-4">
                     <div className="grid grid-cols-2 gap-4">
@@ -2153,7 +2153,7 @@ function LoginPage({ onLogin }) {
                                 type="password" 
                                 required 
                                 className="w-full bg-slate-950/50 border border-white/5 rounded-2xl py-5 px-6 text-white outline-none focus:ring-2 ring-indigo-500/40 transition-all placeholder:text-slate-700 text-sm" 
-                                placeholder="•••••••�? 
+                                placeholder="••••••••" 
                                 value={password} 
                                 onChange={(e) => setPassword(e.target.value)} 
                             />
@@ -2316,7 +2316,7 @@ function PropertySettingsModal({ property, onClose, onSave }) {
                         >
                             {ISO_CURRENCIES.map(c => (
                                 <option key={c.code} value={c.code} className="bg-slate-900">
-                                    {c.code} �?{c.name}
+                                    {c.code} — {c.name}
                                 </option>
                             ))}
                         </select>
