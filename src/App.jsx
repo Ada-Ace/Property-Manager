@@ -135,36 +135,45 @@ const LOCALE = 'en-MY'; // Or your preferred region for GMT+8
 
 // --- Helper Functions ---
 const getLocalDate = () => {
-    // Return a date object adjusted to the targeted timezone if needed, 
-    // or just use this for formatting consistency.
-    return new Date(new Date().toLocaleString("en-US", { timeZone: APP_TIMEZONE }));
+    try {
+        // More robust way to get a UTC-based date for specific timezone comparison
+        const d = new Date();
+        return new Date(d.toLocaleString("en-US", { timeZone: APP_TIMEZONE }));
+    } catch (e) {
+        return new Date();
+    }
 };
 
 const formatDate = (date, includeTime = false) => {
     if (!date) return '';
-    const d = typeof date === 'string' ? new Date(date) : date;
-    return d.toLocaleDateString(LOCALE, {
-        timeZone: APP_TIMEZONE,
-        year: 'numeric',
-        month: 'short',
-        day: '2-digit',
-        ...(includeTime ? { hour: '2-digit', minute: '2-digit', second: '2-digit' } : {})
-    });
+    try {
+        const d = typeof date === 'string' ? new Date(date) : date;
+        if (isNaN(d.getTime())) return 'N/A';
+        return d.toLocaleDateString(LOCALE, {
+            timeZone: APP_TIMEZONE,
+            year: 'numeric',
+            month: 'short',
+            day: '2-digit',
+            ...(includeTime ? { hour: '2-digit', minute: '2-digit', second: '2-digit' } : {})
+        });
+    } catch (e) {
+        return 'N/A';
+    }
 };
+
 const calculateNextRentDue = (leaseStart) => {
     const today = getLocalDate();
     const lStart = new Date(leaseStart);
-    const day = lStart.getDate();
     
-    // Rent is due one day before the period starts.
-    // Period starts on 'day' of each month.
+    // Safety check: If lease date is invalid, use today as a safe bail-out
+    if (isNaN(lStart.getTime())) return new Date(today);
+    
+    const day = lStart.getDate();
     let dueDate = new Date(today.getFullYear(), today.getMonth(), day - 1);
     
-    // If this month's due date has already passed, compute for the next cycle
     if (dueDate < today) {
         dueDate = new Date(today.getFullYear(), today.getMonth() + 1, day - 1);
     }
-    
     return dueDate;
 };
 
@@ -172,6 +181,7 @@ const getDaysUntilDue = (leaseStart) => {
     const today = getLocalDate();
     today.setHours(0, 0, 0, 0);
     const dueDate = calculateNextRentDue(leaseStart);
+    if (isNaN(dueDate.getTime())) return 0;
     dueDate.setHours(0, 0, 0, 0);
     return Math.ceil((dueDate - today) / (1000 * 60 * 60 * 24));
 };
