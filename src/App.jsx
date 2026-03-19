@@ -400,7 +400,20 @@ export default function App() {
     const [isRefreshing, setIsRefreshing] = useState(false);
 
     const syncWithCloud = async (isBackground = false) => {
-        if (!API.isValid()) return;
+        if (!API.isValid()) {
+            if (!isBackground) {
+                // Fallback to local/demo data if no cloud URL
+                setProperties(INITIAL_PROPERTIES);
+                setTenants(INITIAL_TENANTS);
+                setPropertyUnits(INITIAL_UNITS);
+                setUtilityBills(INITIAL_BILLS);
+                setTenantMessages(INITIAL_MESSAGES);
+                setActiveProperty(INITIAL_PROPERTIES[0].name);
+                setTimeout(() => setIsLoading(false), 500); // Small delay for smooth entry
+            }
+            return;
+        }
+
         if (!isBackground) setIsLoading(true);
         else setIsRefreshing(true);
         
@@ -443,9 +456,21 @@ export default function App() {
                         setActiveProperty(actualProperties[0].name);
                     }
                 }
+            } else {
+                // Handle success with no data or invalid data format returned
+                if (!isBackground) {
+                    setProperties(INITIAL_PROPERTIES);
+                    setTenants(INITIAL_TENANTS);
+                }
             }
         } catch (err) {
-            console.error('Background Sync Error:', err);
+            console.error('Core sync failure:', err);
+            if (!isBackground) {
+                setGlobalMessage({ type: 'error', text: "Cloud Sync Error - Using Demo Data" });
+                setProperties(INITIAL_PROPERTIES);
+                setTenants(INITIAL_TENANTS);
+                setActiveProperty(INITIAL_PROPERTIES[0].name);
+            }
         } finally {
             setIsLoading(false);
             setIsRefreshing(false);
