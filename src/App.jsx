@@ -254,18 +254,15 @@ const API = {
 export default function App() {
     const [view, setView] = useState('login');
     const [isLoading, setIsLoading] = useState(true);
-    const [tenants, setTenants] = useState(INITIAL_TENANTS);
-    const [propertyUnits, setPropertyUnits] = useState(INITIAL_UNITS);
-    const [utilityBills, setUtilityBills] = useState(INITIAL_BILLS);
+    const [tenants, setTenants] = useState([]);
+    const [propertyUnits, setPropertyUnits] = useState([]);
+    const [utilityBills, setUtilityBills] = useState([]);
     const [tasks, setTasks] = useState([]);
     const [activeTenantId, setActiveTenantId] = useState(null);
     const [activeProperty, setActiveProperty] = useState(null);
     const [globalMessage, setGlobalMessage] = useState(null);
-    const [properties, setProperties] = useState(INITIAL_PROPERTIES);
-    const [tenantMessages, setTenantMessages] = useState([
-        { id: 'M1', tenantId: 'T1', content: 'The aircon in the master bedroom is leaking slightly.', timestamp: '2026-03-18T10:30:00Z', propertyName: 'Skyline Residency' },
-        { id: 'M2', tenantId: 'T2', content: 'When will the utility bills for March be posted?', timestamp: '2026-03-18T14:45:00Z', propertyName: 'Skyline Residency' }
-    ]);
+    const [properties, setProperties] = useState([]);
+    const [tenantMessages, setTenantMessages] = useState([]);
 
     // Computed filtered lists based on selected property (ensure arrays exist)
     const filteredTenants = useMemo(() => {
@@ -320,8 +317,18 @@ export default function App() {
                 // If we found ANY real data at all, we should clear the mock properties
                 if (actualProperties.length > 0) {
                     setProperties(actualProperties);
-                    // Ensure active property is the first real one
-                    setActiveProperty(actualProperties[0].name);
+                    if (!activeProperty) setActiveProperty(actualProperties[0].name);
+                } else if (!API.isValid()) {
+                    // Fallback to mock data ONLY if API is not configured (local dev)
+                    setProperties(INITIAL_PROPERTIES);
+                    setTenants(INITIAL_TENANTS);
+                    setPropertyUnits(INITIAL_UNITS);
+                    setUtilityBills(INITIAL_BILLS);
+                    setTenantMessages([
+                        { id: 'M1', tenantId: 'T1', content: 'The aircon in the master bedroom is leaking slightly.', timestamp: '2026-03-18T10:30:00Z', propertyName: 'Skyline Residency' },
+                        { id: 'M2', tenantId: 'T2', content: 'When will the utility bills for March be posted?', timestamp: '2026-03-18T14:45:00Z', propertyName: 'Skyline Residency' }
+                    ]);
+                    setActiveProperty(INITIAL_PROPERTIES[0].name);
                 }
 
                 if (Array.isArray(data.tenants)) setTenants(data.tenants);
