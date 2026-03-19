@@ -870,6 +870,7 @@ function ManagerDashboard({ tenants, propertyUnits, utilityBills, tasks, tenantM
                                         unit={unit}
                                         actualRent={tenant?.baseRent}
                                         tenantName={tenant?.name}
+                                        tenantLeaseEnd={tenant?.leaseEnd}
                                         onUpdateFittings={(newFittings) => onUpdateFittings(unit.id, newFittings)}
                                     />
                                 );
@@ -1886,7 +1887,7 @@ function FittingsModal({ fittings, onClose, onSave }) {
     );
 }
 
-function UnitCard({ unit, actualRent, tenantName, onUpdateFittings }) {
+function UnitCard({ unit, actualRent, tenantName, tenantLeaseEnd, onUpdateFittings }) {
     const [activeSubTab, setActiveSubTab] = useState('info');
     const [showInventoryModal, setShowInventoryModal] = useState(false);
     const isOccupied = unit.status === 'Occupied' || !!tenantName;
@@ -1957,9 +1958,14 @@ function UnitCard({ unit, actualRent, tenantName, onUpdateFittings }) {
                                         {isOccupied ? (
                                             <div className="space-y-1">
                                                 <p className="text-[8px] font-black text-slate-600 uppercase tracking-widest ml-1">Current Resident</p>
-                                                <div className="flex items-center gap-2.5 text-indigo-400 font-black bg-indigo-500/5 px-4 py-2 rounded-2xl border border-indigo-500/10">
-                                                    <User className="w-4 h-4" />
-                                                    <span className="text-xs uppercase tracking-tight truncate max-w-[120px]">{tenantName}</span>
+                                                <div className="flex flex-col gap-1.5">
+                                                    <div className="flex items-center gap-2.5 text-indigo-400 font-black bg-indigo-500/5 px-4 py-2 rounded-2xl border border-indigo-500/10">
+                                                        <User className="w-4 h-4" />
+                                                        <span className="text-xs uppercase tracking-tight truncate max-w-[120px]">{tenantName}</span>
+                                                    </div>
+                                                    {tenantLeaseEnd && (
+                                                        <p className="text-[9px] text-slate-500 font-bold ml-1">End: <span className="text-white">{fmtDate(tenantLeaseEnd)}</span></p>
+                                                    )}
                                                 </div>
                                             </div>
                                         ) : (
