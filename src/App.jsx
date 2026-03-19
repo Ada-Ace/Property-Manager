@@ -402,23 +402,6 @@ export default function App() {
     
     // Property selection view removed as requested - admins now go direct
 
-    if (isLoading) {
-        return (
-            <div className="min-h-screen bg-slate-950 flex items-center justify-center">
-                <div className="text-center">
-                    <div className="w-12 h-12 border-4 border-indigo-500/20 border-t-indigo-500 rounded-full animate-spin mx-auto mb-4 shadow-[0_0_15px_rgba(99,102,241,0.2)]"></div>
-                    <p className="text-[10px] text-slate-500 font-black uppercase tracking-[0.3em] animate-pulse">Establishing Secure Connection...</p>
-                    <button 
-                        onClick={() => setIsLoading(false)} 
-                        className="mt-8 text-[9px] text-slate-700 hover:text-indigo-400 font-black uppercase tracking-widest transition-all hover:tracking-[0.4em]"
-                    >
-                        Skip & Continue Offline
-                    </button>
-                </div>
-            </div>
-        );
-    }
-
     return (
         <div className="min-h-screen bg-slate-950 text-slate-200 font-sans selection:bg-indigo-500/30 premium-gradient selection:text-white">
             <AnimatePresence>
@@ -468,35 +451,48 @@ export default function App() {
 
             <main className="max-w-7xl mx-auto p-4 md:p-8">
                 <AnimatePresence mode="wait">
-                    <Motion.div
-                        key={view + activeTenantId}
-                        initial={{ opacity: 0, scale: 0.98 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        exit={{ opacity: 0 }}
-                        transition={{ duration: 0.4, ease: "easeOut" }}
-                    >
-                        {view === 'manager' ? (
-                            <ManagerDashboard
-                                tenants={filteredTenants}
-                                propertyUnits={filteredUnits}
-                                utilityBills={filteredBills}
-                                tasks={filteredTasks}
-                                tenantMessages={filteredMessages}
-                                onAddUnit={addUnitToCatalog}
-                                onAddTenant={addTenant}
-                                onEditTenant={editTenant}
-                                onUpdateFittings={updateUnitFittings}
-                                onAddBill={handleAddBill}
-                                onAddTask={handleAddTask}
-                            />
-                        ) : (
-                            <TenantDashboard
-                                tenant={tenants.find(t => t.id === activeTenantId)}
-                                unit={propertyUnits.find(u => u.unitNumber === (tenants.find(t => t.id === activeTenantId)?.unit))}
-                                onSendMessage={handleSendMessage}
-                            />
-                        )}
-                    </Motion.div>
+                    {isLoading ? (
+                        <Motion.div 
+                            key="loader"
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="flex flex-col items-center justify-center py-20"
+                        >
+                            <div className="w-12 h-12 border-4 border-indigo-500/20 border-t-indigo-500 rounded-full animate-spin mb-4"></div>
+                            <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest animate-pulse">Syncing with Cloud Database...</p>
+                        </Motion.div>
+                    ) : (
+                        <Motion.div
+                            key={view + activeTenantId}
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0 }}
+                            transition={{ duration: 0.4, ease: "easeOut" }}
+                        >
+                            {view === 'manager' ? (
+                                <ManagerDashboard
+                                    tenants={filteredTenants}
+                                    propertyUnits={filteredUnits}
+                                    utilityBills={filteredBills}
+                                    tasks={filteredTasks}
+                                    tenantMessages={filteredMessages}
+                                    onAddUnit={addUnitToCatalog}
+                                    onAddTenant={addTenant}
+                                    onEditTenant={editTenant}
+                                    onUpdateFittings={updateUnitFittings}
+                                    onAddBill={handleAddBill}
+                                    onAddTask={handleAddTask}
+                                />
+                            ) : (
+                                <TenantDashboard
+                                    tenant={tenants.find(t => t.id === activeTenantId)}
+                                    unit={propertyUnits.find(u => u.unitNumber === (tenants.find(t => t.id === activeTenantId)?.unit))}
+                                    onSendMessage={handleSendMessage}
+                                />
+                            )}
+                        </Motion.div>
+                    )}
                 </AnimatePresence>
             </main>
         </div>
