@@ -257,11 +257,35 @@ export default function App() {
     ]);
 
     // Computed filtered lists based on selected property (ensure arrays exist)
-    const filteredTenants = useMemo(() => (activeProperty && Array.isArray(tenants)) ? tenants.filter(t => t && String(t.propertyName || '').trim() === String(activeProperty).trim()) : [], [tenants, activeProperty]);
-    const filteredUnits = useMemo(() => (activeProperty && Array.isArray(propertyUnits)) ? propertyUnits.filter(u => u && String(u.propertyName || '').trim() === String(activeProperty).trim()) : [], [propertyUnits, activeProperty]);
-    const filteredMessages = useMemo(() => (activeProperty && Array.isArray(tenantMessages)) ? tenantMessages.filter(m => m && String(m.propertyName || '').trim() === String(activeProperty).trim()) : [], [tenantMessages, activeProperty]);
-    const filteredBills = useMemo(() => (activeProperty && Array.isArray(utilityBills)) ? utilityBills.filter(b => b && String(b.propertyName || '').trim() === String(activeProperty).trim()) : [], [utilityBills, activeProperty]);
-    const filteredTasks = useMemo(() => (activeProperty && Array.isArray(tasks)) ? tasks.filter(t => t && String(t.propertyName || '').trim() === String(activeProperty).trim()) : [], [tasks, activeProperty]);
+    const filteredTenants = useMemo(() => {
+        if (!activeProperty || !Array.isArray(tenants)) return [];
+        const normActive = String(activeProperty).trim().toLowerCase();
+        return tenants.filter(t => t && String(t.propertyName || '').trim().toLowerCase() === normActive);
+    }, [tenants, activeProperty]);
+
+    const filteredUnits = useMemo(() => {
+        if (!activeProperty || !Array.isArray(propertyUnits)) return [];
+        const normActive = String(activeProperty).trim().toLowerCase();
+        return propertyUnits.filter(u => u && String(u.propertyName || '').trim().toLowerCase() === normActive);
+    }, [propertyUnits, activeProperty]);
+
+    const filteredMessages = useMemo(() => {
+        if (!activeProperty || !Array.isArray(tenantMessages)) return [];
+        const normActive = String(activeProperty).trim().toLowerCase();
+        return tenantMessages.filter(m => m && String(m.propertyName || '').trim().toLowerCase() === normActive);
+    }, [tenantMessages, activeProperty]);
+
+    const filteredBills = useMemo(() => {
+        if (!activeProperty || !Array.isArray(utilityBills)) return [];
+        const normActive = String(activeProperty).trim().toLowerCase();
+        return utilityBills.filter(b => b && String(b.propertyName || '').trim().toLowerCase() === normActive);
+    }, [utilityBills, activeProperty]);
+
+    const filteredTasks = useMemo(() => {
+        if (!activeProperty || !Array.isArray(tasks)) return [];
+        const normActive = String(activeProperty).trim().toLowerCase();
+        return tasks.filter(t => t && String(t.propertyName || '').trim().toLowerCase() === normActive);
+    }, [tasks, activeProperty]);
 
     // Initial Data Fetch
     useEffect(() => {
