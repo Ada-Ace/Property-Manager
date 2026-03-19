@@ -145,22 +145,41 @@ const getLocalDate = () => {
     }
 };
 
+// Standardised date formatter → dd-MMM-yyyy (e.g. 19-Mar-2026)
+const MONTHS_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
 const formatDate = (date, includeTime = false) => {
-    if (!date) return '';
+    if (!date) return '—';
     try {
         const d = typeof date === 'string' ? new Date(date) : date;
         if (isNaN(d.getTime())) return 'N/A';
-        return d.toLocaleDateString(LOCALE, {
-            timeZone: APP_TIMEZONE,
-            year: 'numeric',
-            month: 'short',
-            day: '2-digit',
-            ...(includeTime ? { hour: '2-digit', minute: '2-digit', second: '2-digit' } : {})
-        });
+        const dd   = String(d.getDate()).padStart(2, '0');
+        const mmm  = MONTHS_SHORT[d.getMonth()];
+        const yyyy = d.getFullYear();
+        const base = `${dd}-${mmm}-${yyyy}`;
+        if (!includeTime) return base;
+        const hh = String(d.getHours()).padStart(2, '0');
+        const mi = String(d.getMinutes()).padStart(2, '0');
+        return `${base} ${hh}:${mi}`;
     } catch (e) {
         return 'N/A';
     }
 };
+
+// Shorthand: convert an ISO/date string → dd-MMM-yyyy, stripping time part first
+const fmtDate = (str) => {
+    if (!str) return '—';
+    try {
+        // Handle strings like "2024-06-01T00:00:00Z" or "2024-06-01"
+        const clean = String(str).split('T')[0];
+        const [y, m, d] = clean.split('-');
+        if (!y || !m || !d) return '—';
+        return `${d.padStart(2,'0')}-${MONTHS_SHORT[parseInt(m,10)-1]}-${y}`;
+    } catch (e) {
+        return '—';
+    }
+};
+
 
 const calculateNextRentDue = (leaseStart) => {
     const today = getLocalDate();
@@ -706,13 +725,13 @@ function ManagerDashboard({ tenants, propertyUnits, utilityBills, tasks, tenantM
                                         {tenants.map(t => {
                                             const daysUntil = getDaysUntilDue(t.leaseStart);
                                             const dueDate = calculateNextRentDue(t.leaseStart);
-                                            const dueDateStr = (dueDate instanceof Date && !isNaN(dueDate)) ? dueDate.toISOString().split('T')[0] : 'N/A';
+                                            const dueDateStr = (dueDate instanceof Date && !isNaN(dueDate)) ? fmtDate(dueDate.toISOString()) : 'N/A';
                                             
                                             return (
                                                 <tr key={t.id} className="group hover:bg-white/[0.02] transition-colors">
                                                     <td className="py-6 pl-2 font-black text-white">{t.name}</td>
                                                     <td className="py-6"><span className="text-indigo-400 font-mono text-xs bg-indigo-500/5 px-2 py-1 rounded-md border border-indigo-500/10">Unit {t.unit}</span></td>
-                                                    <td className="py-6 text-slate-400 text-xs font-bold">{String(t.leaseEnd || '').split('T')[0]}</td>
+                                                    <td className="py-6 text-slate-400 text-xs font-bold">{fmtDate(t.leaseEnd)}</td>
                                                     <td className="py-6 text-center">
                                                         <div className="flex flex-col items-center">
                                                             <span className={`text-[10px] font-black uppercase tracking-tight ${daysUntil <= 3 ? 'text-orange-400 animate-pulse' : 'text-slate-400'}`}>
@@ -844,7 +863,7 @@ function RentSummaryTab({ tenants }) {
                     {upcomingRents.map((rent, idx) => {
                         const isUrgent = rent.daysUntil <= 3;
                         const isOverdue = rent.daysUntil < 0;
-                        const dueDateStr = (rent.dueDate instanceof Date && !isNaN(rent.dueDate)) ? rent.dueDate.toISOString().split('T')[0] : 'N/A';
+                        const dueDateStr = (rent.dueDate instanceof Date && !isNaN(rent.dueDate)) ? fmtDate(rent.dueDate.toISOString()) : 'N/A';
                         return (
                             <Motion.div 
                                 key={rent.id} 
@@ -866,7 +885,7 @@ function RentSummaryTab({ tenants }) {
                                     }`}>{rent.unit}</div>
                                     <div>
                                         <p className="text-base font-black text-white tracking-tight">{rent.name}</p>
-                                        <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest mt-0.5">Cycle: {String(rent.leaseStart || '').split('T')[0]}</p>
+                                        <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest mt-0.5">Cycle: {fmtDate(rent.leaseStart)}</p>
                                     </div>
                                 </div>
 
@@ -1035,7 +1054,7 @@ function WhatsAppRentButton({ tenant, mode = 'rent' }) {
     }
 
     // Default: Rent Mode
-    const dueDate = calculateNextRentDue(tenant.leaseStart).toISOString().split('T')[0];
+    const dueDate = fmtDate(calculateNextRentDue(tenant.leaseStart).toISOString());
     const daysUntil = getDaysUntilDue(tenant.leaseStart);
     const message = encodeURIComponent(`Hi ${String(tenant.name || 'Tenant').split(' ')[0]},\n\nJust a friendly reminder that your monthly rent of *$${(Number(tenant.baseRent) || 0).toLocaleString()}* for Unit *${tenant.unit}* is due on *${dueDate}*.\n\nPlease ensure payment is made before the deadline to avoid any late fees.\n\nThank you!`);
     const waLink = `https://wa.me/${String(tenant.mobile || '').replace(/\D/g, '')}?text=${message}`;
@@ -1381,7 +1400,7 @@ function UtilityManager({ tenants, utilityBills, onAddBill }) {
                                                         </span>
                                                     )}
                                                 </h4>
-                                                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1"><span className="text-indigo-400">{String(bill.date || '').split('T')[0]}</span> • {bill.mode === 'equal' ? 'Standard Split' : 'Designated Split'}</p>
+                                                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1"><span className="text-indigo-400">{fmtDate(bill.date)}</span> • {bill.mode === 'equal' ? 'Standard Split' : 'Designated Split'}</p>
                                             </div>
                                         </div>
                                         <div className="text-right">
@@ -1612,14 +1631,14 @@ function TenantDashboard({ tenant, unit, onSendMessage }) {
                                 <p className="text-[9px] font-black text-slate-600 uppercase tracking-widest mb-1">Lease Start</p>
                                 <div className="flex items-center gap-2">
                                     <Calendar className="w-3.5 h-3.5 text-slate-500" />
-                                    <p className="text-sm font-bold text-white tracking-tight">{tenant.leaseStart}</p>
+                                    <p className="text-sm font-bold text-white tracking-tight">{fmtDate(tenant.leaseStart)}</p>
                                 </div>
                             </div>
                             <div>
                                 <p className="text-[9px] font-black text-slate-600 uppercase tracking-widest mb-1">Lease End</p>
                                 <div className="flex items-center gap-2">
                                     <Clock className="w-3.5 h-3.5 text-amber-400" />
-                                    <p className="text-sm font-bold text-white tracking-tight">{tenant.leaseEnd}</p>
+                                    <p className="text-sm font-bold text-white tracking-tight">{fmtDate(tenant.leaseEnd)}</p>
                                 </div>
                             </div>
                             <div>
