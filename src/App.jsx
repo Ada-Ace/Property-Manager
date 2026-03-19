@@ -906,8 +906,8 @@ function ManagerDashboard({ tenants, propertyUnits, utilityBills, tasks, tenantM
 
             {showUnitModal && <UnitModal onClose={() => setShowUnitModal(false)} onSubmit={onAddUnit} />}
             {editingUnit && <UnitModal initialData={editingUnit} onClose={() => setEditingUnit(null)} onSubmit={(data) => { onEditUnit(data); setEditingUnit(null); }} />}
-            {showLeaseModal && <LeaseModal availableUnits={propertyUnits.filter(u => u.status === 'Available')} onClose={() => setShowLeaseModal(false)} onSubmit={onAddTenant} />}
-            {editingTenant && <LeaseModal initialData={editingTenant} availableUnits={propertyUnits.filter(u => u.status === 'Available' || u.unitNumber === editingTenant.unit)} onClose={() => setEditingTenant(null)} onSubmit={(data) => { onEditTenant(data); setEditingTenant(null); }} />}
+            {showLeaseModal && <LeaseModal availableUnits={propertyUnits.filter(u => !tenants.some(t => t.unit === u.unitNumber))} onClose={() => setShowLeaseModal(false)} onSubmit={onAddTenant} />}
+            {editingTenant && <LeaseModal initialData={editingTenant} availableUnits={propertyUnits.filter(u => !tenants.some(t => t.unit === u.unitNumber) || u.unitNumber === editingTenant.unit)} onClose={() => setEditingTenant(null)} onSubmit={(data) => { onEditTenant(data); setEditingTenant(null); }} />}
         </div>
     );
 }
