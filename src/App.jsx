@@ -92,6 +92,23 @@ const INITIAL_TENANTS = [
         notifications: [],
         leaseDocument: 'lease_agreement_B.pdf',
         propertyName: 'Skyline Residency'
+    },
+    {
+        id: 'T3',
+        name: 'Charlie Brown',
+        unit: '10-A',
+        email: 'charlie@example.com',
+        mobile: '+1122334455',
+        password: 'password123',
+        baseRent: 2500,
+        deposit: 5000,
+        leaseStart: '2024-03-01',
+        leaseEnd: '2025-02-28',
+        maintenanceSelection: null,
+        utilityShare: 15.00,
+        notifications: [],
+        leaseDocument: null,
+        propertyName: 'Uptown@Farrer'
     }
 ];
 
@@ -240,11 +257,11 @@ export default function App() {
     ]);
 
     // Computed filtered lists based on selected property (ensure arrays exist)
-    const filteredTenants = useMemo(() => (activeProperty && Array.isArray(tenants)) ? tenants.filter(t => t && t.propertyName === activeProperty) : [], [tenants, activeProperty]);
-    const filteredUnits = useMemo(() => (activeProperty && Array.isArray(propertyUnits)) ? propertyUnits.filter(u => u && u.propertyName === activeProperty) : [], [propertyUnits, activeProperty]);
-    const filteredMessages = useMemo(() => (activeProperty && Array.isArray(tenantMessages)) ? tenantMessages.filter(m => m && m.propertyName === activeProperty) : [], [tenantMessages, activeProperty]);
-    const filteredBills = useMemo(() => (activeProperty && Array.isArray(utilityBills)) ? utilityBills.filter(b => b && b.propertyName === activeProperty) : [], [utilityBills, activeProperty]);
-    const filteredTasks = useMemo(() => (activeProperty && Array.isArray(tasks)) ? tasks.filter(t => t && t.propertyName === activeProperty) : [], [tasks, activeProperty]);
+    const filteredTenants = useMemo(() => (activeProperty && Array.isArray(tenants)) ? tenants.filter(t => t && String(t.propertyName || '').trim() === String(activeProperty).trim()) : [], [tenants, activeProperty]);
+    const filteredUnits = useMemo(() => (activeProperty && Array.isArray(propertyUnits)) ? propertyUnits.filter(u => u && String(u.propertyName || '').trim() === String(activeProperty).trim()) : [], [propertyUnits, activeProperty]);
+    const filteredMessages = useMemo(() => (activeProperty && Array.isArray(tenantMessages)) ? tenantMessages.filter(m => m && String(m.propertyName || '').trim() === String(activeProperty).trim()) : [], [tenantMessages, activeProperty]);
+    const filteredBills = useMemo(() => (activeProperty && Array.isArray(utilityBills)) ? utilityBills.filter(b => b && String(b.propertyName || '').trim() === String(activeProperty).trim()) : [], [utilityBills, activeProperty]);
+    const filteredTasks = useMemo(() => (activeProperty && Array.isArray(tasks)) ? tasks.filter(t => t && String(t.propertyName || '').trim() === String(activeProperty).trim()) : [], [tasks, activeProperty]);
 
     // Initial Data Fetch
     useEffect(() => {
@@ -463,19 +480,21 @@ export default function App() {
                         transition={{ duration: 0.3 }}
                     >
                         {view === 'manager' ? (
-                            <ManagerDashboard
-                                tenants={filteredTenants}
-                                propertyUnits={filteredUnits}
-                                utilityBills={filteredBills}
-                                tasks={filteredTasks}
-                                tenantMessages={filteredMessages}
-                                onAddUnit={addUnitToCatalog}
-                                onAddTenant={addTenant}
-                                onEditTenant={editTenant}
-                                onUpdateFittings={updateUnitFittings}
-                                onAddBill={handleAddBill}
-                                onAddTask={handleAddTask}
-                            />
+                            <ErrorBoundary>
+                                <ManagerDashboard
+                                    tenants={filteredTenants}
+                                    propertyUnits={filteredUnits}
+                                    utilityBills={filteredBills}
+                                    tasks={filteredTasks}
+                                    tenantMessages={filteredMessages}
+                                    onAddUnit={addUnitToCatalog}
+                                    onAddTenant={addTenant}
+                                    onEditTenant={editTenant}
+                                    onUpdateFittings={updateUnitFittings}
+                                    onAddBill={handleAddBill}
+                                    onAddTask={handleAddTask}
+                                />
+                            </ErrorBoundary>
                         ) : (
                             <TenantDashboard
                                 tenant={tenants.find(t => t.id === activeTenantId)}
@@ -662,8 +681,8 @@ function RentSummaryTab({ tenants }) {
         });
     }, [tenants]);
 
-    const totalRevenueThisCycle = useMemo(() => upcomingRents.reduce((a, b) => a + b.baseRent, 0), [upcomingRents]);
-    const soonDueCount = upcomingRents.filter(r => r.daysUntil <= 3).length;
+    const totalRevenueThisCycle = useMemo(() => upcomingRents.reduce((a, b) => a + (Number(b?.baseRent) || 0), 0), [upcomingRents]);
+    const soonDueCount = upcomingRents.filter(r => r && (Number(r?.daysUntil) || 0) <= 3).length;
 
     return (
         <div className="space-y-8 animate-in fade-in duration-700">
@@ -1814,4 +1833,27 @@ function PropertySelectView({ properties, onSelect }) {
             </button>
         </div>
     );
+}
+
+
+// --- Global Support ---
+class ErrorBoundary extends React.Component {
+    constructor(props) { super(props); this.state = { hasError: false, error: null }; }
+    static getDerivedStateFromError(error) { return { hasError: true, error }; }
+    render() {
+        if (this.state.hasError) {
+            return (
+                <div className=" bg-red-500/10 border border-red-500/20 p-8 rounded-3xl text-center\>
+ <AlertCircle className=\w-10 h-10 text-red-500 mx-auto mb-4\ />
+ <h2 className=\text-xl font-black text-white italic mb-2\>Portal Crash Detected</h2>
+ <p className=\text-[10px] text-red-400 font-bold uppercase tracking-widest leading-relaxed\>
+ An incompatibility in local data or browser settings prevented this dashboard from loading.<br/>
+ <span className=\opacity-60 text-[8px]\>{this.state.error?.message}</span>
+ </p>
+ <button onClick={() => window.location.reload()} className=\mt-6 text-[9px] font-black text-white bg-red-600 px-6 py-2 rounded-xl uppercase tracking-widest shadow-lg active:scale-95\>Re-sync Dashboard</button>
+ </div>
+ );
+ }
+ return this.props.children;
+ }
 }
