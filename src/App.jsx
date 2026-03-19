@@ -237,12 +237,12 @@ export default function App() {
         { id: 'M2', tenantId: 'T2', content: 'When will the utility bills for March be posted?', timestamp: '2026-03-18T14:45:00Z', propertyName: 'Skyline Residency' }
     ]);
 
-    // Computed filtered lists based on selected property
-    const filteredTenants = useMemo(() => activeProperty ? tenants.filter(t => t.propertyName === activeProperty) : [], [tenants, activeProperty]);
-    const filteredUnits = useMemo(() => activeProperty ? propertyUnits.filter(u => u.propertyName === activeProperty) : [], [propertyUnits, activeProperty]);
-    const filteredMessages = useMemo(() => activeProperty ? tenantMessages.filter(m => m.propertyName === activeProperty) : [], [tenantMessages, activeProperty]);
-    const filteredBills = useMemo(() => activeProperty ? utilityBills.filter(b => b.propertyName === activeProperty) : [], [utilityBills, activeProperty]);
-    const filteredTasks = useMemo(() => activeProperty ? tasks.filter(t => t.propertyName === activeProperty) : [], [tasks, activeProperty]);
+    // Computed filtered lists based on selected property (ensure arrays exist)
+    const filteredTenants = useMemo(() => (activeProperty && Array.isArray(tenants)) ? tenants.filter(t => t && t.propertyName === activeProperty) : [], [tenants, activeProperty]);
+    const filteredUnits = useMemo(() => (activeProperty && Array.isArray(propertyUnits)) ? propertyUnits.filter(u => u && u.propertyName === activeProperty) : [], [propertyUnits, activeProperty]);
+    const filteredMessages = useMemo(() => (activeProperty && Array.isArray(tenantMessages)) ? tenantMessages.filter(m => m && m.propertyName === activeProperty) : [], [tenantMessages, activeProperty]);
+    const filteredBills = useMemo(() => (activeProperty && Array.isArray(utilityBills)) ? utilityBills.filter(b => b && b.propertyName === activeProperty) : [], [utilityBills, activeProperty]);
+    const filteredTasks = useMemo(() => (activeProperty && Array.isArray(tasks)) ? tasks.filter(t => t && t.propertyName === activeProperty) : [], [tasks, activeProperty]);
 
     // Initial Data Fetch
     useEffect(() => {
@@ -459,7 +459,7 @@ export default function App() {
                                     value={activeProperty}
                                     onChange={(e) => setActiveProperty(e.target.value)}
                                 >
-                                    {properties.map(p => <option key={p.id} value={p.name} className="bg-slate-900">{p.name}</option>)}
+                                    {Array.isArray(properties) && properties.map(p => <option key={p?.id || p} value={p?.name || p} className="bg-slate-900">{p?.name || p}</option>)}
                                 </select>
                             </div>
                         )}
@@ -497,7 +497,7 @@ export default function App() {
                         ) : (
                             <TenantDashboard
                                 tenant={tenants.find(t => t.id === activeTenantId)}
-                                unit={propertyUnits.find(u => u.unitNumber === tenants.find(t => t.id === activeTenantId)?.unit)}
+                                unit={propertyUnits.find(u => u.unitNumber === (tenants.find(t => t.id === activeTenantId)?.unit))}
                                 onSendMessage={handleSendMessage}
                             />
                         )}
@@ -516,16 +516,17 @@ function ManagerDashboard({ tenants, propertyUnits, utilityBills, tasks, tenantM
     const [editingTenant, setEditingTenant] = useState(null);
     const [showUnitModal, setShowUnitModal] = useState(false);
 
-    const totalRevenue = useMemo(() => tenants.reduce((a, b) => a + (Number(b.baseRent) || 0), 0), [tenants]);
-    const vacantUnits = useMemo(() => propertyUnits.filter(u => u.status === 'Available').length, [propertyUnits]);
+    const totalRevenue = useMemo(() => (Array.isArray(tenants) ? tenants.reduce((a, b) => a + (Number(b?.baseRent) || 0), 0) : 0), [tenants]);
+    const vacantUnits = useMemo(() => (Array.isArray(propertyUnits) ? propertyUnits.filter(u => u?.status === 'Available').length : 0), [propertyUnits]);
+    const tasksCount = Array.isArray(tasks) ? tasks.length : 0;
 
     return (
         <div className="space-y-8 animate-in fade-in duration-700">
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <StatCard index={0} title="Monthly Revenue" value={`$${totalRevenue.toLocaleString()}`} icon={<CreditCard className="text-emerald-400" />} />
-                <StatCard index={1} title="Occupancy Rate" value={`${Math.round(((propertyUnits.length - vacantUnits) / propertyUnits.length) * 100)}%`} icon={<Users className="text-blue-400" />} />
-                <StatCard index={2} title="Available Units" value={vacantUnits} icon={<Building2 className="text-sky-400" />} />
-                <StatCard index={3} title="Active Maintenance" value={tasks.length.toString()} icon={<Wrench className="text-amber-400" />} />
+                <StatCard index={0} title="Monthly Revenue" value={`$${(totalRevenue || 0).toLocaleString()}`} icon={<CreditCard className="text-emerald-400" />} />
+                <StatCard index={1} title="Occupancy Rate" value={(Array.isArray(propertyUnits) && propertyUnits.length > 0) ? `${Math.round(((propertyUnits.length - vacantUnits) / propertyUnits.length) * 100)}%` : '0%'} icon={<Users className="text-blue-400" />} />
+                <StatCard index={2} title="Available Units" value={vacantUnits || 0} icon={<Building2 className="text-sky-400" />} />
+                <StatCard index={3} title="Active Maintenance" value={(tasksCount || 0).toString()} icon={<Wrench className="text-amber-400" />} />
             </div>
 
             <div className="flex bg-slate-900/50 p-1 rounded-2xl border border-white/5 w-fit overflow-x-auto max-w-full relative">
@@ -584,40 +585,40 @@ function ManagerDashboard({ tenants, propertyUnits, utilityBills, tasks, tenantM
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-white/5">
-                                {tenants.map(t => (
-                                    <tr key={t.id} className="group hover:bg-white/5 transition-colors">
-                                        <td className="py-4 pl-2 font-bold text-white">{t.name}</td>
-                                        <td className="py-4"><span className="text-indigo-400 font-mono text-xs">{t.unit}</span></td>
-                                        <td className="py-4 text-slate-400 text-xs">{t.leaseEnd}</td>
-                                        <td className="py-4 text-center">
-                                            {(() => {
-                                                const daysUntil = getDaysUntilDue(t.leaseStart);
-                                                const dueDate = calculateNextRentDue(t.leaseStart).toISOString().split('T')[0];
-                                                return (
-                                                    <div className="flex flex-col items-center">
-                                                        <span className={`text-[10px] font-black uppercase tracking-tight ${daysUntil <= 3 ? 'text-orange-400 animate-pulse' : 'text-slate-400'}`}>
-                                                            {dueDate}
-                                                        </span>
-                                                        <span className="text-[8px] font-bold text-slate-600 uppercase">
-                                                            {daysUntil === 0 ? 'Due Today' : `${daysUntil} days left`}
-                                                        </span>
-                                                    </div>
-                                                );
-                                            })()}
-                                        </td>
-                                        <td className="py-4 text-right font-black text-white">${t.baseRent}</td>
-                                        <td className="py-4 text-right pr-2">
-                                            <div className="flex items-center justify-end gap-2">
-                                                {t.mobile && (
-                                                    <WhatsAppRentButton tenant={t} />
-                                                )}
-                                                <button onClick={() => setEditingTenant(t)} className="text-slate-500 hover:text-indigo-400 text-[10px] uppercase font-black tracking-widest bg-white/5 px-3 py-1.5 rounded-lg border border-white/5 hover:border-indigo-500/30 transition-all flex items-center gap-1.5">
-                                                    <Settings className="w-3 h-3" /> Edit
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))}
+                                {tenants.map(t => {
+                                    const daysUntil = getDaysUntilDue(t.leaseStart);
+                                    const dueDate = calculateNextRentDue(t.leaseStart);
+                                    const dueDateStr = (dueDate instanceof Date && !isNaN(dueDate)) ? dueDate.toISOString().split('T')[0] : 'N/A';
+                                    
+                                    return (
+                                        <tr key={t.id} className="group hover:bg-white/5 transition-colors">
+                                            <td className="py-4 pl-2 font-bold text-white">{t.name}</td>
+                                            <td className="py-4"><span className="text-indigo-400 font-mono text-xs">{t.unit}</span></td>
+                                            <td className="py-4 text-slate-400 text-xs">{t.leaseEnd}</td>
+                                            <td className="py-4 text-center">
+                                                <div className="flex flex-col items-center">
+                                                    <span className={`text-[10px] font-black uppercase tracking-tight ${daysUntil <= 3 ? 'text-orange-400 animate-pulse' : 'text-slate-400'}`}>
+                                                        {dueDateStr}
+                                                    </span>
+                                                    <span className="text-[8px] font-bold text-slate-600 uppercase">
+                                                        {isNaN(daysUntil) ? 'Invalid Date' : daysUntil === 0 ? 'Due Today' : `${daysUntil} days left`}
+                                                    </span>
+                                                </div>
+                                            </td>
+                                            <td className="py-4 text-right font-black text-white">${t.baseRent}</td>
+                                            <td className="py-4 text-right pr-2">
+                                                <div className="flex items-center justify-end gap-2">
+                                                    {t.mobile && (
+                                                        <WhatsAppRentButton tenant={t} />
+                                                    )}
+                                                    <button onClick={() => setEditingTenant(t)} className="text-slate-500 hover:text-indigo-400 text-[10px] uppercase font-black tracking-widest bg-white/5 px-3 py-1.5 rounded-lg border border-white/5 hover:border-indigo-500/30 transition-all flex items-center gap-1.5">
+                                                        <Settings className="w-3 h-3" /> Edit
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
                             </tbody>
                         </table>
                     </div>
@@ -663,10 +664,14 @@ function RentSummaryTab({ tenants }) {
 
     const upcomingRents = useMemo(() => {
         return tenants.map(t => {
-            const dueDate = calculateNextRentDue(t.leaseStart);
-            const daysUntil = getDaysUntilDue(t.leaseStart);
-            return { ...t, dueDate, daysUntil };
-        }).sort((a, b) => a.dueDate - b.dueDate);
+            try {
+                const dueDate = calculateNextRentDue(t.leaseStart);
+                const daysUntil = getDaysUntilDue(t.leaseStart);
+                return { ...t, dueDate, daysUntil };
+            } catch (e) {
+                return { ...t, dueDate: new Date(), daysUntil: 0 };
+            }
+        }).sort((a, b) => (a.dueDate || 0) - (b.dueDate || 0));
     }, [tenants]);
 
     const totalRevenueThisCycle = useMemo(() => upcomingRents.reduce((a, b) => a + b.baseRent, 0), [upcomingRents]);
@@ -708,7 +713,7 @@ function RentSummaryTab({ tenants }) {
                                 <div className="text-center md:text-right">
                                     <p className="text-[9px] font-black text-slate-600 uppercase tracking-widest mb-1">Due Date</p>
                                     <p className={`text-lg font-black tracking-tighter ${rent.daysUntil <= 3 ? 'text-orange-400' : 'text-slate-300'}`}>
-                                        {rent.dueDate.toISOString().split('T')[0]}
+                                        {(rent.dueDate instanceof Date && !isNaN(rent.dueDate)) ? rent.dueDate.toISOString().split('T')[0] : 'N/A'}
                                     </p>
                                     <p className="text-[8px] font-black text-slate-500 uppercase">{rent.daysUntil === 0 ? 'TODAY' : rent.daysUntil < 0 ? 'OVERDUE' : `${rent.daysUntil} days left`}</p>
                                 </div>
@@ -1300,9 +1305,8 @@ function TasksManager({ tenants, tasks, onAddTask }) {
 
 function TenantDashboard({ tenant, unit, onSendMessage }) {
     const [showMsgModal, setShowMsgModal] = useState(false);
-    const totalDue = tenant.baseRent + tenant.utilityShare;
-
     if (!tenant) return null;
+    const totalDue = (tenant.baseRent || 0) + (tenant.utilityShare || 0);
 
     return (
         <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
