@@ -261,6 +261,11 @@ const MANAGER_CREDENTIALS = {
     mobile: import.meta.env.VITE_MANAGER_MOBILE || '+1555000111'
 };
 
+const TENANT_DEMO_CREDENTIALS = {
+    mobile: import.meta.env.VITE_TENANT_MOBILE || '+1555111222',
+    password: import.meta.env.VITE_TENANT_PASSWORD || 'tenant'
+};
+
 // --- API Service Management ---
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -471,6 +476,18 @@ export default function App() {
             setView('manager');
             setIsLoading(false);
             return { success: true };
+        }
+
+        // --- NEW: Tenant Demo Credentials Access ---
+        if (inputMobileCleaned === cleanMobile(TENANT_DEMO_CREDENTIALS.mobile) && password === TENANT_DEMO_CREDENTIALS.password) {
+            const firstTenant = Array.isArray(tenants) && tenants.length > 0 ? tenants[0] : null;
+            if (firstTenant) {
+                setActiveTenantId(firstTenant.id);
+                setActiveProperty(firstTenant.propertyName);
+                setView('tenant');
+                setIsLoading(false);
+                return { success: true };
+            }
         }
         
         const tenant = tenants.find(t => cleanMobile(t.mobile) === inputMobileCleaned && t.password === password);
