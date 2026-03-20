@@ -66,6 +66,18 @@ import {
     Package
 } from 'lucide-react';
 
+// --- System Credentials & Configuration ---
+const MANAGER_CREDENTIALS = {
+    email: import.meta.env.VITE_MANAGER_EMAIL || 'admin@propmanage.com',
+    password: import.meta.env.VITE_MANAGER_PASSWORD || 'admin',
+    mobile: import.meta.env.VITE_MANAGER_MOBILE || '+1555000111'
+};
+
+const TENANT_DEMO_CREDENTIALS = {
+    mobile: import.meta.env.VITE_TENANT_MOBILE || '+1555111222',
+    password: import.meta.env.VITE_TENANT_PASSWORD || 'tenant'
+};
+
 // --- Mock Initial Data ---
 const INITIAL_TENANTS = [];
 const INITIAL_UNITS = [];
@@ -211,16 +223,6 @@ const getDaysUntilDue = (leaseStart) => {
 };
 
 
-const MANAGER_CREDENTIALS = {
-    email: import.meta.env.VITE_MANAGER_EMAIL || 'admin@propmanage.com',
-    password: import.meta.env.VITE_MANAGER_PASSWORD || 'admin',
-    mobile: import.meta.env.VITE_MANAGER_MOBILE || '+1555000111'
-};
-
-const TENANT_DEMO_CREDENTIALS = {
-    mobile: import.meta.env.VITE_TENANT_MOBILE || '+1555111222',
-    password: import.meta.env.VITE_TENANT_PASSWORD || 'tenant'
-};
 
 // --- API Service Management ---
 const API_URL = import.meta.env.VITE_API_URL;
