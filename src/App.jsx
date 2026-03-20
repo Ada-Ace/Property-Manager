@@ -2358,7 +2358,6 @@ function UnitModal({ initialData, onSubmit, onClose }) {
             const reader = new FileReader();
             reader.onloadend = () => {
                 setImagePreview(reader.result);
-                // We'll pass the base64/file to onSubmit handler to upload via API
                 setForm({ ...form, newImageFile: reader.result });
             };
             reader.readAsDataURL(file);
@@ -2366,20 +2365,36 @@ function UnitModal({ initialData, onSubmit, onClose }) {
     };
 
     return (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-md animate-in fade-in duration-300">
-            <div className="bg-slate-900 border border-white/10 w-full max-w-lg rounded-[2.5rem] p-8 shadow-2xl relative">
-                <button onClick={onClose} className="absolute top-8 right-8 text-slate-500 hover:text-white transition-colors"><XCircle className="w-6 h-6" /></button>
-                <h2 className="text-2xl font-bold text-white italic mb-6 flex items-center gap-3">
-                    {initialData ? <Settings className="w-6 h-6 text-indigo-500" /> : <Building2 className="w-6 h-6 text-indigo-500" />}
-                    {initialData ? 'Edit Unit' : 'Add Unit'}
-                </h2>
-                <form onSubmit={(e) => { e.preventDefault(); onSubmit(form); }} className="space-y-6">
-                    <div className="flex flex-col md:flex-row gap-6">
-                        <div className="w-full md:w-32 h-32 rounded-3xl bg-slate-800 flex items-center justify-center overflow-hidden border border-white/5 relative group shrink-0">
+        <div className="fixed inset-0 z-[100] flex items-end md:items-center justify-center bg-slate-950/90 backdrop-blur-md animate-in fade-in duration-300 overflow-hidden">
+            <Motion.div 
+                initial={{ y: "100%" }}
+                animate={{ y: 0 }}
+                exit={{ y: "100%" }}
+                transition={{ type: "spring", damping: 25, stiffness: 200 }}
+                className="bg-slate-900 border-t md:border border-white/10 w-full max-w-lg rounded-t-[2.5rem] md:rounded-[2.5rem] p-8 md:p-10 shadow-2xl relative max-h-[92vh] overflow-y-auto no-scrollbar"
+            >
+                <div className="w-12 h-1.5 bg-white/10 rounded-full mx-auto mb-8 md:hidden" />
+                <div className="flex justify-between items-center mb-10">
+                    <h2 className="text-2xl md:text-3xl font-black text-white italic flex items-center gap-4 tracking-tighter">
+                        {initialData ? <Settings className="w-8 h-8 text-indigo-500" /> : <PlusCircle className="w-8 h-8 text-indigo-500" />}
+                        {initialData ? 'Edit Property' : 'Add New Unit'}
+                    </h2>
+                    <button onClick={onClose} className="p-2 text-slate-500 hover:text-white transition-colors"><X className="w-6 h-6" /></button>
+                </div>
+
+                <form onSubmit={(e) => { e.preventDefault(); onSubmit(form); }} className="space-y-8">
+                    {/* Hero Image Upload */}
+                    <div className="relative group">
+                        <div className="w-full h-48 md:h-56 rounded-[2rem] bg-slate-800 flex flex-col items-center justify-center overflow-hidden border-2 border-dashed border-white/5 hover:border-indigo-500/30 transition-all cursor-pointer">
                             {imagePreview ? (
                                 <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
                             ) : (
-                                <ImageIcon className="w-8 h-8 text-slate-600" />
+                                <div className="flex flex-col items-center gap-3">
+                                    <div className="p-4 bg-slate-900 rounded-2xl">
+                                        <Camera className="w-8 h-8 text-slate-500" />
+                                    </div>
+                                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Tap to Upload Photo</span>
+                                </div>
                             )}
                             <input 
                                 type="file" 
@@ -2387,29 +2402,63 @@ function UnitModal({ initialData, onSubmit, onClose }) {
                                 onChange={handleFileChange} 
                                 className="absolute inset-0 opacity-0 cursor-pointer z-10" 
                             />
-                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
-                                <Plus className="w-5 h-5 text-white" />
-                            </div>
                         </div>
-                        <div className="flex-1 space-y-4">
-                            <input required className="w-full bg-slate-800 border-none rounded-xl p-3 text-white text-sm outline-none" placeholder="Unit Number" value={form.unitNumber} onChange={e => setForm({ ...form, unitNumber: e.target.value })} />
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-1">
-                                    <label className="text-[10px] text-slate-500 font-bold uppercase tracking-widest pl-1">Size (SQFT)</label>
-                                    <input required type="number" className="w-full bg-slate-800 border-none rounded-xl p-3 text-white text-sm outline-none" placeholder="1200" value={form.size} onChange={e => setForm({ ...form, size: e.target.value })} />
-                                </div>
-                                <div className="space-y-1">
-                                    <label className="text-[10px] text-slate-500 font-bold uppercase tracking-widest pl-1">Target Rent</label>
-                                    <input required type="number" className="w-full bg-slate-800 border-none rounded-xl p-3 text-white text-sm outline-none" placeholder="2500" value={form.expectedRent} onChange={e => setForm({ ...form, expectedRent: e.target.value })} />
+                    </div>
+
+                    <div className="space-y-6">
+                        <div className="space-y-2">
+                            <label className="text-[10px] text-slate-500 font-black uppercase tracking-[0.2em] ml-1">Reference Label</label>
+                            <input 
+                                required 
+                                className="w-full bg-slate-800/50 border border-white/5 focus:border-indigo-500/50 rounded-2xl p-4 text-white text-base font-bold outline-none transition-all placeholder:text-slate-600" 
+                                placeholder="e.g. Unit 402 or Penthouse A" 
+                                value={form.unitNumber} 
+                                onChange={e => setForm({ ...form, unitNumber: e.target.value })} 
+                            />
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4 md:gap-6">
+                            <div className="space-y-2">
+                                <label className="text-[10px] text-slate-500 font-black uppercase tracking-[0.2em] ml-1">Total Space (FT²)</label>
+                                <input 
+                                    required 
+                                    type="number" 
+                                    className="w-full bg-slate-800/50 border border-white/5 focus:border-indigo-500/50 rounded-2xl p-4 text-white text-base font-bold outline-none transition-all" 
+                                    placeholder="1200" 
+                                    value={form.size} 
+                                    onChange={e => setForm({ ...form, size: e.target.value })} 
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-[10px] text-slate-500 font-black uppercase tracking-[0.2em] ml-1">Target Rent</label>
+                                <div className="relative">
+                                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 font-black text-sm">$</span>
+                                    <input 
+                                        required 
+                                        type="number" 
+                                        className="w-full bg-slate-800/50 border border-white/5 focus:border-indigo-500/50 rounded-2xl p-4 pl-8 text-white text-base font-bold outline-none transition-all" 
+                                        placeholder="2500" 
+                                        value={form.expectedRent} 
+                                        onChange={e => setForm({ ...form, expectedRent: e.target.value })} 
+                                    />
                                 </div>
                             </div>
                         </div>
                     </div>
-                    <button type="submit" className="w-full py-4 bg-indigo-600 hover:bg-indigo-500 text-white font-black rounded-2xl uppercase tracking-widest text-[10px] shadow-lg shadow-indigo-600/20">
-                        {initialData ? 'Save Changes' : 'Save Unit'}
-                    </button>
+
+                    <div className="pt-4 pb-2 md:pb-0">
+                        <Motion.button 
+                            type="submit" 
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
+                            className="w-full py-5 bg-indigo-600 hover:bg-indigo-500 text-white font-black rounded-2xl uppercase tracking-[0.2em] text-[11px] shadow-xl shadow-indigo-600/20 transition-all flex items-center justify-center gap-3"
+                        >
+                            <CheckCircle2 className="w-5 h-5" />
+                            {initialData ? 'Update Property' : 'Add to Collection'}
+                        </Motion.button>
+                    </div>
                 </form>
-            </div>
+            </Motion.div>
         </div>
     );
 }
@@ -2426,76 +2475,124 @@ function LeaseModal({ initialData, availableUnits, onClose, onSubmit }) {
         leaseEnd: '', 
         ...initialData 
     });
+
     return (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-md">
-            <div className="bg-slate-900 border border-white/10 w-full max-w-lg rounded-[2.5rem] p-8 shadow-2xl">
-                <div className="flex justify-between items-center mb-6">
-                    <h2 className="text-2xl font-bold text-white italic flex items-center gap-3">
-                        {initialData?.id ? <Settings className="w-6 h-6 text-indigo-500" /> : <PlusCircle className="w-6 h-6 text-emerald-500" />}
-                        {initialData?.id ? 'Edit Lease' : 'New Lease'}
-                    </h2>
-                    <button onClick={onClose} className="text-slate-500 hover:text-white transition-colors">✕</button>
+        <div className="fixed inset-0 z-[100] flex items-end md:items-center justify-center bg-slate-950/90 backdrop-blur-md overflow-hidden">
+            <Motion.div 
+                initial={{ y: "100%" }}
+                animate={{ y: 0 }}
+                exit={{ y: "100%" }}
+                transition={{ type: "spring", damping: 25, stiffness: 200 }}
+                className="bg-slate-900 border-t md:border border-white/10 w-full max-w-xl rounded-t-[2.5rem] md:rounded-[3rem] p-8 md:p-12 shadow-2xl relative max-h-[92vh] overflow-y-auto no-scrollbar"
+            >
+                <div className="w-12 h-1.5 bg-white/10 rounded-full mx-auto mb-8 md:hidden" />
+                
+                <div className="flex justify-between items-center mb-10">
+                    <div>
+                        <h2 className="text-2xl md:text-3xl font-black text-white italic flex items-center gap-4 tracking-tighter">
+                            {initialData?.id ? <Settings className="w-8 h-8 text-indigo-500" /> : <PlusCircle className="w-8 h-8 text-emerald-500" />}
+                            {initialData?.id ? 'Adjust Agreement' : 'Register New Lease'}
+                        </h2>
+                        <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest mt-2 ml-1 opacity-60">Legal Tenure Configuration</p>
+                    </div>
+                    <button onClick={onClose} className="p-2 text-slate-500 hover:text-white transition-colors"><X className="w-6 h-6" /></button>
                 </div>
-                <form onSubmit={(e) => { e.preventDefault(); onSubmit(leaseForm); }} className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                        <input required className="w-full bg-slate-800 border-none rounded-xl p-3 text-white text-sm" placeholder="Name" value={leaseForm.name} onChange={e => setLeaseForm({ ...leaseForm, name: e.target.value })} />
-                        <select required className="w-full bg-slate-800 border-none rounded-xl p-3 text-white text-sm outline-none" value={leaseForm.unit} onChange={e => setLeaseForm({ ...leaseForm, unit: e.target.value })}>
-                            <option value="" disabled>Select Unit</option>
-                            {availableUnits.map(u => <option key={u.id} value={u.unitNumber}>{u.unitNumber}</option>)}
-                        </select>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                        <input required type="text" className="w-full bg-slate-800 border-none rounded-xl p-3 text-white text-sm outline-none" placeholder="Create Password" value={leaseForm.password} onChange={e => setLeaseForm({ ...leaseForm, password: e.target.value })} />
-                        <input required type="tel" className="w-full bg-slate-800 border-none rounded-xl p-3 text-white text-sm outline-none" placeholder="WhatsApp Number" value={leaseForm.mobile} onChange={e => setLeaseForm({ ...leaseForm, mobile: e.target.value })} />
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                        <input type="number" className="w-full bg-slate-800 border-none rounded-xl p-3 text-white text-sm" placeholder="Rent ($)" value={leaseForm.baseRent} onChange={e => setLeaseForm({ ...leaseForm, baseRent: Number(e.target.value) })} />
-                        <input type="number" className="w-full bg-slate-800 border-none rounded-xl p-3 text-white text-sm" placeholder="Deposit ($)" value={leaseForm.deposit} onChange={e => setLeaseForm({ ...leaseForm, deposit: Number(e.target.value) })} />
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                            <label className="text-[10px] text-slate-500 font-black uppercase tracking-widest pl-1">Lease Start</label>
-                            <input 
-                                required 
-                                type="date" 
-                                style={{ colorScheme: 'dark' }} 
-                                className="w-full bg-slate-800 border border-white/5 focus:border-indigo-500/50 rounded-xl p-3 text-white text-sm outline-none transition-all" 
-                                value={leaseForm.leaseStart} 
-                                onChange={e => setLeaseForm({ ...leaseForm, leaseStart: e.target.value })} 
-                            />
+
+                <form onSubmit={(e) => { e.preventDefault(); onSubmit(leaseForm); }} className="space-y-10">
+                    {/* section: primary */}
+                    <div className="space-y-6">
+                        <div className="flex items-center gap-3 text-[10px] font-black text-indigo-400 uppercase tracking-widest bg-indigo-500/5 py-2 px-4 rounded-full w-fit">
+                            <User className="w-3.5 h-3.5" /> Identity & Unit
                         </div>
-                        <div className="space-y-2">
-                            <div className="flex justify-between items-center px-1">
-                                <label className="text-[10px] text-slate-500 font-black uppercase tracking-widest">Lease End</label>
-                                <button 
-                                    type="button"
-                                    onClick={() => {
-                                        const baseDate = leaseForm.leaseEnd || leaseForm.leaseStart;
-                                        if (!baseDate) return;
-                                        const d = new Date(baseDate);
-                                        d.setMonth(d.getMonth() + 6);
-                                        setLeaseForm({ ...leaseForm, leaseEnd: d.toISOString().split('T')[0] });
-                                    }}
-                                    className="text-[8px] font-black text-indigo-400 hover:text-indigo-300 uppercase tracking-tighter bg-indigo-500/10 px-2 py-0.5 rounded-lg border border-indigo-500/20 transition-all active:scale-95"
-                                >
-                                    + 6 Months
-                                </button>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <input required className="w-full bg-slate-800/50 border border-white/5 focus:border-indigo-500/50 rounded-2xl p-4 text-white text-base font-bold outline-none transition-all placeholder:text-slate-600" placeholder="Full Resident Name" value={leaseForm.name} onChange={e => setLeaseForm({ ...leaseForm, name: e.target.value })} />
+                            <select required className="w-full bg-slate-800/50 border border-white/5 focus:border-indigo-500/50 rounded-2xl p-4 text-white text-base font-bold outline-none transition-all appearance-none" value={leaseForm.unit} onChange={e => setLeaseForm({ ...leaseForm, unit: e.target.value })}>
+                                <option value="" disabled>Assigned Unit</option>
+                                {availableUnits.map(u => <option key={u.id} value={u.unitNumber}>{u.unitNumber} ({u.size} SQFT)</option>)}
+                            </select>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <input required type="tel" className="w-full bg-slate-800/50 border border-white/5 focus:border-indigo-500/50 rounded-2xl p-4 text-white text-base font-bold outline-none transition-all placeholder:text-slate-600" placeholder="WhatsApp Number" value={leaseForm.mobile} onChange={e => setLeaseForm({ ...leaseForm, mobile: e.target.value })} />
+                            <input required type="text" className="w-full bg-slate-800/50 border border-white/5 focus:border-indigo-500/50 rounded-2xl p-4 text-white text-base font-bold outline-none transition-all placeholder:text-slate-600" placeholder="Portal Password" value={leaseForm.password} onChange={e => setLeaseForm({ ...leaseForm, password: e.target.value })} />
+                        </div>
+                    </div>
+
+                    {/* section: financial */}
+                    <div className="space-y-6">
+                        <div className="flex items-center gap-3 text-[10px] font-black text-emerald-400 uppercase tracking-widest bg-emerald-500/5 py-2 px-4 rounded-full w-fit">
+                            <DollarSign className="w-3.5 h-3.5" /> Financial Commitment
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="relative">
+                                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 font-bold text-sm">$</span>
+                                <input type="number" className="w-full bg-slate-800/50 border border-white/5 focus:border-emerald-500/50 rounded-2xl p-4 pl-8 text-white text-base font-bold outline-none transition-all" placeholder="Actual Rent" value={leaseForm.baseRent} onChange={e => setLeaseForm({ ...leaseForm, baseRent: Number(e.target.value) })} />
                             </div>
-                            <input 
-                                required 
-                                type="date" 
-                                style={{ colorScheme: 'dark' }} 
-                                className="w-full bg-slate-800 border border-white/5 focus:border-indigo-500/50 rounded-xl p-3 text-white text-sm outline-none transition-all" 
-                                value={leaseForm.leaseEnd} 
-                                onChange={e => setLeaseForm({ ...leaseForm, leaseEnd: e.target.value })} 
-                            />
+                            <div className="relative">
+                                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 font-bold text-sm">$</span>
+                                <input type="number" className="w-full bg-slate-800/50 border border-white/5 focus:border-emerald-500/50 rounded-2xl p-4 pl-8 text-white text-base font-bold outline-none transition-all" placeholder="Security Deposit" value={leaseForm.deposit} onChange={e => setLeaseForm({ ...leaseForm, deposit: Number(e.target.value) })} />
+                            </div>
                         </div>
                     </div>
-                    <button type="submit" className={`w-full py-4 text-white font-black rounded-2xl uppercase tracking-widest text-[10px] transition-all shadow-xl ${initialData?.id ? 'bg-indigo-600 hover:bg-indigo-500 shadow-indigo-600/20' : 'bg-emerald-600 hover:bg-emerald-500 shadow-emerald-500/20'}`}>
-                        {initialData?.id ? 'Save Changes' : 'Create Lease'}
-                    </button>
+
+                    {/* section: dates */}
+                    <div className="space-y-6">
+                        <div className="flex items-center gap-3 text-[10px] font-black text-amber-400 uppercase tracking-widest bg-amber-500/5 py-2 px-4 rounded-full w-fit">
+                            <CalendarRange className="w-3.5 h-3.5" /> Tenure Boundaries
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="space-y-2">
+                                <label className="text-[10px] text-slate-500 font-black uppercase tracking-widest ml-1">Commencement Date</label>
+                                <input 
+                                    required 
+                                    type="date" 
+                                    style={{ colorScheme: 'dark' }} 
+                                    className="w-full bg-slate-800/50 border border-white/5 focus:border-amber-500/50 rounded-2xl p-4 text-white text-[13px] font-bold outline-none transition-all" 
+                                    value={leaseForm.leaseStart} 
+                                    onChange={e => setLeaseForm({ ...leaseForm, leaseStart: e.target.value })} 
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <div className="flex justify-between items-center px-1 mb-2">
+                                    <label className="text-[10px] text-slate-500 font-black uppercase tracking-widest">Termination Date</label>
+                                    <button 
+                                        type="button"
+                                        onClick={() => {
+                                            const baseDate = leaseForm.leaseEnd || leaseForm.leaseStart;
+                                            if (!baseDate) return;
+                                            const d = new Date(baseDate);
+                                            d.setMonth(d.getMonth() + 6);
+                                            setLeaseForm({ ...leaseForm, leaseEnd: d.toISOString().split('T')[0] });
+                                        }}
+                                        className="text-[9px] font-black text-amber-400 hover:text-amber-300 uppercase tracking-tight bg-amber-500/10 px-3 py-1 rounded-xl border border-amber-500/20 transition-all active:translate-y-0.5"
+                                    >
+                                        + 6 mo
+                                    </button>
+                                </div>
+                                <input 
+                                    required 
+                                    type="date" 
+                                    style={{ colorScheme: 'dark' }} 
+                                    className="w-full bg-slate-800/50 border border-white/5 focus:border-amber-500/50 rounded-2xl p-4 text-white text-[13px] font-bold outline-none transition-all" 
+                                    value={leaseForm.leaseEnd} 
+                                    onChange={e => setLeaseForm({ ...leaseForm, leaseEnd: e.target.value })} 
+                                />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="pt-4 pb-2 md:pb-0">
+                        <Motion.button 
+                            type="submit" 
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
+                            className={`w-full py-5 text-white font-black rounded-[2rem] uppercase tracking-[0.2em] text-[11px] transition-all shadow-2xl flex items-center justify-center gap-4 ${initialData?.id ? 'bg-indigo-600 hover:bg-indigo-500 shadow-indigo-600/20' : 'bg-emerald-600 hover:bg-emerald-500 shadow-emerald-500/20'}`}
+                        >
+                            <FileCheck className="w-5 h-5" />
+                            {initialData?.id ? 'Update Lease Agreement' : 'Finalize & Create Lease'}
+                        </Motion.button>
+                    </div>
                 </form>
-            </div>
+            </Motion.div>
         </div>
     );
 }
