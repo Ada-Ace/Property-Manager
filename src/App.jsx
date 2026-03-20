@@ -931,6 +931,8 @@ export default function App() {
                                     onUpdateFittings={updateUnitFittings}
                                     onAddBill={handleAddBill}
                                     onAddTask={handleAddTask}
+                                    onUpdateLeaseDoc={handleLeaseDocUpload}
+                                    onMoveOut={handleMoveOut}
                                 />
                             </ErrorBoundary>
                         ) : (
@@ -950,7 +952,7 @@ export default function App() {
 
 // --- Manager Components ---
 
-function ManagerDashboard({ tenants, propertyUnits, utilityBills, tasks, tenantMessages, currency = 'USD', onAddUnit, onEditUnit, onDeleteUnit, onAddTenant, onEditTenant, onUpdateFittings, onAddBill, onAddTask }) {
+function ManagerDashboard({ tenants, propertyUnits, utilityBills, tasks, tenantMessages, currency = 'USD', onAddUnit, onEditUnit, onDeleteUnit, onAddTenant, onEditTenant, onUpdateFittings, onAddBill, onAddTask, onUpdateLeaseDoc, onMoveOut }) {
     const [activeTab, setActiveTab] = useState('rents');
     const [showLeaseModal, setShowLeaseModal] = useState(false);
     const [editingTenant, setEditingTenant] = useState(null);
@@ -1030,8 +1032,8 @@ function ManagerDashboard({ tenants, propertyUnits, utilityBills, tasks, tenantM
                                         onDeleteUnit={() => onDeleteUnit(unit.id)}
                                         onAddLease={() => { setEditingTenant(null); setShowLeaseModal(true); setEditingUnit(unit); }}
                                         onEditLease={() => { setEditingTenant(tenant); setShowLeaseModal(true); setEditingUnit(unit); }}
-                                        onUpdateLeaseDoc={handleLeaseDocUpload}
-                                        onMoveOut={() => handleMoveOut(unit, tenant)}
+                                        onUpdateLeaseDoc={onUpdateLeaseDoc}
+                                        onMoveOut={() => onMoveOut(unit, tenant)}
                                     />
                                 );
                             })}
