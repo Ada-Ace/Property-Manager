@@ -69,11 +69,13 @@ function doPost(e) {
       const file = folder.createFile(blob);
       
       file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+      const fileId = file.getId();
+      const directUrl = `https://drive.google.com/uc?id=${fileId}`;
       
       return ContentService.createTextOutput(JSON.stringify({ 
         success: true, 
-        url: file.getDownloadUrl().replace("?e=download", ""), 
-        fileId: file.getId() 
+        url: directUrl, 
+        fileId: fileId 
       })).setMimeType(ContentService.MimeType.JSON);
     } catch (err) {
       return errorResponse("Upload Failed: " + err.toString());

@@ -829,10 +829,16 @@ export default function App() {
         let photoUrl = null;
         
         if (photoData) {
-            setGlobalMessage({ type: 'info', text: "Uploading attachment to Drive..." });
+            setGlobalMessage({ type: 'info', text: "Uploading attachment..." });
             const uploadRes = await API.uploadToDrive(photoData, `msg_${Date.now()}.png`);
             if (uploadRes.success) {
                 photoUrl = uploadRes.url;
+            } else {
+                setGlobalMessage({ type: 'error', text: "Photo upload failed! Please ensure UPLOAD_FOLDER_ID is set in your GAS Script." });
+                setTimeout(() => setGlobalMessage(null), 5000);
+                // We proceed with the text message anyway, or return?
+                // Better to return if they tried to upload a photo but it failed?
+                // User said "i cant see the proof", so photo is important.
             }
         }
 
