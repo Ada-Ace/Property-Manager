@@ -1,91 +1,75 @@
-# PropManage Pro - Property Management Application
+# PropManage Pro - Enterprise Property Management Solution
 
-A modern, high-performance property management application built with **React**, **Vite**, and **Tailwind CSS**.
+A modern, high-performance property management application built with **React**, **Vite**, and **Framer Motion**. Optimized for real-time tracking, financial auditing, and tenant communication.
 
-## Features
+## 🚀 Key Features
 
-- **Manager Dashboard**: Overview of revenue, occupancy, and active maintenance tasks.
-- **Lease Management**: Create, edit, and track tenant leases and rental agreements.
-- **Utility Sharing**: Allocate utility bills (electricity, water, etc.) to tenants based on occupancy periods or equal split.
-- **Maintenance Tracking**: Schedule and monitor property maintenance requests.
-- **Tenant Messaging**: Direct communication with tenants with WhatsApp integration for notifications.
-- **Tenant Portal**: Personal dashboard for tenants to view rent dues, utility shares, and lease details.
+### 🏢 Strategic Asset Management
+- **Centralized Property Catalog**: Manage multiple buildings and units from a single command center.
+- **Unit Performance Tracking**: Real-time vacancy analysis, yield calculation, and vacancy duration tracking.
+- **Inventory & Fittings Management**: Digital inventory logs for every individual unit (Aircon, Fridge, etc.).
 
-## Tech Stack
+### 💰 Financial Intelligence & Ledger
+- **Rent Collection Automation**: Track upcoming dues, identify urgent collections, and send automated WhatsApp reminders.
+- **Verification Workflow**: One-click payment verification that automatically archives payment proofs.
+- **Historical Payment Ledger**: Full auditable transaction history of all past rent collections.
+- **PDF Financial Reports**: Generate professional, branded collection statements with one click (via jsPDF).
+- **Utility Share Engine**: Intelligent allocation of building bills (Water/Electricity) to tenants based on residency periods.
 
-- **Frontend**: React 19, Vite
-- **Styling**: Tailwind CSS
+### 💬 Unified Communication Center
+- **Tenant Inbox**: View incoming messages with photo attachments (rent proofs, maintenance issues).
+- **WhatsApp Deep-Integration**: Direct reply capability that pre-fills context-aware messages for instant communication.
+- **Task Dispatch**: Convert tenant issues into maintenance tasks and dispatch vendors via WhatsApp.
+
+### 🛠️ Service Network & Maintenance
+- **Vendor Directory**: Manage a verified network of contractors (Plumbing, Electrical, etc.) with rating systems.
+- **Advanced Maintenance Tracking**: Milestone-based tracking for repairs and property upgrades.
+
+## 🛠️ Tech Stack
+
+- **Frontend**: React 19 (Hooks & Memoization for performance)
+- **Animations**: Framer Motion (State-aware transitions)
 - **Icons**: Lucide React
+- **PDF Engine**: jsPDF & AutoTable (Client-side generation)
+- **Backend Data**: Google Sheets API (via Google Apps Script)
 
-## Getting Started
+## 📦 Getting Started
 
 ### Prerequisites
-
-- Node.js (v18 or later)
-- npm or yarn
+- Node.js (v18+)
+- Google Account (for database)
 
 ### Installation
+1. Clone the repository: `git clone <repo-url>`
+2. Install dependencies: `npm install`
+3. Run Development: `npm run dev`
 
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/yourusername/property-management.git
-   cd property-management
-   ```
+## ☁️ Database Setup (Google Sheets)
 
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
+The application uses Google Sheets as a lightweight, real-time database.
 
-3. Start the development server:
-   ```bash
-   npm run dev
-   ```
+### 1. Spreadsheet Structure
+Create a Google Sheet with the following **exact** tabs and headers:
 
-4. Open your browser to `http://localhost:5173`.
-
-## Deployment
-
-The application is optimized for static hosting platforms like **Vercel**, **Netlify**, or **GitHub Pages**.
-
-To build for production:
-```bash
-npm run build
-```
-
-## Persistence Setup (Google Sheets API)
-
-To save and persist data for this application, follow these steps:
-
-### 1. Create a Google Sheet
-Create a new Google Sheet and add the following tabs (with matching headers):
 - **Units**: `id`, `unitNumber`, `size`, `expectedRent`, `status`, `fittings`, `propertyName`
-- **Tenants**: `id`, `name`, `unit`, `mobile`, `password`, `baseRent`, `deposit`, `leaseStart`, `leaseEnd`, `propertyName`
+- **Tenants**: `id`, `name`, `unit`, `mobile`, `password`, `baseRent`, `deposit`, `leaseStart`, `leaseEnd`, `propertyName`, `lastPaymentDate`, `leaseDocument`
+- **Payments**: `id`, `tenantId`, `amount`, `date`, `propertyName`
 - **Bills**: `id`, `type`, `date`, `amount`, `mode`, `allocations`, `propertyName`
 - **Tasks**: `id`, `title`, `tenantId`, `status`, `dateOptions`, `propertyName`
 - **Messages**: `id`, `tenantId`, `content`, `timestamp`, `photoUrl`, `propertyName`
+- **Vendors**: `id`, `name`, `mobile`, `type`, `rating`, `email`, `propertyName`
 - **Properties**: `id`, `name`, `address`, `currency`
 
-### 2. Deploy Google Apps Script
-1. Open your Sheet and go to **Extensions > Apps Script**.
-2. Copy the contents of [`backend/gas_script.gs`](./backend/gas_script.gs) into the editor.
-3. Click **Deploy > New Deployment**.
-4. Select **Web App** as the type.
-5. Set **Execute as**: `Me` and **Who has access**: `Anyone`.
-6. Click **Deploy** and copy your **Web App URL**.
-7. **CRITICAL**: Go to **Project Settings** (gear icon) in the Apps Script editor and ensure the **Time zone** is set to `(GMT+08:00) Kuala Lumpur` (or your local GMT+8 region) to ensure date consistency.
+### 2. Backend API Deployment
+1. Go to **Extensions > Apps Script** in your Google Sheet.
+2. Paste the code from [`backend/gas_script.gs`](./backend/gas_script.gs).
+3. **Crucial**: Set the Script Timezone to your local region (e.g., GMT+8) in Project Settings.
+4. Click **Deploy > New Deployment > Web App**.
+5. Set 'Who has access' to **Anyone**.
+6. Copy the **Web App URL** and add it to your `.env` file as `VITE_API_URL`.
 
-### 3. Configure Environment Variables
-1. Paste your Web App URL into your local `.env` file as `VITE_API_URL`.
-2. Restart your development server.
+## 📈 Deployment
+The project is configured for one-click deployment to **Vercel** or **Netlify**. Ensure environment variables are set in your hosting provider's dashboard.
 
-## Environment Variables
-
-Copy the example file and fill in your variables:
-```bash
-cp .env.example .env
-```
-
-## License
-
+## 📝 License
 MIT
