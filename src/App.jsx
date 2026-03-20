@@ -1156,7 +1156,7 @@ function ManagerDashboard({ tenants, propertyUnits, utilityBills, tasks, vendors
                     exit={{ opacity: 0, y: -10 }}
                     transition={{ duration: 0.2 }}
                 >
-                    {activeTab === 'rents' && <RentSummaryTab tenants={tenants} payments={payments.filter(p => !p.propertyName || p.propertyName === activeProperty)} currency={currency} onMarkPaid={onMarkPaid} />}
+                    {activeTab === 'rents' && <RentSummaryTab tenants={tenants} payments={payments.filter(p => !p.propertyName || p.propertyName === activeProperty)} currency={currency} onMarkPaid={onMarkPaid} propertyName={activeProperty} />}
                     {activeTab === 'messages' && <MessagesManager tenants={tenants} messages={tenantMessages} onMarkPaid={onMarkPaid} currency={currency} />}
                     {activeTab === 'tasks' && (
                         <TasksManager 
@@ -1234,7 +1234,47 @@ function ManagerDashboard({ tenants, propertyUnits, utilityBills, tasks, vendors
 }
 
 // --- Rent Summary Tab ---
-function RentSummaryTab({ tenants, payments, currency = 'USD', onMarkPaid }) {
+function RentSummaryTab({ tenants, payments, currency = 'USD', onMarkPaid, propertyName }) {
+    const downloadLedgerPDF = () => {
+        if (!window.jspdf) {
+            alert('PDF utility is initializing. Please wait a second.');
+            return;
+        }
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        
+        // Branded Header
+        doc.setFontSize(22);
+        doc.setTextColor(40);
+        doc.text(`${propertyName} - Rent Ledger`, 14, 22);
+        
+        doc.setFontSize(10);
+        doc.setTextColor(100);
+        doc.text(`Transaction Statement Generated: ${new Date().toLocaleDateString()}`, 14, 30);
+
+        const tableColumn = ["Unit", "Tenant", "Payment Date", "Amount"];
+        const tableRows = payments.slice().reverse().map(pay => {
+            const t = tenants.find(ten => ten.id === pay.tenantId);
+            return [
+                t?.unit || 'N/A',
+                t?.name || 'Archived Tenant',
+                fmtDate(pay.date),
+                `${currency} ${Number(pay.amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`
+            ];
+        });
+
+        doc.autoTable({
+            head: [tableColumn],
+            body: tableRows,
+            startY: 40,
+            theme: 'grid',
+            headStyles: { fillColor: [79, 70, 229], textColor: [255, 255, 255] }, // Indigo-600
+            alternateRowStyles: { fillColor: [245, 247, 250] }
+        });
+
+        doc.save(`Ledger_${propertyName}_${new Date().toISOString().split('T')[0]}.pdf`);
+    };
+
     const today = getLocalDate() || new Date();
     const currentMonthLabel = (today && typeof today.toLocaleString === 'function') ? today.toLocaleString(LOCALE, { month: 'long', year: 'numeric', timeZone: APP_TIMEZONE }) : 'Current Month';
 
@@ -1350,6 +1390,17 @@ function RentSummaryTab({ tenants, payments, currency = 'USD', onMarkPaid }) {
                         );
                     })}
                 </div>
+
+                {payments.length > 0 && (
+                    <div className="flex justify-end gap-3 mt-8">
+                        <button 
+                            onClick={downloadLedgerPDF}
+                            className="bg-white/5 hover:bg-white/10 text-slate-300 border border-white/10 px-6 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 transition-all shadow-xl"
+                        >
+                            <FileCheck className="w-4 h-4 text-emerald-400" /> Download PDF Report
+                        </button>
+                    </div>
+                )}
             </div>
 
             {/* Historical Payment Ledger */}
