@@ -402,6 +402,12 @@ export default function App() {
         await API.saveToSheet('UPDATE', 'Vendors', vendor);
     };
 
+    const handleDeleteVendor = async (vendorId) => {
+        if (!window.confirm('Are you sure you want to remove this contractor?')) return;
+        setVendors(prev => prev.filter(v => v.id !== vendorId));
+        await API.saveToSheet('DELETE', 'Vendors', { id: vendorId });
+    };
+
     const handleAddProperty = () => {
         setPropertyToEdit(null); // Clear for new
         setShowPropertyModal(true);
