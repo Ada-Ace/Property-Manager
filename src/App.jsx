@@ -231,6 +231,17 @@ const getDaysUntilDue = (leaseStart) => {
     return Math.ceil((dueDate - today) / (1000 * 60 * 60 * 24));
 };
 
+// Returns the current billing period { from, to } based on lease start day
+const getBillingPeriod = (leaseStart) => {
+    const to = calculateNextRentDue(leaseStart);
+    if (isNaN(to.getTime())) return { from: null, to: null };
+    // 'from' is one month before 'to', +1 day
+    const from = new Date(to);
+    from.setMonth(from.getMonth() - 1);
+    from.setDate(from.getDate() + 1);
+    return { from, to };
+};
+
 
 
 // --- API Service Management ---
@@ -1408,7 +1419,19 @@ function RentSummaryTab({ tenants, payments, currency = 'USD', onMarkPaid, prope
                                     }`}>{rent.unit}</div>
                                     <div>
                                         <p className="text-base font-black text-white tracking-tight">{rent.name}</p>
-                                        <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest mt-0.5">Cycle: {fmtDate(rent.leaseStart)}</p>
+                                        {(() => {
+                                            const bp = getBillingPeriod(rent.leaseStart);
+                                            return bp.from && bp.to ? (
+                                                <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest mt-0.5 flex items-center gap-1.5">
+                                                    <CalendarRange className="w-3 h-3 text-indigo-400/60 shrink-0" />
+                                                    {fmtDate(bp.from.toISOString())}
+                                                    <span className="text-indigo-400/60">→</span>
+                                                    {fmtDate(bp.to.toISOString())}
+                                                </p>
+                                            ) : (
+                                                <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest mt-0.5">Lease Start: {fmtDate(rent.leaseStart)}</p>
+                                            );
+                                        })()}
                                     </div>
                                 </div>
 
