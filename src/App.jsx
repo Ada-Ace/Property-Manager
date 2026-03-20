@@ -426,6 +426,29 @@ export default function App() {
     const [lastSyncTime, setLastSyncTime] = useState(null);
     const [isRefreshing, setIsRefreshing] = useState(false);
 
+    const [vendors, setVendors] = useState([
+        { id: 'V1', name: 'Dr. Pipe Plumbing', mobile: '+12345678', type: 'Plumbing', rating: 4.8 },
+        { id: 'V2', name: 'VoltMaster Electrical', mobile: '+12345679', type: 'Electrical', rating: 4.9 },
+        { id: 'V3', name: 'CoolAir Solutions', mobile: '+12345680', type: 'HVAC', rating: 4.5 }
+    ]);
+
+    const handleAddVendor = async (vendor) => {
+        const newVendor = { ...vendor, propertyName: activeProperty };
+        setVendors(prev => [...prev, newVendor]);
+        await API.saveToSheet('ADD', 'Vendors', newVendor);
+    };
+
+    const handleEditVendor = async (vendor) => {
+        setVendors(prev => prev.map(v => v.id === vendor.id ? vendor : v));
+        await API.saveToSheet('UPDATE', 'Vendors', vendor);
+    };
+
+    const handleDeleteVendor = async (vendorId) => {
+        if (!window.confirm('Are you sure you want to remove this contractor?')) return;
+        setVendors(prev => prev.filter(v => v.id !== vendorId));
+        await API.saveToSheet('DELETE', 'Vendors', { id: vendorId });
+    };
+
     const syncWithCloud = async (isBackground = false) => {
         if (!API.isValid()) {
             setSyncStatus('offline');
@@ -970,6 +993,7 @@ export default function App() {
                                     propertyUnits={filteredUnits}
                                     utilityBills={filteredBills}
                                     tasks={filteredTasks}
+                                    vendors={vendors.filter(v => !v.propertyName || v.propertyName === activeProperty)}
                                     tenantMessages={filteredMessages}
                                     currency={activeCurrency}
                                     onAddUnit={addUnitToCatalog}
@@ -980,6 +1004,9 @@ export default function App() {
                                     onUpdateFittings={updateUnitFittings}
                                     onAddBill={handleAddBill}
                                     onAddTask={handleAddTask}
+                                    onAddVendor={handleAddVendor}
+                                    onEditVendor={handleEditVendor}
+                                    onDeleteVendor={handleDeleteVendor}
                                     onUpdateLeaseDoc={handleLeaseDocUpload}
                                     onMoveOut={handleMoveOut}
                                 />
@@ -1001,13 +1028,27 @@ export default function App() {
 
 // --- Manager Components ---
 
-function ManagerDashboard({ tenants, propertyUnits, utilityBills, tasks, tenantMessages, currency = 'USD', onAddUnit, onEditUnit, onDeleteUnit, onAddTenant, onEditTenant, onUpdateFittings, onAddBill, onAddTask, onUpdateLeaseDoc, onMoveOut }) {
+function ManagerDashboard({ tenants, propertyUnits, utilityBills, tasks, vendors, tenantMessages, currency = 'USD', onAddUnit, onEditUnit, onDeleteUnit, onAddTenant, onEditTenant, onUpdateFittings, onAddBill, onAddTask, onAddVendor, onEditVendor, onDeleteVendor, onUpdateLeaseDoc, onMoveOut }) {
     const [activeTab, setActiveTab] = useState('rents');
     const [showLeaseModal, setShowLeaseModal] = useState(false);
     const [editingTenant, setEditingTenant] = useState(null);
     const [showUnitModal, setShowUnitModal] = useState(false);
     const [editingUnit, setEditingUnit] = useState(null);
     const [selectedUnitForLease, setSelectedUnitForLease] = useState(null);
+
+    const [showVendorModal, setShowVendorModal] = useState(false);
+    const [editingVendor, setEditingVendor] = useState(null);
+
+    const handleAddVendor = (vendorData) => {
+        onAddVendor(vendorData);
+        setShowVendorModal(false);
+    };
+
+    const handleUpdateVendor = (vendorData) => {
+        onEditVendor(vendorData);
+        setShowVendorModal(false);
+        setEditingVendor(null);
+    };
 
     const totalRevenue = useMemo(() => (Array.isArray(tenants) ? tenants.reduce((a, b) => a + (Number(b?.baseRent) || 0), 0) : 0), [tenants]);
     const occupiedUnits = useMemo(() => (Array.isArray(propertyUnits) ? propertyUnits.filter(u => tenants.some(t => t.unit === u.unitNumber)).length : 0), [propertyUnits, tenants]);
@@ -1020,6 +1061,12 @@ function ManagerDashboard({ tenants, propertyUnits, utilityBills, tasks, tenantM
 
     return (
         <div className="space-y-8 animate-in fade-in duration-700">
+            <VendorModal 
+                isOpen={showVendorModal} 
+                onClose={() => { setShowVendorModal(false); setEditingVendor(null); }} 
+                onSubmit={editingVendor ? handleUpdateVendor : handleAddVendor} 
+                editingVendor={editingVendor} 
+            />
             <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <StatCard index={0} title="Monthly Revenue" value={cur(totalRevenue)} icon={<CreditCard className="text-emerald-400 group-hover:text-emerald-300 transition-colors" />} />
                 <StatCard index={1} title="Occupancy Rate" value={totalUnits > 0 ? `${Math.round((occupiedUnits / totalUnits) * 100)}%` : '0%'} icon={<Users className="text-blue-400 group-hover:text-blue-300 transition-colors" />} />
@@ -1066,7 +1113,18 @@ function ManagerDashboard({ tenants, propertyUnits, utilityBills, tasks, tenantM
                 >
                     {activeTab === 'rents' && <RentSummaryTab tenants={tenants} currency={currency} />}
                     {activeTab === 'messages' && <MessagesManager tenants={tenants} messages={tenantMessages} />}
-                    {activeTab === 'tasks' && <TasksManager tenants={tenants} tasks={tasks} onAddTask={onAddTask} />}
+                    {activeTab === 'tasks' && (
+                        <TasksManager 
+                            tenants={tenants} 
+                            tasks={tasks} 
+                            vendors={vendors}
+                            onAddTask={onAddTask} 
+                            onAddVendor={() => { setEditingVendor(null); setShowVendorModal(true); }}
+                            onEditVendor={(v) => { setEditingVendor(v); setShowVendorModal(true); }}
+                            onDeleteVendor={onDeleteVendor}
+                            currency={currency}
+                        />
+                    )}
                     {activeTab === 'inventory' && (
                         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 md:gap-8">
                             {propertyUnits.map(unit => {
@@ -1237,6 +1295,75 @@ function RentSummaryTab({ tenants, currency = 'USD' }) {
                             </Motion.div>
                         );
                     })}
+                </div>
+            </div>
+        </div>
+    );
+}
+
+function VendorModal({ isOpen, onClose, onSubmit, editingVendor }) {
+    const [vendorForm, setVendorForm] = useState({
+        id: `VEN${Date.now()}`,
+        name: '',
+        mobile: '',
+        type: 'General Maintenance',
+        rating: 5,
+        email: ''
+    });
+
+    useEffect(() => {
+        if (editingVendor) setVendorForm(editingVendor);
+        else setVendorForm({ id: `VEN${Date.now()}`, name: '', mobile: '', type: 'General Maintenance', rating: 5, email: '' });
+    }, [editingVendor, isOpen]);
+
+    if (!isOpen) return null;
+
+    const specializations = ['Plumbing', 'Electrical', 'HVAC / Aircon', 'Pest Control', 'Cleaning', 'Structural', 'General Maintenance', 'Landscaping'];
+
+    return (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-8 bg-slate-950/90 backdrop-blur-2xl animate-in fade-in transition-all">
+            <div className="w-full max-w-xl bg-slate-900 border border-white/10 rounded-[3rem] shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+                <div className="p-10 pb-6 border-b border-white/5 bg-slate-900/50">
+                    <div className="flex justify-between items-center mb-6">
+                        <div className="p-4 bg-indigo-600/10 rounded-2xl border border-indigo-500/20"><Briefcase className="w-6 h-6 text-indigo-400" /></div>
+                        <button onClick={onClose} className="p-3 hover:bg-white/5 rounded-2xl text-slate-500 hover:text-white transition-all"><X className="w-6 h-6" /></button>
+                    </div>
+                    <h2 className="text-4xl font-black text-white tracking-tighter italic uppercase">{editingVendor ? 'Modify Partner' : 'Enlist Partner'}</h2>
+                    <p className="text-[10px] text-slate-500 font-black uppercase tracking-[0.3em] mt-2 opacity-60">Service Network Registration</p>
+                </div>
+
+                <div className="flex-1 overflow-y-auto p-10 space-y-8 custom-scrollbar">
+                    <div className="space-y-6">
+                        <div className="space-y-2">
+                            <label className="text-[10px] text-slate-500 font-bold uppercase tracking-widest pl-1">Contractor Name</label>
+                            <input type="text" className="w-full bg-slate-950/50 border border-white/5 p-5 rounded-2xl text-white outline-none focus:ring-2 ring-indigo-500 focus:bg-slate-950 transition-all font-bold" placeholder="e.g. Acme Plumbing" value={vendorForm.name} onChange={e => setVendorForm({ ...vendorForm, name: e.target.value })} />
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-6">
+                            <div className="space-y-2">
+                                <label className="text-[10px] text-slate-500 font-bold uppercase tracking-widest pl-1">Primary Specialization</label>
+                                <select className="w-full bg-slate-950/50 border border-white/5 p-5 rounded-2xl text-white outline-none focus:ring-2 ring-indigo-500 font-black uppercase text-[10px] tracking-widest" value={vendorForm.type} onChange={e => setVendorForm({ ...vendorForm, type: e.target.value })}>
+                                    {specializations.map(s => <option key={s} value={s}>{s}</option>)}
+                                </select>
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-[10px] text-slate-500 font-bold uppercase tracking-widest pl-1">Mobile Contact</label>
+                                <input type="text" className="w-full bg-slate-950/50 border border-white/5 p-5 rounded-2xl text-white outline-none focus:ring-2 ring-indigo-500" placeholder="+123456789" value={vendorForm.mobile} onChange={e => setVendorForm({ ...vendorForm, mobile: e.target.value })} />
+                            </div>
+                        </div>
+
+                        <div className="space-y-2">
+                            <label className="text-[10px] text-slate-500 font-bold uppercase tracking-widest pl-1">Email Address (Optional)</label>
+                            <input type="email" className="w-full bg-slate-950/50 border border-white/5 p-5 rounded-2xl text-white outline-none focus:ring-2 ring-indigo-500" placeholder="contractor@example.com" value={vendorForm.email} onChange={e => setVendorForm({ ...vendorForm, email: e.target.value })} />
+                        </div>
+                    </div>
+                </div>
+
+                <div className="p-10 pt-0">
+                    <button onClick={() => onSubmit(vendorForm)} className="w-full py-6 bg-indigo-600 hover:bg-indigo-500 text-white font-black rounded-3xl shadow-xl shadow-indigo-600/30 uppercase tracking-[0.2em] text-xs flex items-center justify-center gap-3 transition-all transform active:scale-95">
+                        {editingVendor ? <RefreshCcw className="w-5 h-5" /> : <PlusCircle className="w-5 h-5" />}
+                        {editingVendor ? 'Confirm Modifications' : 'Enlist Contractor'}
+                    </button>
                 </div>
             </div>
         </div>
@@ -1758,7 +1885,7 @@ function UtilityManager({ tenants, utilityBills, onAddBill, currency = 'USD' }) 
     );
 }
 
-function TasksManager({ tenants, tasks, onAddTask, currency = 'USD' }) {
+function TasksManager({ tenants, tasks, vendors, onAddTask, onAddVendor, onEditVendor, onDeleteVendor, currency = 'USD' }) {
     const [subTab, setSubTab] = useState('active'); // 'active', 'vendors'
     const [title, setTitle] = useState('');
     const [tenantId, setTenantId] = useState('');
@@ -1783,12 +1910,6 @@ function TasksManager({ tenants, tasks, onAddTask, currency = 'USD' }) {
         });
         setTitle('');
     };
-
-    const vendors = [
-        { name: 'Dr. Pipe Plumbing', mobile: '+12345678', type: 'Plumbing', rating: 4.8 },
-        { name: 'VoltMaster Electrical', mobile: '+12345679', type: 'Electrical', rating: 4.9 },
-        { name: 'CoolAir Solutions', mobile: '+12345680', type: 'HVAC', rating: 4.5 }
-    ];
 
     return (
         <div className="space-y-8 animate-in fade-in slide-in-from-top-4">
@@ -1884,7 +2005,16 @@ function TasksManager({ tenants, tasks, onAddTask, currency = 'USD' }) {
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {vendors.map((v, i) => (
-                        <div key={i} className="bg-slate-900 border border-white/5 p-8 rounded-[2.5rem] hover:border-indigo-500/30 transition-all group">
+                        <div key={i} className="bg-slate-900 border border-white/5 p-8 rounded-[2.5rem] hover:border-indigo-500/30 transition-all group relative">
+                            <div className="absolute top-8 right-8 flex gap-2">
+                                <button onClick={() => onEditVendor(v)} className="p-2 bg-slate-800/80 hover:bg-indigo-600 text-slate-400 hover:text-white rounded-xl transition-all border border-white/5">
+                                    <Settings className="w-3.5 h-3.5" />
+                                </button>
+                                <button onClick={() => onDeleteVendor(v.id)} className="p-2 bg-slate-800/80 hover:bg-red-600 text-slate-400 hover:text-white rounded-xl transition-all border border-white/5">
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                            </div>
+
                             <div className="flex justify-between items-start mb-6">
                                 <div className="p-4 bg-indigo-600/10 rounded-2xl border border-indigo-500/20"><Briefcase className="w-6 h-6 text-indigo-400" /></div>
                                 <div className="text-right">
@@ -1894,15 +2024,15 @@ function TasksManager({ tenants, tasks, onAddTask, currency = 'USD' }) {
                             </div>
                             <h4 className="text-xl font-black text-white mb-2">{v.name}</h4>
                             <div className="flex items-center gap-1 mb-6">
-                                {[...Array(5)].map((_, idx) => <span key={idx} className={`w-1.5 h-1.5 rounded-full ${idx < Math.floor(v.rating) ? 'bg-amber-500' : 'bg-slate-700'}`}></span>)}
-                                <span className="text-[10px] text-slate-500 font-black ml-2">{v.rating} Verified</span>
+                                {[...Array(5)].map((_, idx) => <span key={idx} className={`w-1.5 h-1.5 rounded-full ${idx < Math.floor(v.rating || 5) ? 'bg-amber-500' : 'bg-slate-700'}`}></span>)}
+                                <span className="text-[10px] text-slate-500 font-black ml-2">{v.rating || 5} Verified</span>
                             </div>
-                            <a href={`https://wa.me/${v.mobile.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" className="w-full bg-emerald-600/10 hover:bg-emerald-600/20 text-emerald-500 border border-emerald-500/20 py-4 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] flex items-center justify-center gap-3 transition-all">
+                            <a href={`https://wa.me/${String(v.mobile || '').replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" className="w-full bg-emerald-600/10 hover:bg-emerald-600/20 text-emerald-500 border border-emerald-500/20 py-4 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] flex items-center justify-center gap-3 transition-all">
                                 <Phone className="w-4 h-4" /> DISPATCH VENDOR
                             </a>
                         </div>
                     ))}
-                    <div className="border-2 border-dashed border-white/5 rounded-[2.5rem] flex flex-col items-center justify-center p-12 text-slate-600 hover:text-indigo-400 hover:border-indigo-500/40 transition-all cursor-pointer group">
+                    <div onClick={onAddVendor} className="border-2 border-dashed border-white/5 rounded-[2.5rem] flex flex-col items-center justify-center p-12 text-slate-600 hover:text-indigo-400 hover:border-indigo-500/40 transition-all cursor-pointer group bg-white/[0.02]">
                         <PlusSquare className="w-10 h-10 mb-4 group-hover:scale-110 transition-transform" />
                         <p className="text-[10px] font-black uppercase tracking-widest">Enlist New Contractor</p>
                     </div>
