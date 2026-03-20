@@ -1155,6 +1155,7 @@ export default function App() {
                                 tenant={tenants.find(t => t.id === activeTenantId)}
                                 unit={propertyUnits.find(u => u.unitNumber === (tenants.find(t => t.id === activeTenantId)?.unit))}
                                 currency={activeCurrency}
+                                tenantMessages={tenantMessages.filter(m => m.tenantId === activeTenantId)}
                                 onSendMessage={handleSendMessage}
                             />
                         )}
@@ -2512,7 +2513,7 @@ function TasksManager({ tenants, tasks, vendors, onAddTask, onAddVendor, onEditV
 
 // --- Tenant Dashboard (unchanged logic, showing for completeness) ---
 
-function TenantDashboard({ tenant, unit, onSendMessage, currency = 'USD' }) {
+function TenantDashboard({ tenant, unit, tenantMessages = [], onSendMessage, currency = 'USD' }) {
     const [showMsgModal, setShowMsgModal] = useState(false);
     if (!tenant) {
         return (
@@ -2555,10 +2556,32 @@ function TenantDashboard({ tenant, unit, onSendMessage, currency = 'USD' }) {
                     <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity">
                         <CreditCard className="w-24 h-24" />
                     </div>
-                    <p className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-500 mb-2">Total Outstanding</p>
-                    <div className="flex items-baseline gap-2 mb-8">
-                        <span className="text-4xl md:text-5xl font-black text-white tracking-tighter italic">{currency} {totalDue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                        <span className="text-[10px] text-slate-500 font-black uppercase tracking-widest opacity-60">Balanced Due</span>
+                    
+                    <div className="flex justify-between items-start mb-8">
+                        <div>
+                            <p className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-500 mb-2">Total Outstanding</p>
+                            <div className="flex items-baseline gap-2">
+                                <span className="text-4xl md:text-5xl font-black text-white tracking-tighter italic">{currency} {totalDue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                <span className="text-[10px] text-slate-500 font-black uppercase tracking-widest opacity-60">Balanced Due</span>
+                            </div>
+                        </div>
+
+                        {/* Visual Progress Ring */}
+                        {totalDue > 0 ? (
+                            <div className="relative w-16 h-16 shrink-0">
+                                <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+                                    <circle className="text-white/5 stroke-current" strokeWidth="8" cx="50" cy="50" r="40" fill="transparent"></circle>
+                                    <circle className="text-red-500 stroke-current drop-shadow-[0_0_8px_rgba(239,68,68,0.5)]" strokeWidth="8" strokeLinecap="round" cx="50" cy="50" r="40" fill="transparent" strokeDasharray="251.2" strokeDashoffset="60" style={{ transition: 'stroke-dashoffset 1s ease-out' }}></circle>
+                                </svg>
+                                <div className="absolute inset-0 flex items-center justify-center">
+                                    <AlertCircle className="w-4 h-4 text-red-500 animate-pulse" />
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="w-16 h-16 shrink-0 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
+                                <CheckCircle2 className="w-8 h-8 text-emerald-400" />
+                            </div>
+                        )}
                     </div>
  
                     <div className="space-y-4 pt-6 border-t border-white/5">
@@ -2611,16 +2634,21 @@ function TenantDashboard({ tenant, unit, onSendMessage, currency = 'USD' }) {
                                     <p className="text-sm font-black text-white tracking-tight">${tenant.deposit?.toLocaleString()}</p>
                                 </div>
                             </div>
-                            <div>
-                                <p className="text-[9px] font-black text-slate-600 uppercase tracking-widest mb-1">Document Status</p>
-                                <div className="flex items-center gap-2">
+                            <div className="col-span-2 mt-2">
+                                <p className="text-[9px] font-black text-slate-600 uppercase tracking-widest mb-2">Document Status</p>
+                                <div className="flex items-center justify-between bg-white/[0.02] border border-white/5 p-3 rounded-2xl">
                                     {tenant.leaseDocument ? (
-                                        <span className="text-[10px] font-black text-emerald-400 uppercase flex items-center gap-1.5">
-                                            <FileCheck className="w-3.5 h-3.5" /> Verified PDF
-                                        </span>
+                                        <>
+                                            <span className="text-[10px] font-black text-emerald-400 uppercase flex items-center gap-1.5">
+                                                <FileCheck className="w-4 h-4" /> Verified Contract
+                                            </span>
+                                            <a href={tenant.leaseDocument} target="_blank" rel="noopener noreferrer" className="bg-indigo-600 hover:bg-indigo-500 text-white text-[9px] font-black uppercase tracking-widest px-4 py-2 rounded-xl flex items-center gap-2 transition-all shadow-lg shadow-indigo-600/20">
+                                                ☁️ Download Access
+                                            </a>
+                                        </>
                                     ) : (
                                         <span className="text-[10px] font-black text-amber-500 uppercase flex items-center gap-1.5">
-                                            <AlertCircle className="w-3.5 h-3.5" /> Action Required
+                                            <AlertCircle className="w-4 h-4" /> Pending Execution
                                         </span>
                                     )}
                                 </div>
@@ -2634,6 +2662,69 @@ function TenantDashboard({ tenant, unit, onSendMessage, currency = 'USD' }) {
                             Bills are updated monthly based on building consumption. {tenant.utilityShare > 0 ? "The current amount includes shared building water and electricity charges." : "Utilities for this period haven't been shared yet."}
                         </p>
                     </div>
+                </div>
+            </div>
+
+            {/* Support Tickets System */}
+            <div className="bg-slate-900 border border-white/5 p-8 rounded-[2.5rem] shadow-2xl">
+                <div className="flex justify-between items-center mb-6">
+                    <div>
+                        <h3 className="text-xl font-black text-white italic flex items-center gap-3">
+                            <MessageSquare className="w-5 h-5 text-indigo-500" />
+                            My Support Tickets
+                        </h3>
+                        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 mt-1">Communication Log</p>
+                    </div>
+                    <button
+                        onClick={() => setShowMsgModal(true)}
+                        className="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 transition-all shadow-xl shadow-indigo-500/20"
+                    >
+                        <PlusCircle className="w-3.5 h-3.5" />
+                        New Request
+                    </button>
+                </div>
+
+                <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+                    {tenantMessages.length === 0 ? (
+                        <div className="text-center py-10 border-2 border-dashed border-white/5 rounded-3xl bg-white/[0.01]">
+                            <MessageCircle className="w-8 h-8 text-slate-600 mx-auto mb-3" />
+                            <p className="text-slate-400 font-bold text-sm">No support tickets found.</p>
+                        </div>
+                    ) : (
+                        tenantMessages.map(msg => (
+                            <div key={msg.id} className="bg-slate-950/50 border border-white/5 p-5 rounded-3xl relative overflow-hidden group hover:border-indigo-500/30 transition-all">
+                                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-3">
+                                    <div className="flex items-center gap-3">
+                                        <span className={`px-2.5 py-1 rounded-md text-[9px] font-black uppercase tracking-widest border ${
+                                            msg.status === 'RESOLVED' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' :
+                                            msg.status === 'IN PROGRESS' ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' :
+                                            'bg-red-500/10 text-red-400 border-red-500/20'
+                                        }`}>
+                                            {msg.status === 'RESOLVED' ? '✅ Resolved' : msg.status === 'IN PROGRESS' ? '🟡 In Progress' : '🔴 Unread'}
+                                        </span>
+                                        <span className="text-[10px] text-slate-500 font-black uppercase tracking-widest">
+                                            {new Date(msg.timestamp).toLocaleDateString()}
+                                        </span>
+                                    </div>
+                                    {msg.handledBy && (
+                                        <div className="flex items-center gap-1.5 px-3 py-1 bg-indigo-500/10 border border-indigo-500/20 rounded-full text-indigo-300 text-[9px] font-black uppercase tracking-widest">
+                                            <ShieldCheck className="w-3 h-3" /> {msg.handledBy}
+                                        </div>
+                                    )}
+                                </div>
+                                
+                                <p className="text-slate-300 text-sm leading-relaxed font-medium bg-black/20 p-4 rounded-xl border border-white/5 mb-2">
+                                    "{msg.content}"
+                                </p>
+
+                                {msg.photoUrl && (
+                                    <div className="mt-3 overflow-hidden rounded-xl border border-white/10 md:w-1/2">
+                                        <img src={msg.photoUrl} alt="Attachment" className="w-full h-auto object-cover hover:scale-105 transition-transform" />
+                                    </div>
+                                )}
+                            </div>
+                        ))
+                    )}
                 </div>
             </div>
 
