@@ -1758,127 +1758,156 @@ function UtilityManager({ tenants, utilityBills, onAddBill, currency = 'USD' }) 
     );
 }
 
-function TasksManager({ tenants, tasks, onAddTask }) {
+function TasksManager({ tenants, tasks, onAddTask, currency = 'USD' }) {
+    const [subTab, setSubTab] = useState('active'); // 'active', 'vendors'
     const [title, setTitle] = useState('');
     const [tenantId, setTenantId] = useState('');
+    const [category, setCategory] = useState('General Maintenance');
+    const [priority, setPriority] = useState('Normal');
     const [dateOptions, setDateOptions] = useState([{ date: '', time: '' }]);
 
-    const handleAddOption = () => {
-        setDateOptions([...dateOptions, { date: '', time: '' }]);
-    };
-
-    const handleRemoveOption = (index) => {
-        setDateOptions(dateOptions.filter((_, i) => i !== index));
-    };
-
-    const updateOption = (index, field, value) => {
-        const newOptions = [...dateOptions];
-        newOptions[index][field] = value;
-        setDateOptions(newOptions);
-    };
-
-    const isFormValid = title && tenantId && dateOptions.every(opt => opt.date && opt.time);
+    const categories = ['Plumbing', 'Electrical', 'HVAC / Aircon', 'Pest Control', 'Cleaning', 'Structural', 'General Maintenance'];
+    const priorities = ['Low', 'Normal', 'High', 'URGENT'];
 
     const handleAdd = () => {
-        if (!isFormValid) return;
+        if (!title || !tenantId) return;
         const formattedOptions = dateOptions.map(opt => `${opt.date} ${opt.time}`);
-        const newTask = {
+        onAddTask({
             id: `TSK${Date.now()}`,
             title,
             tenantId,
+            category,
+            priority,
             dateOptions: formattedOptions,
-            status: 'Pending Tenant'
-        };
-        onAddTask(newTask);
+            status: 'Pending Discovery'
+        });
         setTitle('');
-        setDateOptions([{ date: '', time: '' }]);
     };
 
+    const vendors = [
+        { name: 'Dr. Pipe Plumbing', mobile: '+12345678', type: 'Plumbing', rating: 4.8 },
+        { name: 'VoltMaster Electrical', mobile: '+12345679', type: 'Electrical', rating: 4.9 },
+        { name: 'CoolAir Solutions', mobile: '+12345680', type: 'HVAC', rating: 4.5 }
+    ];
+
     return (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 animate-in fade-in slide-in-from-top-4">
-            <div className="lg:col-span-1 space-y-6">
-                <div className="bg-slate-900/50 border border-white/5 p-6 rounded-[2.5rem] shadow-xl">
-                    <h3 className="text-sm font-black text-white italic mb-6 flex items-center gap-2">
-                        <Hammer className="w-4 h-4 text-indigo-400" /> New Maintenance Task
-                    </h3>
-                    <div className="space-y-4">
-                        <div className="space-y-1">
-                            <label className="text-[10px] text-slate-500 font-bold uppercase tracking-widest pl-1">Task Title</label>
-                            <input type="text" className="w-full bg-slate-800 border-none rounded-xl p-3 text-white text-sm outline-none focus:ring-1 ring-indigo-500" placeholder="e.g. Aircon Service" value={title} onChange={e => setTitle(e.target.value)} />
-                        </div>
-                        <div className="space-y-1">
-                            <label className="text-[10px] text-slate-500 font-bold uppercase tracking-widest pl-1">Select Tenant</label>
-                            <select className="w-full bg-slate-800 border-none rounded-xl p-3 text-white text-sm outline-none focus:ring-1 ring-indigo-500" value={tenantId} onChange={e => setTenantId(e.target.value)}>
-                                <option value="">-- Choose Tenant --</option>
-                                <option value="ALL">All Tenants (Broadcast)</option>
-                                {tenants.map(t => <option key={t.id} value={t.id}>{t.name} ({t.unit})</option>)}
-                            </select>
-                        </div>
-                        <div className="space-y-2">
-                            <label className="text-[10px] text-slate-500 font-bold uppercase tracking-widest pl-1">Date Options</label>
-                            {dateOptions.map((opt, index) => (
-                                <div key={index} className="flex items-center gap-2">
-                                    <input type="date" style={{ colorScheme: 'dark' }} className="w-full bg-slate-800 border-none rounded-xl p-3 text-white text-sm outline-none focus:ring-1 ring-indigo-500 min-w-0" value={opt.date} onChange={e => updateOption(index, 'date', e.target.value)} />
-                                    <input type="time" style={{ colorScheme: 'dark' }} className="w-full bg-slate-800 border-none rounded-xl p-3 text-white text-sm outline-none focus:ring-1 ring-indigo-500 min-w-0" value={opt.time} onChange={e => updateOption(index, 'time', e.target.value)} />
-                                    {dateOptions.length > 1 && (
-                                        <button onClick={() => handleRemoveOption(index)} className="p-3 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-xl transition-colors shrink-0">
-                                            <Trash2 className="w-4 h-4" />
-                                        </button>
-                                    )}
+        <div className="space-y-8 animate-in fade-in slide-in-from-top-4">
+            <div className="flex bg-slate-900/40 p-1 rounded-2xl border border-white/5 w-fit backdrop-blur-md">
+                {[
+                    { id: 'active', icon: <Hammer className="w-3.5 h-3.5" />, label: 'Work Orders' },
+                    { id: 'vendors', icon: <Briefcase className="w-3.5 h-3.5" />, label: 'Service Network' }
+                ].map(t => (
+                    <button key={t.id} onClick={() => setSubTab(t.id)} className={`px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 ${subTab === t.id ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}>
+                        {t.icon} {t.label}
+                    </button>
+                ))}
+            </div>
+
+            {subTab === 'active' ? (
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    <div className="lg:col-span-1 space-y-6">
+                        <div className="bg-slate-900/50 border border-white/5 p-8 rounded-[2.5rem] shadow-xl">
+                            <h3 className="text-sm font-black text-white italic mb-8 flex items-center gap-2">
+                                <PlusCircle className="w-4 h-4 text-indigo-400" /> Dispatch New Order
+                            </h3>
+                            <div className="space-y-5">
+                                <div className="space-y-1.5">
+                                    <label className="text-[10px] text-slate-500 font-bold uppercase tracking-widest pl-1">Issue Description</label>
+                                    <input type="text" className="w-full bg-slate-800 border-none rounded-xl p-4 text-white text-sm outline-none focus:ring-1 ring-indigo-500" placeholder="e.g. Master Bedroom Leak" value={title} onChange={e => setTitle(e.target.value)} />
                                 </div>
-                            ))}
-                            <div className="flex px-1 mt-1">
-                                <button onClick={handleAddOption} className="text-[10px] text-indigo-400 font-bold uppercase tracking-widest flex items-center gap-1 hover:text-indigo-300 transition-colors p-1">
-                                    <Plus className="w-3 h-3" /> Add Option
-                                </button>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-1.5">
+                                        <label className="text-[10px] text-slate-500 font-bold uppercase tracking-widest pl-1">Category</label>
+                                        <select className="w-full bg-slate-800 border-none rounded-xl p-3 text-white text-[10px] font-black uppercase tracking-widest outline-none focus:ring-1 ring-indigo-500" value={category} onChange={e => setCategory(e.target.value)}>
+                                            {categories.map(c => <option key={c} value={c}>{c}</option>)}
+                                        </select>
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <label className="text-[10px] text-slate-500 font-bold uppercase tracking-widest pl-1">Priority</label>
+                                        <select className="w-full bg-slate-800 border-none rounded-xl p-3 text-white text-[10px] font-black uppercase tracking-widest outline-none focus:ring-1 ring-indigo-500" value={priority} onChange={e => setPriority(e.target.value)}>
+                                            {priorities.map(p => <option key={p} value={p}>{p}</option>)}
+                                        </select>
+                                    </div>
+                                </div>
+                                <div className="space-y-1.5">
+                                    <label className="text-[10px] text-slate-500 font-bold uppercase tracking-widest pl-1">Assign Resident</label>
+                                    <select className="w-full bg-slate-800 border-none rounded-xl p-4 text-white text-sm outline-none focus:ring-1 ring-indigo-500" value={tenantId} onChange={e => setTenantId(e.target.value)}>
+                                        <option value="">Select Tenant...</option>
+                                        <option value="ALL">Broadcast to All</option>
+                                        {tenants.map(t => <option key={t.id} value={t.id}>{t.name} ({t.unit})</option>)}
+                                    </select>
+                                </div>
+                                <div className="space-y-3">
+                                    <label className="text-[10px] text-slate-500 font-bold uppercase tracking-widest pl-1">Inspection Slots</label>
+                                    {dateOptions.map((opt, i) => (
+                                        <div key={i} className="flex gap-2">
+                                            <input type="date" style={{ colorScheme: 'dark' }} className="flex-1 bg-slate-800 border-none rounded-xl p-3 text-white text-xs outline-none focus:ring-1 ring-indigo-500" value={opt.date} onChange={e => { const n = [...dateOptions]; n[i].date = e.target.value; setDateOptions(n); }} />
+                                            <input type="time" style={{ colorScheme: 'dark' }} className="flex-1 bg-slate-800 border-none rounded-xl p-3 text-white text-xs outline-none focus:ring-1 ring-indigo-500" value={opt.time} onChange={e => { const n = [...dateOptions]; n[i].time = e.target.value; setDateOptions(n); }} />
+                                        </div>
+                                    ))}
+                                    <button onClick={() => setDateOptions([...dateOptions, { date: '', time: '' }])} className="text-[9px] text-indigo-400 font-black uppercase tracking-[0.2em] px-2 py-1 hover:text-white transition-all">+ Add Option</button>
+                                </div>
+                                <button onClick={handleAdd} className="w-full mt-4 py-4 bg-indigo-600 hover:bg-indigo-500 text-white font-black rounded-2xl shadow-xl shadow-indigo-600/20 transition-all uppercase tracking-widest text-[10px]">Generate Work Order</button>
                             </div>
                         </div>
-                        <button disabled={!isFormValid} onClick={handleAdd} className="w-full mt-4 py-4 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-30 disabled:cursor-not-allowed text-white font-black rounded-2xl shadow-xl shadow-indigo-600/20 transition-all uppercase tracking-widest text-[10px] flex items-center justify-center gap-2">
-                            <PlusCircle className="w-4 h-4" /> Create Task
-                        </button>
+                    </div>
+
+                    <div className="lg:col-span-2 space-y-4">
+                        {tasks.slice().reverse().map(task => {
+                            const tenant = tenants.find(t => t.id === task.tenantId) || { name: 'All Tenants', unit: 'All' };
+                            return (
+                                <div key={task.id} className="bg-slate-900 border border-white/5 p-6 rounded-[2rem] flex flex-col md:flex-row justify-between gap-6 hover:border-indigo-500/30 transition-all group">
+                                    <div className="flex-1 space-y-3">
+                                        <div className="flex items-center gap-3">
+                                            <span className={`px-2 py-1 rounded-md text-[8px] font-black uppercase tracking-widest ${task.priority === 'URGENT' ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-slate-800 text-slate-400 border border-white/5'}`}>{task.priority}</span>
+                                            <span className="text-[9px] font-black text-indigo-400 uppercase tracking-widest">{task.category || 'Maintenance'}</span>
+                                        </div>
+                                        <h4 className="text-xl font-black text-white tracking-tight">{task.title}</h4>
+                                        <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Unit {tenant.unit} • {tenant.name}</p>
+                                        <div className="flex flex-wrap gap-2 pt-2">
+                                            {task.dateOptions?.map((d, idx) => <span key={idx} className="bg-slate-950/40 text-slate-400 text-[9px] font-bold px-3 py-1.5 rounded-lg border border-white/5">{d}</span>)}
+                                        </div>
+                                    </div>
+                                    <div className="flex flex-col gap-2 min-w-[160px]">
+                                        <div className="px-4 py-2 bg-slate-950/50 rounded-xl border border-white/5 text-center">
+                                            <p className="text-[8px] font-black text-slate-600 uppercase mb-1">Status</p>
+                                            <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">{task.status}</p>
+                                        </div>
+                                        <a href={`https://wa.me/${String(tenant.mobile || '').replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" className="bg-emerald-600/10 hover:bg-emerald-600/20 border border-emerald-500/20 text-emerald-500 p-3 rounded-xl text-[9px] font-black uppercase tracking-widest text-center transition-all">Notify Tenant</a>
+                                        <button className="bg-white/5 hover:bg-white/10 text-slate-400 p-3 rounded-xl text-[9px] font-black uppercase tracking-widest text-center transition-all">Close Order</button>
+                                    </div>
+                                </div>
+                            );
+                        })}
                     </div>
                 </div>
-            </div>
-
-            <div className="lg:col-span-2 space-y-4">
-                {tasks.slice().reverse().map(task => {
-                    const isAll = task.tenantId === 'ALL';
-                    const tenant = isAll ? { name: 'All Tenants', unit: 'All', mobile: '' } : tenants.find(t => t.id === task.tenantId);
-                    if (!tenant) return null;
-
-                    const waMessage = encodeURIComponent(`Hi ${isAll ? 'there' : String(tenant.name || 'Tenant').split(' ')[0]},\n\nA new maintenance task is required: *${task.title}*.\n\nPlease let me know which of the following time slots works best for you:\n${task.dateOptions.map((d, i) => `${i + 1}. ${d}`).join('\n')}\n\nThank you!`);
-                    const waLink = `https://wa.me/${String(tenant.mobile || '').replace(/\D/g, '')}?text=${waMessage}`;
-                    const waCheckLink = `https://wa.me/${String(tenant.mobile || '').replace(/\D/g, '')}`;
-
-                    return (
-                        <div key={task.id} className="bg-slate-900/50 rounded-3xl p-6 border border-white/5 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-                            <div>
-                                <h4 className="text-lg font-black text-white flex items-center gap-2">{task.title}</h4>
-                                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Tenant: <span className="text-indigo-400">{tenant.name}</span> • Unit {tenant.unit}</p>
-                                <div className="mt-3 flex gap-2 flex-wrap">
-                                    {task.dateOptions.map((opt, i) => (
-                                        <span key={i} className="bg-slate-800 text-slate-300 text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-md border border-white/5">{opt}</span>
-                                    ))}
+            ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {vendors.map((v, i) => (
+                        <div key={i} className="bg-slate-900 border border-white/5 p-8 rounded-[2.5rem] hover:border-indigo-500/30 transition-all group">
+                            <div className="flex justify-between items-start mb-6">
+                                <div className="p-4 bg-indigo-600/10 rounded-2xl border border-indigo-500/20"><Briefcase className="w-6 h-6 text-indigo-400" /></div>
+                                <div className="text-right">
+                                    <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest">Specialization</p>
+                                    <p className="text-sm font-black text-white uppercase tracking-tight">{v.type}</p>
                                 </div>
                             </div>
-                            <div className="flex flex-col gap-2 w-full md:w-auto">
-                                <a href={waLink} target="_blank" rel="noopener noreferrer" className="bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-all whitespace-nowrap">
-                                    <MessageSquare className="w-3.5 h-3.5" /> Notify Tenant
-                                </a>
-                                <a href={waCheckLink} target="_blank" rel="noopener noreferrer" className="bg-white/5 hover:bg-white/10 text-slate-300 border border-white/5 px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-all whitespace-nowrap">
-                                    <MessageSquare className="w-3.5 h-3.5" /> Check Messages
-                                </a>
+                            <h4 className="text-xl font-black text-white mb-2">{v.name}</h4>
+                            <div className="flex items-center gap-1 mb-6">
+                                {[...Array(5)].map((_, idx) => <span key={idx} className={`w-1.5 h-1.5 rounded-full ${idx < Math.floor(v.rating) ? 'bg-amber-500' : 'bg-slate-700'}`}></span>)}
+                                <span className="text-[10px] text-slate-500 font-black ml-2">{v.rating} Verified</span>
                             </div>
+                            <a href={`https://wa.me/${v.mobile.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" className="w-full bg-emerald-600/10 hover:bg-emerald-600/20 text-emerald-500 border border-emerald-500/20 py-4 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] flex items-center justify-center gap-3 transition-all">
+                                <Phone className="w-4 h-4" /> DISPATCH VENDOR
+                            </a>
                         </div>
-                    );
-                })}
-                {tasks.length === 0 && (
-                    <div className="bg-slate-900/50 rounded-3xl border border-white/5 p-12 text-center text-slate-500 h-full flex flex-col justify-center">
-                        <Hammer className="w-12 h-12 mx-auto mb-4 opacity-20" />
-                        <p className="text-sm font-bold uppercase tracking-widest">No maintenance tasks scheduled</p>
+                    ))}
+                    <div className="border-2 border-dashed border-white/5 rounded-[2.5rem] flex flex-col items-center justify-center p-12 text-slate-600 hover:text-indigo-400 hover:border-indigo-500/40 transition-all cursor-pointer group">
+                        <PlusSquare className="w-10 h-10 mb-4 group-hover:scale-110 transition-transform" />
+                        <p className="text-[10px] font-black uppercase tracking-widest">Enlist New Contractor</p>
                     </div>
-                )}
-            </div>
+                </div>
+            )}
         </div>
     );
 }
