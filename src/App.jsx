@@ -63,7 +63,8 @@ import {
     UploadCloud,
     TrendingUp,
     History,
-    Package
+    Package,
+    Key
 } from 'lucide-react';
 
 // --- System Credentials & Configuration ---
@@ -868,11 +869,9 @@ export default function App() {
         setTimeout(() => setGlobalMessage(null), 3000);
     };
 
-    const handleMoveOut = async (unit, tenant) => {
-        if (!window.confirm(`Are you sure you want to mark ${tenant.name} as moved out and set Unit ${unit.unitNumber} as Available?`)) return;
-        
+    const handleMoveOut = async (unit, tenant, offboardingData) => {
         try {
-            setGlobalMessage({ type: 'info', text: 'Processing Move-Out...' });
+            setGlobalMessage({ type: 'info', text: 'Finalizing Settlement & Offboarding...' });
             
             // 1. Mark unit as Available with Vacancy Tracking
             const updatedUnit = { 
@@ -882,23 +881,37 @@ export default function App() {
             };
             await editUnitInCatalog(updatedUnit);
 
-            // 2. Mark tenant as archived
-            const updatedTenant = { ...tenant, unit: 'None' };
+            // 2. Archive tenant and wipe portal credentials
+            const updatedTenant = { 
+                ...tenant, 
+                unit: 'None', 
+                status: 'Archived', 
+                password: '', // Revoke portal access permanently
+                depositRefunded: offboardingData.refundAmount,
+                depositDeducted: offboardingData.deductionAmount,
+                moveOutDate: new Date().toISOString().split('T')[0]
+            };
             await editTenant(updatedTenant);
 
-            // 3. Create Turnover Task
+            // 3. Create Turnover Task with damages/notes attached
+            let taskDesc = `🧹 Turnover Cleaning & Inspection for Unit ${unit.unitNumber}`;
+            if (offboardingData.hasDamages) taskDesc += ` | Notes: Check for reported damages.`;
+            
             const newTask = {
-                id: `T${Date.now()}`,
+                id: generateId('TSK'),
                 unit: unit.unitNumber,
                 type: 'Maintenance',
                 status: 'Pending',
-                date: new Date().toISOString().split('T')[0],
-                task: `🧹 Turnover Cleaning & Inspection for Unit ${unit.unitNumber}`
+                propertyName: activeProperty,
+                scheduleDate: new Date().toISOString().split('T')[0],
+                title: taskDesc,
+                description: 'Generated automatically from Offboarding workflow.'
             };
+            
             setTasks(prev => [newTask, ...prev]);
             await API.saveToSheet('ADD', 'Tasks', newTask);
 
-            setGlobalMessage({ type: 'success', text: `Unit ${unit.unitNumber} is now Available. Cleanup task scheduled.` });
+            setGlobalMessage({ type: 'success', text: `Offboarding Complete. Financials logged and unit secured.` });
             setTimeout(() => setGlobalMessage(null), 3000);
         } catch (err) {
             console.error('Move out failed:', err);
@@ -1161,6 +1174,7 @@ function ManagerDashboard({ activeProperty, tenants, payments, propertyUnits, ut
     const [showUnitModal, setShowUnitModal] = useState(false);
     const [editingUnit, setEditingUnit] = useState(null);
     const [selectedUnitForLease, setSelectedUnitForLease] = useState(null);
+    const [offboardingSession, setOffboardingSession] = useState(null);
 
     const [showVendorModal, setShowVendorModal] = useState(false);
     const [editingVendor, setEditingVendor] = useState(null);
@@ -1271,7 +1285,7 @@ function ManagerDashboard({ activeProperty, tenants, payments, propertyUnits, ut
                                         onAddLease={() => { setEditingTenant(null); setSelectedUnitForLease(unit); setShowLeaseModal(true); }}
                                         onEditLease={() => { setEditingTenant(tenant); setSelectedUnitForLease(unit); setShowLeaseModal(true); }}
                                         onUpdateLeaseDoc={onUpdateLeaseDoc}
-                                        onMoveOut={() => onMoveOut(unit, tenant)}
+                                        onMoveOut={() => setOffboardingSession({ unit, tenant })}
                                     />
                                 );
                             })}
@@ -1296,6 +1310,19 @@ function ManagerDashboard({ activeProperty, tenants, payments, propertyUnits, ut
 
             {showUnitModal && <UnitModal onClose={() => setShowUnitModal(false)} onSubmit={onAddUnit} />}
             {editingUnit && <UnitModal initialData={editingUnit} onClose={() => setEditingUnit(null)} onSubmit={(data) => { onEditUnit(data); setEditingUnit(null); }} />}
+            {offboardingSession && (
+                <OffboardingModal 
+                    tenant={offboardingSession.tenant}
+                    unit={offboardingSession.unit}
+                    utilityBills={utilityBills.filter(b => b.unit === offboardingSession.unit.unitNumber && b.status !== 'Paid')}
+                    currency={currency}
+                    onClose={() => setOffboardingSession(null)}
+                    onSubmit={(data) => {
+                        onMoveOut(offboardingSession.unit, offboardingSession.tenant, data);
+                        setOffboardingSession(null);
+                    }}
+                />
+            )}
             {showLeaseModal && (
                 <LeaseModal 
                     initialData={selectedUnitForLease ? { unit: selectedUnitForLease.unitNumber } : (editingTenant || {})}
@@ -3797,6 +3824,103 @@ function PropertySettingsModal({ property, apiStatus, onClose, onSave }) {
                     >
                         <CheckCircle2 className="w-4 h-4" /> Save Settings
                     </Motion.button>
+                </div>
+            </Motion.div>
+        </div>
+    );
+}
+
+function OffboardingModal({ tenant, unit, utilityBills, currency, onClose, onSubmit }) {
+    const [data, setData] = useState({
+        refundAmount: tenant?.deposit || 0,
+        deductionAmount: 0,
+        hasDamages: false,
+        keysReturned: false,
+        accessRevoked: true // Visual indicator
+    });
+
+    const unpaidUtilities = utilityBills.reduce((acc, bill) => acc + Number(bill.amount || 0), 0);
+
+    return (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 md:p-8 bg-slate-950/90 backdrop-blur-2xl animate-in fade-in transition-all">
+            <Motion.div 
+                initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                className="relative z-10 w-full max-w-xl bg-slate-900 rounded-[2.5rem] border border-white/10 shadow-2xl shadow-black/50 overflow-hidden flex flex-col max-h-[90vh]"
+            >
+                <div className="p-10 pb-6 border-b border-white/5 bg-slate-900/50">
+                    <div className="flex justify-between items-center mb-6">
+                        <div className="p-4 bg-red-600/10 rounded-2xl border border-red-500/20"><LogOut className="w-6 h-6 text-red-400" /></div>
+                        <button onClick={onClose} className="p-3 hover:bg-white/5 rounded-2xl text-slate-500 hover:text-white transition-all"><X className="w-6 h-6" /></button>
+                    </div>
+                    <h2 className="text-4xl font-black text-white tracking-tighter italic uppercase">Settle & Offboard</h2>
+                    <p className="text-[10px] text-slate-500 font-black uppercase tracking-[0.3em] mt-2 opacity-60">Tenant Move-Out Checklist</p>
+                </div>
+                
+                <div className="flex-1 overflow-y-auto p-6 md:p-10 space-y-8 custom-scrollbar">
+                    {unpaidUtilities > 0 && (
+                        <div className="bg-red-500/10 border border-red-500/20 p-5 rounded-3xl flex items-start gap-4">
+                            <AlertCircle className="w-6 h-6 text-red-400 shrink-0" />
+                            <div>
+                                <h4 className="text-red-400 font-black text-sm uppercase tracking-widest">Unpaid Utilities Warning</h4>
+                                <p className="text-[10px] text-slate-400 font-bold mt-1">This tenant has {currency} {unpaidUtilities.toLocaleString()} in unpaid utility bills. Ensure you deduct this from the security deposit.</p>
+                            </div>
+                        </div>
+                    )}
+
+                    <div className="space-y-6">
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="bg-white/[0.02] p-6 rounded-3xl border border-white/5 space-y-2">
+                                <p className="text-slate-500 text-[10px] font-black uppercase tracking-widest">Initial Deposit</p>
+                                <p className="text-xl font-black text-white">{currency} {Number(tenant?.deposit || 0).toLocaleString()}</p>
+                            </div>
+                            <div className="bg-white/[0.02] p-6 rounded-3xl border border-white/5 space-y-2">
+                                <p className="text-slate-500 text-[10px] font-black uppercase tracking-widest">Monthly Rent</p>
+                                <p className="text-xl font-black text-slate-300">{currency} {Number(tenant?.baseRent || 0).toLocaleString()}</p>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-6">
+                            <div className="space-y-2">
+                                <label className="text-[10px] text-slate-500 font-bold uppercase tracking-widest pl-1">Deposit Refunded</label>
+                                <div className="relative">
+                                    <span className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-500 font-bold">{currency}</span>
+                                    <input type="number" className="w-full bg-slate-950/50 border border-white/5 py-4 pl-12 pr-5 rounded-2xl text-white outline-none focus:ring-2 ring-indigo-500 font-black" value={data.refundAmount} onChange={e => setData({ ...data, refundAmount: e.target.value })} />
+                                </div>
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-[10px] text-slate-500 font-bold uppercase tracking-widest pl-1">Deposit Retained</label>
+                                <div className="relative">
+                                    <span className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-500 font-bold">{currency}</span>
+                                    <input type="number" className="w-full bg-slate-950/50 border border-white/5 py-4 pl-12 pr-5 rounded-2xl text-white outline-none focus:ring-2 ring-indigo-500 font-black" value={data.deductionAmount} onChange={e => setData({ ...data, deductionAmount: e.target.value })} />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="space-y-3 pt-4 border-t border-white/5">
+                            <label className="flex items-center justify-between bg-white/[0.02] p-5 rounded-2xl border border-white/5 cursor-pointer hover:bg-white/[0.04] transition-all group">
+                                <span className="text-xs font-black text-slate-300 uppercase tracking-widest flex items-center gap-3"><Hammer className="w-5 h-5 text-amber-500"/> Retaining for Damages</span>
+                                <input type="checkbox" checked={data.hasDamages} onChange={e => setData({...data, hasDamages: e.target.checked})} className="w-5 h-5 rounded-lg border-white/10 bg-slate-950 text-indigo-500 focus:ring-indigo-500 cursor-pointer" />
+                            </label>
+                            
+                            <label className="flex items-center justify-between bg-white/[0.02] p-5 rounded-2xl border border-white/5 cursor-pointer hover:bg-white/[0.04] transition-all group">
+                                <span className="text-xs font-black text-slate-300 uppercase tracking-widest flex items-center gap-3"><Key className="w-5 h-5 text-indigo-400"/> Keys Returned</span>
+                                <input type="checkbox" checked={data.keysReturned} onChange={e => setData({...data, keysReturned: e.target.checked})} className="w-5 h-5 rounded-lg border-white/10 bg-slate-950 text-indigo-500 focus:ring-indigo-500 cursor-pointer" />
+                            </label>
+
+                            <label className="flex items-center justify-between bg-white/[0.02] p-5 rounded-2xl border border-white/5 transition-all opacity-50 cursor-not-allowed">
+                                <span className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-3"><Lock className="w-5 h-5 text-emerald-500"/> Portal Access Revoked</span>
+                                <input type="checkbox" checked={data.accessRevoked} readOnly className="w-5 h-5 rounded-lg border-white/10 bg-slate-950 text-indigo-500 pointer-events-none" />
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="p-8 pt-0 border-t border-white/5 bg-slate-900/50 flex flex-col pt-8 space-y-4">
+                    <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest text-center px-4 leading-relaxed">By clicking execute, the tenant's portal login will be permanently disabled, and a maintenance turnover task will be generated.</p>
+                    <button onClick={() => onSubmit(data)} className="w-full py-6 bg-red-600 hover:bg-red-500 text-white font-black rounded-3xl shadow-xl shadow-red-600/30 uppercase tracking-[0.2em] text-xs flex items-center justify-center gap-3 transition-all transform active:scale-95">
+                        <LogOut className="w-5 h-5" /> Execute Offboarding
+                    </button>
                 </div>
             </Motion.div>
         </div>
