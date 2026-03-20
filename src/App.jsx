@@ -1700,19 +1700,17 @@ function VendorModal({ isOpen, onClose, onSubmit, editingVendor }) {
         id: `VEN${Date.now()}`,
         name: '',
         mobile: '',
-        type: 'General Maintenance',
+        type: '',
         rating: 5,
         email: ''
     });
 
     useEffect(() => {
         if (editingVendor) setVendorForm(editingVendor);
-        else setVendorForm({ id: `VEN${Date.now()}`, name: '', mobile: '', type: 'General Maintenance', rating: 5, email: '' });
+        else setVendorForm({ id: `VEN${Date.now()}`, name: '', mobile: '', type: '', rating: 5, email: '' });
     }, [editingVendor, isOpen]);
 
     if (!isOpen) return null;
-
-    const specializations = ['Plumbing', 'Electrical', 'HVAC / Aircon', 'Pest Control', 'Cleaning', 'Structural', 'General Maintenance', 'Landscaping'];
 
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-8 bg-slate-950/90 backdrop-blur-2xl animate-in fade-in transition-all">
@@ -1736,9 +1734,7 @@ function VendorModal({ isOpen, onClose, onSubmit, editingVendor }) {
                         <div className="grid grid-cols-2 gap-6">
                             <div className="space-y-2">
                                 <label className="text-[10px] text-slate-500 font-bold uppercase tracking-widest pl-1">Primary Specialization</label>
-                                <select className="w-full bg-slate-950/50 border border-white/5 p-5 rounded-2xl text-white outline-none focus:ring-2 ring-indigo-500 font-black uppercase text-[10px] tracking-widest" value={vendorForm.type} onChange={e => setVendorForm({ ...vendorForm, type: e.target.value })}>
-                                    {specializations.map(s => <option key={s} value={s}>{s}</option>)}
-                                </select>
+                                <input type="text" className="w-full bg-slate-950/50 border border-white/5 p-5 rounded-2xl text-white outline-none focus:ring-2 ring-indigo-500 font-black uppercase text-[10px] tracking-widest" placeholder="e.g. Roof Repair" value={vendorForm.type} onChange={e => setVendorForm({ ...vendorForm, type: e.target.value })} />
                             </div>
                             <div className="space-y-2">
                                 <label className="text-[10px] text-slate-500 font-bold uppercase tracking-widest pl-1">Mobile Contact</label>
