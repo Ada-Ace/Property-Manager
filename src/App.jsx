@@ -83,7 +83,8 @@ const INITIAL_TENANTS = [
         utilityShare: 45.50,
         notifications: [],
         leaseDocument: null,
-        propertyName: 'Skyline Residency'
+        propertyName: 'Skyline Residency',
+        lastPaymentDate: '2024-03-05'
     },
     {
         id: 'T2',
@@ -190,6 +191,13 @@ const getLocalDate = () => {
 
 // Standardised date formatter → dd-MMM-yyyy (e.g. 19-Mar-2026)
 const MONTHS_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+const isPaidThisMonth = (lastPaymentDate) => {
+    if (!lastPaymentDate) return false;
+    const last = new Date(lastPaymentDate);
+    const now = getLocalDate();
+    return last.getMonth() === now.getMonth() && last.getFullYear() === now.getFullYear();
+};
 
 const formatDate = (date, includeTime = false) => {
     if (!date) return '—';
@@ -626,6 +634,25 @@ export default function App() {
         setTimeout(() => setGlobalMessage(null), 3000);
     };
 
+    const handleMarkPaid = async (tenantId, amount) => {
+        const tenant = tenants.find(t => t.id === tenantId);
+        if (tenant) {
+            const updatedTenant = { 
+                ...tenant, 
+                lastPaymentDate: new Date().toISOString() 
+            };
+            setTenants(prev => prev.map(t => t.id === tenantId ? updatedTenant : t));
+            setGlobalMessage({ type: 'success', text: `Payment for ${tenant.unit} Verified!` });
+            await API.saveToSheet('UPDATE', 'Tenants', updatedTenant);
+            setTimeout(() => setGlobalMessage(null), 3000);
+            
+            // Generate receipt link
+            const msg = encodeURIComponent(`Hi ${tenant.name.split(' ')[0]},\n\nWe have successfully received and verified your rent payment of ${activeCurrency} ${amount}. \n\nThank you for the prompt payment! \n\nBest regards,\nProperty Management`);
+            const waLink = `https://wa.me/${String(tenant.mobile || '').replace(/\D/g, '')}?text=${msg}`;
+            window.open(waLink, '_blank');
+        }
+    };
+
     const handleAddTask = async (newTask) => {
         const taskData = { ...newTask, propertyName: activeProperty };
         setTasks([...tasks, taskData]);
@@ -1007,6 +1034,7 @@ export default function App() {
                                     onAddVendor={handleAddVendor}
                                     onEditVendor={handleEditVendor}
                                     onDeleteVendor={handleDeleteVendor}
+                                    onMarkPaid={handleMarkPaid}
                                     onUpdateLeaseDoc={handleLeaseDocUpload}
                                     onMoveOut={handleMoveOut}
                                 />
@@ -1028,7 +1056,7 @@ export default function App() {
 
 // --- Manager Components ---
 
-function ManagerDashboard({ tenants, propertyUnits, utilityBills, tasks, vendors, tenantMessages, currency = 'USD', onAddUnit, onEditUnit, onDeleteUnit, onAddTenant, onEditTenant, onUpdateFittings, onAddBill, onAddTask, onAddVendor, onEditVendor, onDeleteVendor, onUpdateLeaseDoc, onMoveOut }) {
+function ManagerDashboard({ tenants, propertyUnits, utilityBills, tasks, vendors, tenantMessages, currency = 'USD', onAddUnit, onEditUnit, onDeleteUnit, onAddTenant, onEditTenant, onUpdateFittings, onAddBill, onAddTask, onAddVendor, onEditVendor, onDeleteVendor, onMarkPaid, onUpdateLeaseDoc, onMoveOut }) {
     const [activeTab, setActiveTab] = useState('rents');
     const [showLeaseModal, setShowLeaseModal] = useState(false);
     const [editingTenant, setEditingTenant] = useState(null);
@@ -1111,8 +1139,8 @@ function ManagerDashboard({ tenants, propertyUnits, utilityBills, tasks, vendors
                     exit={{ opacity: 0, y: -10 }}
                     transition={{ duration: 0.2 }}
                 >
-                    {activeTab === 'rents' && <RentSummaryTab tenants={tenants} currency={currency} />}
-                    {activeTab === 'messages' && <MessagesManager tenants={tenants} messages={tenantMessages} />}
+                    {activeTab === 'rents' && <RentSummaryTab tenants={tenants} currency={currency} onMarkPaid={onMarkPaid} />}
+                    {activeTab === 'messages' && <MessagesManager tenants={tenants} messages={tenantMessages} onMarkPaid={onMarkPaid} currency={currency} />}
                     {activeTab === 'tasks' && (
                         <TasksManager 
                             tenants={tenants} 
@@ -1189,7 +1217,7 @@ function ManagerDashboard({ tenants, propertyUnits, utilityBills, tasks, vendors
 }
 
 // --- Rent Summary Tab ---
-function RentSummaryTab({ tenants, currency = 'USD' }) {
+function RentSummaryTab({ tenants, currency = 'USD', onMarkPaid }) {
     const today = getLocalDate() || new Date();
     const currentMonthLabel = (today && typeof today.toLocaleString === 'function') ? today.toLocaleString(LOCALE, { month: 'long', year: 'numeric', timeZone: APP_TIMEZONE }) : 'Current Month';
 
@@ -1253,6 +1281,7 @@ function RentSummaryTab({ tenants, currency = 'USD' }) {
                                 animate={{ opacity: 1, x: 0 }}
                                 transition={{ delay: idx * 0.05 }}
                                 className={`rounded-3xl p-6 border flex flex-col md:flex-row items-start md:items-center justify-between gap-5 transition-all ${
+                                    isPaidThisMonth(rent.lastPaymentDate) ? 'bg-emerald-500/5 border-emerald-500/20 shadow-lg shadow-emerald-600/5' :
                                     isOverdue ? 'bg-red-500/5 border-red-500/20 hover:bg-red-500/10' :
                                     isUrgent ? 'bg-orange-500/5 border-orange-500/20 hover:bg-orange-500/10' :
                                     'bg-white/[0.03] border-white/5 hover:bg-white/[0.06]'
@@ -1261,6 +1290,7 @@ function RentSummaryTab({ tenants, currency = 'USD' }) {
                                 {/* Left: avatar + info */}
                                 <div className="flex items-center gap-5">
                                     <div className={`w-14 h-14 rounded-2xl flex items-center justify-center font-black text-xs shadow-lg shrink-0 ${
+                                        isPaidThisMonth(rent.lastPaymentDate) ? 'bg-emerald-600 shadow-emerald-600/20' :
                                         isOverdue ? 'bg-red-600 shadow-red-600/20' :
                                         isUrgent ? 'bg-orange-500 shadow-orange-500/20' :
                                         'bg-indigo-600 shadow-indigo-600/20'
@@ -1279,9 +1309,10 @@ function RentSummaryTab({ tenants, currency = 'USD' }) {
                                             isOverdue ? 'text-red-400' : isUrgent ? 'text-orange-400' : 'text-slate-300'
                                         }`}>{dueDateStr}</p>
                                         <p className={`text-[9px] font-black uppercase mt-0.5 ${
+                                            isPaidThisMonth(rent.lastPaymentDate) ? 'text-emerald-500' :
                                             isOverdue ? 'text-red-500' : isUrgent ? 'text-orange-500' : 'text-slate-600'
                                         }`}>
-                                            {rent.daysUntil === 0 ? '🔴 Due Today' : isOverdue ? `${Math.abs(rent.daysUntil)}d overdue` : `${rent.daysUntil}d left`}
+                                            {isPaidThisMonth(rent.lastPaymentDate) ? '✅ Paid & Verified' : rent.daysUntil === 0 ? '🔴 Due Today' : isOverdue ? `${Math.abs(rent.daysUntil)}d overdue` : `${rent.daysUntil}d left`}
                                         </p>
                                     </div>
 
@@ -1290,7 +1321,13 @@ function RentSummaryTab({ tenants, currency = 'USD' }) {
                                         <p className="text-xl font-black text-emerald-400 tracking-tighter">{currency} {Number(rent.baseRent).toLocaleString()}</p>
                                     </div>
 
-                                    {rent.mobile && <WhatsAppRentButton tenant={rent} mode="rent" currency={currency} />}
+                                    {isPaidThisMonth(rent.lastPaymentDate) ? (
+                                        <div className="bg-emerald-600/10 border border-emerald-500/20 text-emerald-500 px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2">
+                                            <CheckCircle2 className="w-4 h-4" /> Received
+                                        </div>
+                                    ) : (
+                                        rent.mobile && <WhatsAppRentButton tenant={rent} mode="rent" currency={currency} />
+                                    )}
                                 </div>
                             </Motion.div>
                         );
@@ -1370,7 +1407,7 @@ function VendorModal({ isOpen, onClose, onSubmit, editingVendor }) {
     );
 }
 
-function MessagesManager({ tenants, messages }) {
+function MessagesManager({ tenants, messages, onMarkPaid, currency = 'USD' }) {
     return (
         <div className="space-y-6">
             <div className="premium-card rounded-[2.5rem] p-8">
@@ -1446,18 +1483,30 @@ function MessagesManager({ tenants, messages }) {
                                                 </div>
                                             )}
                                         </div>
-                                        <div className="w-full md:w-auto self-end flex-shrink-0">
+                                        <div className="w-full md:w-auto self-end flex flex-col md:flex-row gap-2 flex-shrink-0">
                                             {tenant && (
-                                                <Motion.a
-                                                    whileHover={{ scale: 1.04 }}
-                                                    whileTap={{ scale: 0.96 }}
-                                                    href={waReplyLink}
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    className="w-full md:w-auto bg-emerald-600 hover:bg-emerald-500 text-white px-7 py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 shadow-xl shadow-emerald-600/20 transition-all"
-                                                >
-                                                    <MessageSquare className="w-4 h-4" /> Reply on WhatsApp
-                                                </Motion.a>
+                                                <>
+                                                    {msg.photoUrl && (
+                                                        <Motion.button
+                                                            whileHover={{ scale: 1.04 }}
+                                                            whileTap={{ scale: 0.96 }}
+                                                            onClick={() => onMarkPaid(tenant.id, (Number(tenant.baseRent) + Number(tenant.utilityShare)).toFixed(2))}
+                                                            className="bg-indigo-600 hover:bg-indigo-500 text-white px-7 py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 shadow-xl shadow-indigo-600/20 transition-all border border-indigo-500/30"
+                                                        >
+                                                            <CheckCircle2 className="w-4 h-4" /> Verify & Send Receipt
+                                                        </Motion.button>
+                                                    )}
+                                                    <Motion.a
+                                                        whileHover={{ scale: 1.04 }}
+                                                        whileTap={{ scale: 0.96 }}
+                                                        href={waReplyLink}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="w-full md:w-auto bg-emerald-600/10 hover:bg-emerald-600/20 text-emerald-500 border border-emerald-500/20 px-7 py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-all"
+                                                    >
+                                                        <MessageSquare className="w-4 h-4" /> Reply on WhatsApp
+                                                    </Motion.a>
+                                                </>
                                             )}
                                         </div>
                                     </div>
