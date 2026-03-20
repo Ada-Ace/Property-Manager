@@ -196,6 +196,15 @@ const fmtDate = (str) => {
     }
 };
 
+const generateId = (prefix) => {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // Avoid ambiguous 0,1,I,O
+    let result = '';
+    for (let i = 0; i < 4; i++) {
+        result += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return `${prefix}-${result}`;
+};
+
 
 const calculateNextRentDue = (leaseStart) => {
     const today = getLocalDate();
@@ -383,7 +392,7 @@ export default function App() {
     const [managers, setManagers] = useState(INITIAL_MANAGERS);
 
     const handleAddVendor = async (vendor) => {
-        const newVendor = { ...vendor, propertyName: activeProperty };
+        const newVendor = { ...vendor, id: generateId('VEN'), propertyName: activeProperty };
         setVendors(prev => [...prev, newVendor]);
         await API.saveToSheet('ADD', 'Vendors', newVendor);
     };
@@ -400,7 +409,7 @@ export default function App() {
 
     const savePropertyDetails = async (propData) => {
         const isNew = !propData.id;
-        const finalProp = isNew ? { ...propData, id: `cloud-${Date.now()}` } : propData;
+        const finalProp = isNew ? { ...propData, id: generateId('PRP') } : propData;
         
         if (isNew) {
             setProperties(prev => [...prev, finalProp]);
@@ -465,7 +474,7 @@ export default function App() {
                         .map(n => String(n).trim());
                     
                     const uniqueNames = Array.from(new Set(foundNames));
-                    actualProperties = uniqueNames.map((name, idx) => ({ id: `cloud-${idx}`, name, address: 'Synced Property' }));
+                    actualProperties = uniqueNames.map((name, idx) => ({ id: generateId('PRP'), name, address: 'Synced Property' }));
                 }
 
                 if (actualProperties.length > 0) {
@@ -592,7 +601,7 @@ export default function App() {
     };
 
     const handleAddBill = async (newBillData, updatedTenants) => {
-        const newBill = { ...newBillData, propertyName: activeProperty };
+        const newBill = { ...newBillData, id: generateId('BIL'), propertyName: activeProperty };
         setUtilityBills([...utilityBills, newBill]);
         setTenants(updatedTenants);
         
@@ -615,7 +624,7 @@ export default function App() {
                 lastPaymentDate: new Date().toISOString() 
             };
             const newPayment = {
-                id: `PAY${Date.now()}`,
+                id: generateId('PAY'),
                 tenantId: tenant.id,
                 amount: amount,
                 date: new Date().toISOString(),
@@ -639,7 +648,7 @@ export default function App() {
     };
 
     const handleAddTask = async (newTask) => {
-        const taskData = { ...newTask, propertyName: activeProperty };
+        const taskData = { ...newTask, id: generateId('MTN'), propertyName: activeProperty };
         setTasks([...tasks, taskData]);
         await API.saveToSheet('ADD', 'Tasks', taskData);
         setGlobalMessage({ type: 'success', text: `Maintenance task created for ${activeProperty}!` });
@@ -656,7 +665,7 @@ export default function App() {
 
         const newUnit = { 
             ...unitData, 
-            id: `U${Date.now()}`, 
+            id: generateId('UNT'), 
             fittings: [], 
             propertyName: activeProperty,
             image: imageUrl 
@@ -714,7 +723,7 @@ export default function App() {
 
         const tenantData = {
             ...newTenant,
-            id: `T${Date.now()}`,
+            id: generateId('RES'),
             maintenanceSelection: null,
             utilityShare: 0,
             notifications: [],
@@ -809,7 +818,7 @@ export default function App() {
         }
 
         const newMessage = {
-            id: `MSG${Date.now()}`,
+            id: generateId('MSG'),
             tenantId: activeTenantId,
             content: msg,
             photoUrl: photoUrl, // Remote URL
