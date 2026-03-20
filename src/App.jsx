@@ -57,6 +57,7 @@ import {
     Flame,
     PieChart,
     LayoutGrid,
+    MessageCircle,
     RefreshCcw
 } from 'lucide-react';
 
@@ -740,6 +741,58 @@ export default function App() {
         setTimeout(() => setGlobalMessage(null), 3000);
     };
 
+    const handleMoveOut = async (unit, tenant) => {
+        if (!window.confirm(`Are you sure you want to mark ${tenant.name} as moved out and set Unit ${unit.unitNumber} as Available?`)) return;
+        
+        try {
+            setGlobalMessage({ type: 'info', text: 'Processing Move-Out...' });
+            
+            // 1. Mark unit as Available
+            const updatedUnit = { ...unit, status: 'Available' };
+            await editUnitInCatalog(updatedUnit);
+
+            // 2. Mark tenant as archived
+            const updatedTenant = { ...tenant, unit: 'None' };
+            await editTenant(updatedTenant);
+
+            // 3. Create Turnover Task
+            const newTask = {
+                id: `T${Date.now()}`,
+                unit: unit.unitNumber,
+                type: 'Maintenance',
+                status: 'Pending',
+                date: new Date().toISOString().split('T')[0],
+                task: `🧹 Turnover Cleaning & Inspection for Unit ${unit.unitNumber}`
+            };
+            setTasks(prev => [newTask, ...prev]);
+            await API.saveToSheet('ADD', 'Tasks', newTask);
+
+            setGlobalMessage({ type: 'success', text: `Unit ${unit.unitNumber} is now Available. Cleanup task scheduled.` });
+            setTimeout(() => setGlobalMessage(null), 3000);
+        } catch (err) {
+            console.error('Move out failed:', err);
+            setGlobalMessage({ type: 'error', text: 'Move-out failed. Connection issue?' });
+        }
+    };
+
+    const handleLeaseDocUpload = async (tenantId, file) => {
+        try {
+            setGlobalMessage({ type: 'info', text: 'Uploading Lease Agreement...' });
+            const docUrl = await API.uploadFile(file);
+            if (docUrl) {
+                const tenant = tenants.find(t => t.id === tenantId);
+                const updatedTenant = { ...tenant, leaseDocument: docUrl };
+                await editTenant(updatedTenant);
+                setGlobalMessage({ type: 'success', text: 'Lease Agreement Uploaded Successfully' });
+                setTimeout(() => setGlobalMessage(null), 3000);
+            }
+        } catch (err) {
+            console.error('Lease upload failed:', err);
+            setGlobalMessage({ type: 'error', text: 'Upload Failed - Check Cloud Connection' });
+            setTimeout(() => setGlobalMessage(null), 3000);
+        }
+    };
+
     if (view === 'login') return <LoginPage onLogin={handleLogin} />;
     
     // Property selection view removed as requested - admins now go direct
@@ -975,8 +1028,10 @@ function ManagerDashboard({ tenants, propertyUnits, utilityBills, tasks, tenantM
                                         onUpdateFittings={(newFittings) => onUpdateFittings(unit.id, newFittings)}
                                         onEditUnit={() => setEditingUnit(unit)}
                                         onDeleteUnit={() => onDeleteUnit(unit.id)}
-                                        onAddLease={() => setEditingTenant({ unit: unit.unitNumber })}
-                                        onEditLease={() => setEditingTenant(tenant)}
+                                        onAddLease={() => { setEditingTenant(null); setShowLeaseModal(true); setEditingUnit(unit); }}
+                                        onEditLease={() => { setEditingTenant(tenant); setShowLeaseModal(true); setEditingUnit(unit); }}
+                                        onUpdateLeaseDoc={handleLeaseDocUpload}
+                                        onMoveOut={() => handleMoveOut(unit, tenant)}
                                     />
                                 );
                             })}
@@ -2006,25 +2061,44 @@ function FittingsModal({ fittings, onClose, onSave }) {
     );
 }
 
-function UnitCard({ unit, tenant, currency = 'USD', onUpdateFittings, onEditUnit, onDeleteUnit, onAddLease, onEditLease }) {
+function UnitCard({ unit, tenant, currency = 'USD', onUpdateFittings, onEditUnit, onDeleteUnit, onAddLease, onEditLease, onUpdateLeaseDoc, onMoveOut }) {
     const [activeSubTab, setActiveSubTab] = useState('info');
     const tenantName = tenant?.name;
-    const tenantLeaseEnd = tenant?.leaseEnd;
     const actualRent = tenant?.baseRent;
     const [showInventoryModal, setShowInventoryModal] = useState(false);
-    // Hardened Occupancy logic: Require both status AND matching tenant for resident view
     const isOccupied = unit.status === 'Occupied' && !!tenant;
+
+    // Decision Intelligence: Lease Expiry Calculation
+    const getLeaseStatus = () => {
+        if (!isOccupied || !tenant?.leaseEnd) return null;
+        const end = new Date(tenant.leaseEnd);
+        const today = new Date();
+        const diffDays = Math.ceil((end - today) / (1000 * 60 * 60 * 24));
+        
+        if (diffDays < 0) return { label: 'Expired', color: 'bg-red-600 text-white shadow-red-500/50', icon: AlertCircle, pulse: true };
+        if (diffDays <= 30) return { label: 'Urgent: Renew Now', color: 'bg-red-500 text-white shadow-red-500/20', icon: Clock, pulse: true };
+        if (diffDays <= 60) return { label: 'Action Required: Renew Soon', color: 'bg-amber-500 text-white shadow-amber-500/20', icon: Calendar, pulse: false };
+        return null;
+    };
+    const leaseStatus = getLeaseStatus();
 
     return (
         <Motion.div 
             layout
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="premium-card rounded-[2.5rem] overflow-hidden group flex flex-col h-full"
+            className={`premium-card rounded-[2.5rem] overflow-hidden group flex flex-col h-full bg-slate-900 shadow-2xl shadow-black/50 border transition-colors duration-500 ${
+                leaseStatus?.pulse ? 'border-red-500/30' : 'border-white/5'
+            }`}
         >
             <div className={`h-48 relative flex items-center justify-center overflow-hidden bg-slate-800/50`}>
                 <div className="absolute inset-0 bg-gradient-to-b from-transparent to-slate-900/80 z-10" />
                 
+                {/* Visual Expiry Glow */}
+                {leaseStatus && (
+                    <div className={`absolute inset-0 opacity-20 bg-gradient-to-t ${leaseStatus.color.split(' ')[0]} transition-opacity`} />
+                )}
+
                 {unit.image ? (
                     <img src={unit.image} alt="" className="absolute inset-0 w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
                 ) : (
@@ -2034,12 +2108,21 @@ function UnitCard({ unit, tenant, currency = 'USD', onUpdateFittings, onEditUnit
                     </div>
                 )}
 
-                <div className={`absolute top-6 right-6 px-4 py-2 rounded-2xl text-[10px] font-black uppercase tracking-widest border backdrop-blur-xl shadow-2xl z-20 ${
-                    !isOccupied 
-                    ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' 
-                    : 'bg-indigo-600/30 text-indigo-400 border-indigo-500/30'
-                }`}>
-                    {isOccupied ? 'Occupied' : 'Available'}
+                {/* Status Badges */}
+                <div className="absolute top-6 right-6 flex flex-col items-end gap-2 z-20">
+                    <div className={`px-4 py-2 rounded-2xl text-[10px] font-black uppercase tracking-widest border backdrop-blur-xl shadow-2xl ${
+                        !isOccupied 
+                        ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' 
+                        : 'bg-indigo-600/30 text-indigo-400 border-indigo-500/30'
+                    }`}>
+                        {isOccupied ? 'Occupied' : 'Available'}
+                    </div>
+                    {leaseStatus && (
+                        <div className={`px-4 py-2 rounded-2xl text-[9px] font-black uppercase tracking-tight flex items-center gap-2 border border-white/10 backdrop-blur-xl shadow-xl animate-in fade-in slide-in-from-right-4 transition-all ${leaseStatus.color} ${leaseStatus.pulse ? 'animate-pulse' : ''}`}>
+                            <leaseStatus.icon className="w-3 h-3" />
+                            {leaseStatus.label}
+                        </div>
+                    )}
                 </div>
 
                 <div className="absolute top-6 left-6 flex gap-2 z-20 opacity-0 group-hover:opacity-100 transition-all">
@@ -2103,63 +2186,114 @@ function UnitCard({ unit, tenant, currency = 'USD', onUpdateFittings, onEditUnit
                             className="h-full"
                         >
                             {activeSubTab === 'info' ? (
-                                <div className="h-full flex flex-col pt-2">
-                                    <div className="flex justify-between items-end">
-                                        <div className="space-y-4">
-                                            {isOccupied ? (
-                                                <div className="space-y-1">
-                                                    <p className="text-[8px] font-black text-slate-600 uppercase tracking-widest ml-1">Current Resident</p>
-                                                    <div className="flex flex-col gap-1.5">
-                                                        <div className="flex items-center gap-2.5 text-indigo-400 font-black bg-indigo-500/5 px-4 py-2 rounded-2xl border border-indigo-500/10">
-                                                            <User className="w-4 h-4" />
-                                                            <span className="text-xs uppercase tracking-tight truncate max-w-[120px]">{tenantName}</span>
-                                                        </div>
-                                                        {tenantLeaseEnd && (
-                                                            <p className="text-[9px] text-slate-500 font-bold ml-1">End: <span className="text-white">{fmtDate(tenantLeaseEnd)}</span></p>
-                                                        )}
-                                                    </div>
+                                isOccupied ? (
+                                    <div className="flex flex-col gap-6 pt-2">
+                                        {/* Lease Details Grid */}
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div className="bg-slate-950/40 p-4 rounded-2xl border border-white/5 space-y-1.5">
+                                                <p className="text-[8px] font-black text-slate-600 uppercase tracking-widest flex items-center gap-1.5">
+                                                    <User className="w-3 h-3 text-indigo-500" /> Resident
+                                                </p>
+                                                <p className="text-white font-black text-sm truncate uppercase tracking-tight">{tenantName}</p>
+                                            </div>
+                                            <div className="bg-indigo-600/10 p-4 rounded-2xl border border-indigo-500/20 space-y-1.5">
+                                                <p className="text-[8px] font-black text-indigo-400 uppercase tracking-widest flex items-center gap-1.5 px-0.5">
+                                                    <DollarSign className="w-3 h-3" /> Actual Rent
+                                                </p>
+                                                <p className="text-white font-black text-lg leading-none tracking-tighter">
+                                                    <span className="text-xs text-indigo-500 mr-0.5">{currency}</span>{Number(actualRent).toLocaleString()}
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        {/* Timeline & Actions */}
+                                        <div className="bg-slate-950/20 rounded-2xl border border-white/5 p-4 space-y-4">
+                                            <div className="flex items-center justify-between text-[9px] font-bold uppercase tracking-widest text-slate-500 border-b border-white/5 pb-3">
+                                                <span>Lease Timeline</span>
+                                                <div className="flex gap-4">
+                                                    <span>{fmtDate(tenant.leaseStart)}</span>
+                                                    <ChevronRight className="w-3 h-3 opacity-30" />
+                                                    <span className="text-indigo-400">{fmtDate(tenant.leaseEnd)}</span>
                                                 </div>
-                                            ) : (
+                                            </div>
+
+                                            <div className="flex items-center justify-between gap-3">
+                                                <div className="flex-1 space-y-1.5">
+                                                    <p className="text-[8px] font-black text-slate-600 uppercase tracking-widest ml-1">Documentation</p>
+                                                    {tenant.leaseDocument ? (
+                                                        <a 
+                                                            href={tenant.leaseDocument} 
+                                                            target="_blank" 
+                                                            rel="noopener noreferrer"
+                                                            className="flex items-center gap-2.5 text-xs font-bold text-emerald-400 bg-emerald-500/5 hover:bg-emerald-500/10 border border-emerald-500/10 rounded-xl px-4 py-2.5 transition-all group/doc"
+                                                        >
+                                                            <FileText className="w-4 h-4" />
+                                                            <span>View Agreement</span>
+                                                            <ExternalLink className="w-3 h-3 ml-auto opacity-0 group-hover/doc:opacity-100 transition-all" />
+                                                        </a>
+                                                    ) : (
+                                                        <label className="flex items-center gap-2.5 text-[10px] font-black text-slate-500 uppercase tracking-tight bg-white/5 hover:bg-white/10 border border-dashed border-white/10 hover:border-white/30 rounded-xl px-4 py-2.5 cursor-pointer transition-all">
+                                                            <Upload className="w-4 h-4" />
+                                                            <span>Upload Lease</span>
+                                                            <input 
+                                                                type="file" 
+                                                                className="hidden" 
+                                                                accept="application/pdf,image/*" 
+                                                                onChange={(e) => {
+                                                                    const file = e.target.files[0];
+                                                                    if (file && onUpdateLeaseDoc) onUpdateLeaseDoc(tenant.id, file);
+                                                                }} 
+                                                            />
+                                                        </label>
+                                                    )}
+                                                </div>
+                                                <button 
+                                                    onClick={onEditLease}
+                                                    className="p-3 bg-slate-900 border border-white/10 text-slate-500 hover:text-white rounded-xl hover:bg-slate-800 transition-all mt-4"
+                                                    title="Edit Lease Details"
+                                                >
+                                                    <Settings className="w-4 h-4" />
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        <div className="flex gap-2.5 pt-2">
+                                            <a 
+                                                href={`https://wa.me/${String(tenant.mobile || '').replace(/\D/g, '')}`}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="flex-1 bg-slate-900 border border-white/5 hover:border-emerald-500/30 text-emerald-500 hover:text-emerald-400 font-black rounded-2xl py-3.5 flex items-center justify-center gap-2.5 text-[10px] uppercase tracking-widest transition-all hover:bg-emerald-500/5 group"
+                                            >
+                                                <MessageCircle className="w-4 h-4 transition-transform group-hover:scale-110" />
+                                                Contact
+                                            </a>
+                                            <button 
+                                                onClick={onMoveOut}
+                                                className="flex-1 bg-slate-900 border border-white/5 hover:border-red-500/30 text-slate-500 hover:text-red-400 font-black rounded-2xl py-3.5 flex items-center justify-center gap-2.5 text-[10px] uppercase tracking-widest transition-all hover:bg-red-500/5"
+                                            >
+                                                <LogOut className="w-4 h-4" />
+                                                Move Out
+                                            </button>
+                                            <WhatsAppRentButton tenant={tenant} mode="renewal" currency={currency} />
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="h-full flex flex-col pt-2">
+                                        <div className="flex justify-between items-end">
+                                            <div className="space-y-4">
                                                 <div className="flex items-center gap-2.5 text-emerald-500 font-black bg-emerald-500/5 px-4 py-2 rounded-2xl border border-emerald-500/10">
                                                     <LayoutGrid className="w-4 h-4" />
                                                     <span className="text-[9px] uppercase tracking-widest">Market Ready</span>
                                                 </div>
-                                            )}
-                                        </div>
-                                        <div className="flex items-center gap-4">
+                                            </div>
                                             <div className="text-right">
                                                 <p className="text-[8px] font-black text-slate-600 uppercase tracking-widest mb-1.5 px-1 truncate">Market Target</p>
-                                                <p className={`text-2xl font-black tracking-tighter leading-none ${isOccupied ? 'text-slate-700 decoration-slate-800' : 'text-white'}`}>
-                                                    <span className="text-xs">$</span>{Number(unit.expectedRent).toLocaleString()}
+                                                <p className="text-2xl font-black text-white tracking-tighter leading-none">
+                                                    <span className="text-xs mr-0.5">$</span>{Number(unit.expectedRent).toLocaleString()}
                                                 </p>
                                             </div>
-                                            {isOccupied && (
-                                                <div className="text-right bg-indigo-600/10 px-5 py-3 rounded-2xl border border-indigo-500/20 shadow-xl shadow-indigo-600/5">
-                                                    <p className="text-[8px] font-black text-indigo-400 uppercase tracking-widest mb-1.5 px-1 truncate">Actual Lease</p>
-                                                    <p className="text-3xl font-black text-white tracking-tighter leading-none">
-                                                        <span className="text-sm text-indigo-500 mr-0.5">$</span>{Number(actualRent).toLocaleString()}
-                                                    </p>
-                                                </div>
-                                            )}
                                         </div>
-                                    </div>
-                                    <div className="mt-auto pt-6">
-                                        {isOccupied ? (
-                                            <div className="flex gap-2">
-                                                <div className="flex-1">
-                                                    <WhatsAppRentButton tenant={tenant} mode="renewal" currency={currency} fullWidth />
-                                                </div>
-                                                <Motion.button
-                                                    whileHover={{ scale: 1.05 }}
-                                                    whileTap={{ scale: 0.95 }}
-                                                    onClick={onEditLease}
-                                                    title="Edit Lease Details"
-                                                    className="p-4 bg-slate-900 border border-white/10 text-slate-400 hover:text-white rounded-2xl hover:bg-slate-800 transition-all flex items-center justify-center shrink-0"
-                                                >
-                                                    <Settings className="w-4 h-4" />
-                                                </Motion.button>
-                                            </div>
-                                        ) : (
+                                        <div className="mt-auto pt-6">
                                             <Motion.button 
                                                 whileHover={{ scale: 1.02, y: -2 }}
                                                 whileTap={{ scale: 0.98 }}
@@ -2168,9 +2302,9 @@ function UnitCard({ unit, tenant, currency = 'USD', onUpdateFittings, onEditUnit
                                             >
                                                 <PlusCircle className="w-4 h-4" /> Create New Lease
                                             </Motion.button>
-                                        )}
+                                        </div>
                                     </div>
-                                </div>
+                                )
                             ) : (
                                 <div className="space-y-4 h-full flex flex-col">
                                     <div className="flex flex-wrap gap-2 pt-1">
