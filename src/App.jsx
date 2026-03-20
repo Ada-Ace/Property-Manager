@@ -392,10 +392,22 @@ export default function App() {
         await API.saveToSheet('UPDATE', 'Vendors', vendor);
     };
 
-    const handleDeleteVendor = async (vendorId) => {
-        if (!window.confirm('Are you sure you want to remove this contractor?')) return;
-        setVendors(prev => prev.filter(v => v.id !== vendorId));
-        await API.saveToSheet('DELETE', 'Vendors', { id: vendorId });
+    const handleAddProperty = async () => {
+        const name = window.prompt('Enter New Property Name:');
+        if (name && name.trim()) {
+            const cleanName = name.trim();
+            // Prevent duplicate names
+            if (properties.some(p => p.name.toLowerCase() === cleanName.toLowerCase())) {
+                alert('A property with this name already exists.');
+                return;
+            }
+            const newProp = { id: `cloud-${Date.now()}`, name: cleanName, address: 'Set Address in Settings', currency: 'USD' };
+            setProperties(prev => [...prev, newProp]);
+            setActiveProperty(newProp.name);
+            await API.saveToSheet('ADD', 'Properties', newProp);
+            setGlobalMessage({ type: 'success', text: `Property "${cleanName}" Created` });
+            setTimeout(() => setGlobalMessage(null), 3000);
+        }
     };
 
     const syncWithCloud = async (isBackground = false) => {
@@ -929,9 +941,20 @@ export default function App() {
                                 <select 
                                     className="bg-transparent border-none text-[10px] font-black uppercase tracking-widest outline-none cursor-pointer text-indigo-400 max-w-[120px] md:max-w-[200px]"
                                     value={activeProperty}
-                                    onChange={(e) => setActiveProperty(e.target.value)}
+                                    onChange={(e) => {
+                                        if (e.target.value === '__ADD_NEW__') {
+                                            handleAddProperty();
+                                        } else {
+                                            setActiveProperty(e.target.value);
+                                        }
+                                    }}
                                 >
-                                    {Array.isArray(properties) && properties.map(p => <option key={p?.id || p} value={p?.name || p} className="bg-slate-900">{p?.name || p}</option>)}
+                                    <optgroup label="Select Property" className="bg-slate-900">
+                                        {Array.isArray(properties) && properties.map(p => <option key={p?.id || p} value={p?.name || p} className="bg-slate-900">{p?.name || p}</option>)}
+                                    </optgroup>
+                                    <optgroup label="Management" className="bg-slate-900">
+                                        <option value="__ADD_NEW__" className="bg-indigo-600 text-white font-bold">+ Register New Property</option>
+                                    </optgroup>
                                 </select>
                             </div>
                         )}
