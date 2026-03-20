@@ -440,6 +440,11 @@ export default function App() {
         { id: 'V3', name: 'CoolAir Solutions', mobile: '+12345680', type: 'HVAC', rating: 4.5 }
     ]);
 
+    const [payments, setPayments] = useState([
+        { id: 'P1', tenantId: 'T1', amount: 2200, date: '2024-03-05', propertyName: 'Skyline Residency' },
+        { id: 'P2', tenantId: 'T2', amount: 1800, date: '2024-03-10', propertyName: 'Skyline Residency' }
+    ]);
+
     const handleAddVendor = async (vendor) => {
         const newVendor = { ...vendor, propertyName: activeProperty };
         setVendors(prev => [...prev, newVendor]);
@@ -641,9 +646,21 @@ export default function App() {
                 ...tenant, 
                 lastPaymentDate: new Date().toISOString() 
             };
+            const newPayment = {
+                id: `PAY${Date.now()}`,
+                tenantId: tenant.id,
+                amount: amount,
+                date: new Date().toISOString(),
+                propertyName: activeProperty
+            };
+
             setTenants(prev => prev.map(t => t.id === tenantId ? updatedTenant : t));
+            setPayments(prev => [newPayment, ...prev]);
             setGlobalMessage({ type: 'success', text: `Payment for ${tenant.unit} Verified!` });
+            
             await API.saveToSheet('UPDATE', 'Tenants', updatedTenant);
+            await API.saveToSheet('ADD', 'Payments', newPayment);
+            
             setTimeout(() => setGlobalMessage(null), 3000);
             
             // Generate receipt link
@@ -1139,7 +1156,7 @@ function ManagerDashboard({ tenants, propertyUnits, utilityBills, tasks, vendors
                     exit={{ opacity: 0, y: -10 }}
                     transition={{ duration: 0.2 }}
                 >
-                    {activeTab === 'rents' && <RentSummaryTab tenants={tenants} currency={currency} onMarkPaid={onMarkPaid} />}
+                    {activeTab === 'rents' && <RentSummaryTab tenants={tenants} payments={payments.filter(p => !p.propertyName || p.propertyName === activeProperty)} currency={currency} onMarkPaid={onMarkPaid} />}
                     {activeTab === 'messages' && <MessagesManager tenants={tenants} messages={tenantMessages} onMarkPaid={onMarkPaid} currency={currency} />}
                     {activeTab === 'tasks' && (
                         <TasksManager 
@@ -1217,7 +1234,7 @@ function ManagerDashboard({ tenants, propertyUnits, utilityBills, tasks, vendors
 }
 
 // --- Rent Summary Tab ---
-function RentSummaryTab({ tenants, currency = 'USD', onMarkPaid }) {
+function RentSummaryTab({ tenants, payments, currency = 'USD', onMarkPaid }) {
     const today = getLocalDate() || new Date();
     const currentMonthLabel = (today && typeof today.toLocaleString === 'function') ? today.toLocaleString(LOCALE, { month: 'long', year: 'numeric', timeZone: APP_TIMEZONE }) : 'Current Month';
 
@@ -1333,6 +1350,56 @@ function RentSummaryTab({ tenants, currency = 'USD', onMarkPaid }) {
                         );
                     })}
                 </div>
+            </div>
+
+            {/* Historical Payment Ledger */}
+            <div className="premium-card rounded-[2.5rem] p-8 mt-12">
+                <div className="flex justify-between items-center mb-10 pb-6 border-b border-white/5">
+                    <div>
+                        <h3 className="font-black text-2xl text-white italic tracking-tight flex items-center gap-3">
+                            <History className="w-7 h-7 text-indigo-400" />
+                            Collection Ledger
+                        </h3>
+                        <p className="text-[10px] text-slate-500 font-black uppercase tracking-[0.2em] mt-2">Historical Transaction Log</p>
+                    </div>
+                </div>
+
+                {payments.length === 0 ? (
+                    <div className="text-center py-20 text-slate-600 border-2 border-dashed border-white/5 rounded-[2rem]">
+                        <Package className="w-12 h-12 mx-auto mb-4 opacity-10" />
+                        <p className="text-[10px] uppercase font-black tracking-widest">No transactions recorded</p>
+                    </div>
+                ) : (
+                    <div className="overflow-hidden bg-white/[0.02] border border-white/5 rounded-[2rem]">
+                        <table className="w-full text-left border-collapse">
+                            <thead>
+                                <tr className="border-b border-white/5 bg-white/[0.02]">
+                                    <th className="px-8 py-5 text-[9px] font-black uppercase text-slate-500 tracking-widest">Unit</th>
+                                    <th className="px-8 py-5 text-[9px] font-black uppercase text-slate-500 tracking-widest">Tenant</th>
+                                    <th className="px-8 py-5 text-[9px] font-black uppercase text-slate-500 tracking-widest">Date</th>
+                                    <th className="px-8 py-5 text-[9px] font-black uppercase text-slate-500 tracking-widest text-right">Amount</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-white/5">
+                                {payments.slice().reverse().map((pay, i) => {
+                                    const t = tenants.find(ten => ten.id === pay.tenantId);
+                                    return (
+                                        <tr key={i} className="hover:bg-white/[0.03] transition-colors">
+                                            <td className="px-8 py-6 font-black text-indigo-400 text-xs">{t?.unit || 'N/A'}</td>
+                                            <td className="px-8 py-6">
+                                                <p className="text-sm font-bold text-white tracking-tight">{t?.name || 'Archived Tenant'}</p>
+                                            </td>
+                                            <td className="px-8 py-6 text-xs text-slate-400 font-bold">{fmtDate(pay.date)}</td>
+                                            <td className="px-8 py-6 text-right">
+                                                <span className="text-sm font-black text-emerald-400 tabular-nums">{currency} {Number(pay.amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
+                            </tbody>
+                        </table>
+                    </div>
+                )}
             </div>
         </div>
     );
