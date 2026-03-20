@@ -2179,9 +2179,19 @@ function UnitCard({ unit, tenant, currency = 'USD', history, onUpdateFittings, o
                     <button 
                         onClick={(e) => { e.stopPropagation(); onEditUnit(); }}
                         className="p-2.5 bg-slate-900/60 backdrop-blur-xl border border-white/5 rounded-2xl text-slate-400 hover:text-white hover:border-indigo-500/50 transition-all hover:scale-110"
+                        title="Edit Unit Details"
                     >
                         <Settings className="w-4 h-4" />
                     </button>
+                    {!isOccupied && (
+                        <button 
+                            onClick={(e) => { e.stopPropagation(); onDeleteUnit(unit.id); }}
+                            className="p-2.5 bg-red-900/20 backdrop-blur-xl border border-red-500/20 rounded-2xl text-red-400 hover:bg-red-600 hover:text-white transition-all hover:scale-110"
+                            title="Decommission Unit"
+                        >
+                            <Trash2 className="w-4 h-4" />
+                        </button>
+                    )}
                     {isOccupied && (
                         <div className={`px-4 py-2 rounded-2xl text-[9px] font-black uppercase tracking-tight flex items-center gap-2 border backdrop-blur-xl shadow-xl ${
                             yieldGap >= 0 ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' : 
