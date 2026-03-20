@@ -1221,7 +1221,7 @@ function ManagerDashboard({ activeProperty, tenants, payments, propertyUnits, ut
                     exit={{ opacity: 0, y: -10 }}
                     transition={{ duration: 0.2 }}
                 >
-                    {activeTab === 'rents' && <RentSummaryTab tenants={tenants} payments={payments.filter(p => !p.propertyName || p.propertyName === activeProperty)} currency={currency} onMarkPaid={onMarkPaid} propertyName={activeProperty} />}
+                    {activeTab === 'rents' && <RentSummaryTab tenants={tenants} payments={payments.filter(p => !p.propertyName || p.propertyName === activeProperty)} currency={currency} onMarkPaid={onMarkPaid} propertyName={activeProperty} tenantMessages={tenantMessages} />}
                     {activeTab === 'messages' && <MessagesManager tenants={tenants} messages={tenantMessages} onMarkPaid={onMarkPaid} currency={currency} />}
                     {activeTab === 'tasks' && (
                         <TasksManager 
@@ -1298,8 +1298,119 @@ function ManagerDashboard({ activeProperty, tenants, payments, propertyUnits, ut
     );
 }
 
+// --- Payment Confirmation Modal ---
+function PaymentConfirmModal({ tenant, currency, proofMessages, onConfirm, onClose }) {
+    const [selectedProof, setSelectedProof] = useState(proofMessages[0] || null);
+    const bp = getBillingPeriod(tenant?.leaseStart);
+    const totalDue = (Number(tenant?.baseRent) || 0) + (Number(tenant?.utilityShare) || 0);
+
+    return (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 sm:p-6 bg-slate-950/90 backdrop-blur-md">
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_10%,rgba(245,158,11,0.06),transparent_50%)]" />
+            <Motion.div
+                initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+                className="relative z-10 w-full max-w-lg bg-slate-900 rounded-[2.5rem] border border-white/10 shadow-2xl shadow-black/50 overflow-hidden"
+            >
+                {/* Header */}
+                <div className="p-6 border-b border-white/5 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                        <div className="p-2.5 bg-amber-500/10 rounded-2xl border border-amber-500/20">
+                            <CreditCard className="w-5 h-5 text-amber-400" />
+                        </div>
+                        <div>
+                            <h2 className="text-base font-black text-white tracking-tight">Payment Review</h2>
+                            <p className="text-[9px] text-slate-500 font-black uppercase tracking-[0.2em] mt-0.5">{tenant?.unit} · {tenant?.name}</p>
+                        </div>
+                    </div>
+                    <Motion.button whileHover={{ scale: 1.1, rotate: 90 }} whileTap={{ scale: 0.9 }} onClick={onClose}
+                        className="p-2 text-slate-500 hover:text-white bg-white/5 rounded-xl border border-white/5 transition-all">
+                        <X className="w-4 h-4" />
+                    </Motion.button>
+                </div>
+
+                {/* Billing Info Row */}
+                <div className="px-6 py-4 bg-white/[0.02] border-b border-white/5 flex flex-wrap gap-4 items-center justify-between">
+                    <div>
+                        <p className="text-[8px] font-black uppercase tracking-widest text-slate-600 mb-1">Billing Period</p>
+                        <p className="text-[11px] font-black text-slate-300 flex items-center gap-1.5">
+                            {bp.from ? fmtDate(bp.from.toISOString()) : '—'}
+                            <span className="text-indigo-400">→</span>
+                            {bp.to ? fmtDate(bp.to.toISOString()) : '—'}
+                        </p>
+                    </div>
+                    <div className="text-right">
+                        <p className="text-[8px] font-black uppercase tracking-widest text-slate-600 mb-1">Amount Due</p>
+                        <p className="text-xl font-black text-emerald-400 tracking-tighter">{currency} {totalDue.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+                    </div>
+                </div>
+
+                {/* Proof Preview */}
+                <div className="p-6">
+                    {proofMessages.length > 0 ? (
+                        <>
+                            <p className="text-[9px] font-black uppercase tracking-widest text-slate-600 mb-3 flex items-center gap-2">
+                                <ImageIcon className="w-3 h-3" /> Payment Proof ({proofMessages.length} file{proofMessages.length > 1 ? 's' : ''})
+                            </p>
+                            {/* Main large preview */}
+                            <div className="w-full h-56 rounded-2xl overflow-hidden border border-white/10 bg-black/30 flex items-center justify-center mb-3">
+                                {selectedProof?.photoUrl ? (
+                                    <img
+                                        src={selectedProof.photoUrl}
+                                        alt="Payment proof"
+                                        className="w-full h-full object-contain"
+                                        onError={e => { e.target.style.display='none'; e.target.nextSibling.style.display='flex'; }}
+                                    />
+                                ) : null}
+                                <div className="hidden flex-col items-center gap-2 text-slate-600">
+                                    <ImageIcon className="w-8 h-8 opacity-30" />
+                                    <p className="text-[9px] font-black uppercase tracking-widest">Preview Unavailable</p>
+                                </div>
+                            </div>
+                            {/* Thumbnail strip if multiple */}
+                            {proofMessages.length > 1 && (
+                                <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
+                                    {proofMessages.map((m, i) => (
+                                        <button key={i} onClick={() => setSelectedProof(m)}
+                                            className={`w-14 h-14 rounded-xl overflow-hidden border-2 shrink-0 transition-all ${selectedProof === m ? 'border-amber-400' : 'border-white/5 hover:border-white/20'}`}>
+                                            <img src={m.photoUrl} alt="" className="w-full h-full object-cover" />
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+                            <p className="text-[8px] text-slate-600 mt-2 font-medium">
+                                Submitted: {selectedProof ? fmtDate(selectedProof.timestamp, true) : '—'}
+                            </p>
+                        </>
+                    ) : (
+                        <div className="flex flex-col items-center gap-3 py-10 border-2 border-dashed border-white/5 rounded-2xl text-slate-600">
+                            <ImageIcon className="w-10 h-10 opacity-20" />
+                            <p className="text-[10px] font-black uppercase tracking-widest text-center">No proof submitted yet.<br />You can still manually confirm payment.</p>
+                        </div>
+                    )}
+                </div>
+
+                {/* Footer */}
+                <div className="p-6 border-t border-white/5 flex gap-3">
+                    <Motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} onClick={onClose}
+                        className="flex-1 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest text-slate-400 bg-white/5 border border-white/5 hover:bg-white/10 transition-all">
+                        Cancel
+                    </Motion.button>
+                    <Motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} onClick={onConfirm}
+                        className="flex-[2] py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest text-white bg-emerald-600 hover:bg-emerald-500 shadow-xl shadow-emerald-600/20 transition-all flex items-center justify-center gap-2">
+                        <CheckCircle2 className="w-4 h-4" /> Confirm & Mark Paid
+                    </Motion.button>
+                </div>
+            </Motion.div>
+        </div>
+    );
+}
+
 // --- Rent Summary Tab ---
-function RentSummaryTab({ tenants, payments, currency = 'USD', onMarkPaid, propertyName }) {
+function RentSummaryTab({ tenants, payments, currency = 'USD', onMarkPaid, propertyName, tenantMessages = [] }) {
+    const [confirmTenant, setConfirmTenant] = useState(null); // tenant to confirm payment for
     const downloadLedgerPDF = () => {
         if (!window.jspdf) {
             alert('PDF utility is initializing. Please wait a second.');
@@ -1366,6 +1477,22 @@ function RentSummaryTab({ tenants, payments, currency = 'USD', onMarkPaid, prope
 
     return (
         <div className="space-y-8">
+            {/* Payment Confirmation Modal */}
+            <AnimatePresence>
+            {confirmTenant && (
+                <PaymentConfirmModal
+                    tenant={confirmTenant}
+                    currency={currency}
+                    proofMessages={tenantMessages.filter(m => m.tenantId === confirmTenant.id && m.photoUrl).sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp))}
+                    onConfirm={() => {
+                        onMarkPaid(confirmTenant.id, (Number(confirmTenant.baseRent) + Number(confirmTenant.utilityShare || 0)).toFixed(2));
+                        setConfirmTenant(null);
+                    }}
+                    onClose={() => setConfirmTenant(null)}
+                />
+            )}
+            </AnimatePresence>
+
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <StatCard index={0} title="Expected Revenue" value={`${currency} ${totalRevenueThisCycle.toLocaleString()}`} icon={<DollarSign className="text-emerald-400" />} />
                 <StatCard index={1} title="Collections Due" value={upcomingRents.length} icon={<CalendarRange className="text-blue-400" />} />
@@ -1418,7 +1545,18 @@ function RentSummaryTab({ tenants, payments, currency = 'USD', onMarkPaid, prope
                                         'bg-indigo-600 shadow-indigo-600/20'
                                     }`}>{rent.unit}</div>
                                     <div>
-                                        <p className="text-base font-black text-white tracking-tight">{rent.name}</p>
+                                        <p className="text-base font-black text-white tracking-tight flex items-center gap-2">
+                                            {rent.name}
+                                            {/* Proof of payment badge */}
+                                            {(() => {
+                                                const hasProof = tenantMessages.some(m => m.tenantId === rent.id && m.photoUrl);
+                                                return hasProof && !isPaidThisMonth(rent.lastPaymentDate) ? (
+                                                    <span className="text-[8px] font-black uppercase tracking-widest bg-amber-500/20 text-amber-400 border border-amber-500/30 px-2 py-0.5 rounded-full flex items-center gap-1">
+                                                        <ImageIcon className="w-2.5 h-2.5" /> Proof Submitted
+                                                    </span>
+                                                ) : null;
+                                            })()}
+                                        </p>
                                         {(() => {
                                             const bp = getBillingPeriod(rent.leaseStart);
                                             return bp.from && bp.to ? (
@@ -1460,7 +1598,17 @@ function RentSummaryTab({ tenants, payments, currency = 'USD', onMarkPaid, prope
                                             <CheckCircle2 className="w-4 h-4" /> Received
                                         </div>
                                     ) : (
-                                        rent.mobile && <WhatsAppRentButton tenant={rent} mode="rent" currency={currency} />
+                                        <button
+                                            onClick={() => setConfirmTenant(rent)}
+                                            className={`flex items-center gap-2 px-5 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${
+                                                tenantMessages.some(m => m.tenantId === rent.id && m.photoUrl)
+                                                    ? 'bg-amber-500 hover:bg-amber-400 text-slate-900 shadow-lg shadow-amber-500/30'
+                                                    : 'bg-emerald-600/20 hover:bg-emerald-600 text-emerald-400 hover:text-white border border-emerald-500/30'
+                                            }`}
+                                        >
+                                            <CheckCircle2 className="w-4 h-4" />
+                                            {tenantMessages.some(m => m.tenantId === rent.id && m.photoUrl) ? 'Review & Verify' : 'Mark Paid'}
+                                        </button>
                                     )}
                                 </div>
                             </Motion.div>
