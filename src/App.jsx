@@ -651,19 +651,29 @@ export default function App() {
     };
 
     const addTenant = async (newTenant) => {
+        setGlobalMessage({ type: 'info', text: "Initializing lease setup..." });
+        
+        let docUrl = null;
+        if (newTenant.leaseFile) {
+            setGlobalMessage({ type: 'info', text: "Uploading documentation to cloud..." });
+            docUrl = await API.uploadFile(newTenant.leaseFile);
+        }
+
         const tenantData = {
             ...newTenant,
             id: `T${Date.now()}`,
             maintenanceSelection: null,
             utilityShare: 0,
             notifications: [],
-            leaseDocument: null,
+            leaseDocument: docUrl,
             propertyName: activeProperty
         };
+        delete tenantData.leaseFile; // Clean up
+
         setTenants([...tenants, tenantData]);
         setPropertyUnits(prev => prev.map(u => u.unitNumber === newTenant.unit ? { ...u, status: 'Occupied' } : u));
         
-        setGlobalMessage({ type: 'info', text: "Creating lease in cloud..." });
+        setGlobalMessage({ type: 'info', text: "Syncing data to cloud..." });
         const res = await API.saveToSheet('ADD', 'Tenants', tenantData);
         
         const unit = propertyUnits.find(u => u.unitNumber === newTenant.unit);
@@ -672,38 +682,54 @@ export default function App() {
         }
 
         if (res.success) {
-            setGlobalMessage({ type: 'success', text: `Lease for ${newTenant.unit} Created & Cloud Synced` });
+            setGlobalMessage({ type: 'success', text: `Registration Complete & Cloud Synced` });
             syncWithCloud(true);
         } else {
-            setGlobalMessage({ type: 'error', text: `Cloud Sync Error: ${res.message}` });
+            setGlobalMessage({ type: 'error', text: `Sync Failure: ${res.message}` });
         }
         setTimeout(() => setGlobalMessage(null), 3000);
     };
 
     const editTenant = async (updatedTenant) => {
-        setTenants(prev => prev.map(t => t.id === updatedTenant.id ? { ...t, ...updatedTenant } : t));
-        const oldTenant = tenants.find(t => t.id === updatedTenant.id);
-        if (updatedTenant.unit) {
+        setGlobalMessage({ type: 'info', text: "Updating agreement details..." });
+        
+        let docUrl = updatedTenant.leaseDocument;
+        if (updatedTenant.leaseFile) {
+            setGlobalMessage({ type: 'info', text: "Uploading new documentation..." });
+            const uploadRes = await API.uploadFile(updatedTenant.leaseFile);
+            if (uploadRes) docUrl = uploadRes;
+        }
+
+        const finalTenant = { 
+            ...updatedTenant, 
+            leaseDocument: docUrl 
+        };
+        delete finalTenant.leaseFile;
+
+        setTenants(prev => prev.map(t => t.id === finalTenant.id ? { ...t, ...finalTenant } : t));
+        const oldTenant = tenants.find(t => t.id === finalTenant.id);
+        
+        if (finalTenant.unit) {
             // Update local units state
             setPropertyUnits(prev => prev.map(u => {
-                if (u.unitNumber === updatedTenant.unit) return { ...u, status: 'Occupied' };
-                if (oldTenant && oldTenant.unit === u.unitNumber && oldTenant.unit !== updatedTenant.unit) return { ...u, status: 'Available' };
+                if (u.unitNumber === finalTenant.unit) return { ...u, status: 'Occupied' };
+                if (oldTenant && oldTenant.unit === u.unitNumber && oldTenant.unit !== finalTenant.unit) return { ...u, status: 'Available' };
                 return u;
             }));
 
             // Sync unit changes to cloud
-            const newUnit = propertyUnits.find(u => u.unitNumber === updatedTenant.unit);
+            const newUnit = propertyUnits.find(u => u.unitNumber === finalTenant.unit);
             if (newUnit) await API.saveToSheet('UPDATE', 'Units', { ...newUnit, status: 'Occupied' });
             
-            if (oldTenant && oldTenant.unit !== updatedTenant.unit) {
+            if (oldTenant && oldTenant.unit !== finalTenant.unit) {
                 const prevUnit = propertyUnits.find(u => u.unitNumber === oldTenant.unit);
                 if (prevUnit) await API.saveToSheet('UPDATE', 'Units', { ...prevUnit, status: 'Available' });
             }
         }
-        setGlobalMessage({ type: 'info', text: "Updating lease in cloud..." });
-        const res = await API.saveToSheet('UPDATE', 'Tenants', updatedTenant);
+        
+        const res = await API.saveToSheet('UPDATE', 'Tenants', finalTenant);
         if (res.success) {
-            setGlobalMessage({ type: 'success', text: `Lease updated & Cloud Synced` });
+            setGlobalMessage({ type: 'success', text: `Agreement Finalized & Synced` });
             syncWithCloud(true);
         } else {
             setGlobalMessage({ type: 'error', text: `Cloud Save Failed: ${res.message}` });
@@ -2559,9 +2585,18 @@ function LeaseModal({ initialData, availableUnits, onClose, onSubmit }) {
                                         onClick={() => {
                                             const baseDate = leaseForm.leaseEnd || leaseForm.leaseStart;
                                             if (!baseDate) return;
-                                            const d = new Date(baseDate);
+                                            // Handle as parts to avoid timezone shifting
+                                            const [y, m, d_val] = baseDate.split('-').map(Number);
+                                            const d = new Date(y, m - 1, d_val);
+                                            
+                                            if (leaseForm.leaseEnd) d.setDate(d.getDate() + 1);
                                             d.setMonth(d.getMonth() + 6);
-                                            setLeaseForm({ ...leaseForm, leaseEnd: d.toISOString().split('T')[0] });
+                                            d.setDate(d.getDate() - 1);
+                                            
+                                            const year = d.getFullYear();
+                                            const month = String(d.getMonth() + 1).padStart(2, '0');
+                                            const day = String(d.getDate()).padStart(2, '0');
+                                            setLeaseForm({ ...leaseForm, leaseEnd: `${year}-${month}-${day}` });
                                         }}
                                         className="text-[9px] font-black text-amber-400 hover:text-amber-300 uppercase tracking-tight bg-amber-500/10 px-3 py-1 rounded-xl border border-amber-500/20 transition-all active:translate-y-0.5"
                                     >
@@ -2575,6 +2610,40 @@ function LeaseModal({ initialData, availableUnits, onClose, onSubmit }) {
                                     className="w-full bg-slate-800/50 border border-white/5 focus:border-amber-500/50 rounded-2xl p-4 text-white text-[13px] font-bold outline-none transition-all" 
                                     value={leaseForm.leaseEnd} 
                                     onChange={e => setLeaseForm({ ...leaseForm, leaseEnd: e.target.value })} 
+                                />
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* section: documentation */}
+                    <div className="space-y-6">
+                        <div className="flex items-center gap-3 text-[10px] font-black text-sky-400 uppercase tracking-widest bg-sky-500/5 py-2 px-4 rounded-full w-fit">
+                            <FileText className="w-3.5 h-3.5" /> Documentation
+                        </div>
+                        <div className="relative group">
+                            <div className="w-full bg-slate-800/30 border-2 border-dashed border-white/5 hover:border-sky-500/30 rounded-[2rem] p-8 transition-all flex flex-col items-center justify-center gap-4 cursor-pointer relative overflow-hidden">
+                                {leaseForm.leaseFile ? (
+                                    <div className="flex flex-col items-center gap-2">
+                                        <div className="p-4 bg-sky-600 rounded-2xl shadow-lg shadow-sky-600/30">
+                                            <FileCheck className="w-8 h-8 text-white" />
+                                        </div>
+                                        <p className="text-[10px] font-black text-sky-400 uppercase tracking-widest">Document Ready</p>
+                                    </div>
+                                ) : (
+                                    <div className="flex flex-col items-center gap-2">
+                                        <div className="p-4 bg-slate-900 rounded-2xl">
+                                            <UploadCloud className="w-8 h-8 text-slate-500" />
+                                        </div>
+                                        <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Attach Signed Agreement (PDF/IMG)</p>
+                                    </div>
+                                )}
+                                <input 
+                                    type="file" 
+                                    className="absolute inset-0 opacity-0 cursor-pointer z-10" 
+                                    onChange={(e) => {
+                                        const file = e.target.files[0];
+                                        if (file) setLeaseForm({ ...leaseForm, leaseFile: file });
+                                    }}
                                 />
                             </div>
                         </div>
