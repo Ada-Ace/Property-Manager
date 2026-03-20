@@ -338,6 +338,7 @@ export default function App() {
     const [tasks, setTasks] = useState([]);
     const [activeTenantId, setActiveTenantId] = useState(null);
     const [activeProperty, setActiveProperty] = useState(null);
+    const [activeManager, setActiveManager] = useState(null); // Track logged-in admin identity
     const [globalMessage, setGlobalMessage] = useState(null);
     const [properties, setProperties] = useState([]);
     const [tenantMessages, setTenantMessages] = useState([]);
@@ -558,6 +559,7 @@ export default function App() {
         if (inputMobileCleaned === cleanMobile(MANAGER_CREDENTIALS.mobile) && password === MANAGER_CREDENTIALS.password) {
             const firstProp = (Array.isArray(properties) && properties[0]?.name) || INITIAL_PROPERTIES[0]?.name;
             setActiveProperty(firstProp);
+            setActiveManager({ name: 'Primary Admin' });
             setView('manager');
             setIsLoading(false);
             return { success: true };
@@ -568,6 +570,7 @@ export default function App() {
         if (cloudManager) {
             const firstProp = (Array.isArray(properties) && properties[0]?.name) || INITIAL_PROPERTIES[0]?.name;
             setActiveProperty(firstProp);
+            setActiveManager({ name: cloudManager.name });
             setView('manager');
             setIsLoading(false);
             return { success: true };
@@ -599,6 +602,8 @@ export default function App() {
         setView('login');
         setActiveTenantId(null);
         setActiveProperty(null);
+        setActiveManager(null);
+        // Clear global cache silently but keep structure to prevent crashing
     };
 
     const updateUnitFittings = async (unitId, newFittings) => {
@@ -818,6 +823,14 @@ export default function App() {
         setTimeout(() => setGlobalMessage(null), 3000);
     };
 
+    const handleUpdateMessage = async (msgId, updates) => {
+        const msg = tenantMessages.find(m => m.id === msgId);
+        if (!msg) return;
+        const updatedMsg = { ...msg, ...updates };
+        setTenantMessages(prev => prev.map(m => m.id === msgId ? updatedMsg : m));
+        await API.saveToSheet('UPDATE', 'Messages', updatedMsg);
+    };
+
     const handleSendMessage = async (msg, photoData = null) => {
         let photoUrl = null;
         
@@ -829,9 +842,6 @@ export default function App() {
             } else {
                 setGlobalMessage({ type: 'error', text: "Photo upload failed! Please ensure UPLOAD_FOLDER_ID is set in your GAS Script." });
                 setTimeout(() => setGlobalMessage(null), 5000);
-                // We proceed with the text message anyway, or return?
-                // Better to return if they tried to upload a photo but it failed?
-                // User said "i cant see the proof", so photo is important.
             }
         }
 
@@ -841,7 +851,9 @@ export default function App() {
             content: msg,
             photoUrl: photoUrl, // Remote URL
             timestamp: new Date().toISOString(),
-            propertyName: activeProperty
+            propertyName: activeProperty,
+            status: 'UNREAD',
+            handledBy: ''
         };
 
         // UI Persistence (Immediate)
@@ -1119,6 +1131,8 @@ export default function App() {
                                     onMarkPaid={handleMarkPaid}
                                     onUpdateLeaseDoc={handleLeaseDocUpload}
                                     onMoveOut={handleMoveOut}
+                                    onUpdateMessage={handleUpdateMessage}
+                                    activeManager={activeManager}
                                 />
                             </ErrorBoundary>
                         ) : (
@@ -1138,7 +1152,7 @@ export default function App() {
 
 // --- Manager Components ---
 
-function ManagerDashboard({ activeProperty, tenants, payments, propertyUnits, utilityBills, tasks, vendors, tenantMessages, currency = 'USD', onAddUnit, onEditUnit, onDeleteUnit, onAddTenant, onEditTenant, onUpdateFittings, onAddBill, onAddTask, onAddVendor, onEditVendor, onDeleteVendor, onMarkPaid, onUpdateLeaseDoc, onMoveOut }) {
+function ManagerDashboard({ activeProperty, tenants, payments, propertyUnits, utilityBills, tasks, vendors, tenantMessages, currency = 'USD', onAddUnit, onEditUnit, onDeleteUnit, onAddTenant, onEditTenant, onUpdateFittings, onAddBill, onAddTask, onAddVendor, onEditVendor, onDeleteVendor, onMarkPaid, onUpdateLeaseDoc, onMoveOut, onUpdateMessage, activeManager }) {
     const [activeTab, setActiveTab] = useState('rents');
     const [showLeaseModal, setShowLeaseModal] = useState(false);
     const [editingTenant, setEditingTenant] = useState(null);
@@ -1222,7 +1236,7 @@ function ManagerDashboard({ activeProperty, tenants, payments, propertyUnits, ut
                     transition={{ duration: 0.2 }}
                 >
                     {activeTab === 'rents' && <RentSummaryTab tenants={tenants} payments={payments.filter(p => !p.propertyName || p.propertyName === activeProperty)} currency={currency} onMarkPaid={onMarkPaid} propertyName={activeProperty} tenantMessages={tenantMessages} />}
-                    {activeTab === 'messages' && <MessagesManager tenants={tenants} messages={tenantMessages} onMarkPaid={onMarkPaid} currency={currency} />}
+                    {activeTab === 'messages' && <MessagesManager tenants={tenants} messages={tenantMessages} onUpdateMessage={onUpdateMessage} activeManager={activeManager} />}
                     {activeTab === 'tasks' && (
                         <TasksManager 
                             tenants={tenants} 
@@ -1750,41 +1764,62 @@ function VendorModal({ isOpen, onClose, onSubmit, editingVendor }) {
     );
 }
 
-function MessagesManager({ tenants, messages, onMarkPaid, currency = 'USD' }) {
+function MessagesManager({ tenants, messages, onUpdateMessage, activeManager }) {
+    const [filter, setFilter] = useState('ACTIVE'); // 'ACTIVE' or 'RESOLVED'
+
+    const activeMessages = messages.filter(m => m.status !== 'RESOLVED');
+    const resolvedMessages = messages.filter(m => m.status === 'RESOLVED');
+    const currentList = filter === 'ACTIVE' ? activeMessages : resolvedMessages;
+
+    const handleReply = (msg, tenant) => {
+        if (!msg.status || msg.status === 'UNREAD') {
+            onUpdateMessage(msg.id, { status: 'IN PROGRESS', handledBy: activeManager?.name || 'Admin' });
+        }
+        const waLink = `https://wa.me/${String(tenant.mobile || '').replace(/\D/g, '')}?text=${encodeURIComponent(`Hi ${String(tenant.name || 'Tenant').split(' ')[0]}, received your message: "${msg.content}". \n\n`)}`;
+        window.open(waLink, '_blank', 'noopener,noreferrer');
+    };
+
+    const handleResolve = (msgId) => {
+        if (!window.confirm("Archive this message as resolved?")) return;
+        onUpdateMessage(msgId, { status: 'RESOLVED', handledBy: activeManager?.name || 'Admin', resolvedAt: new Date().toISOString() });
+    };
+
     return (
         <div className="space-y-6">
             <div className="premium-card rounded-[2.5rem] p-8">
-                <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 pb-6 border-b border-white/5 gap-4">
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 pb-6 border-b border-white/5 gap-4">
                     <div>
                         <h3 className="font-black text-2xl text-white italic tracking-tight flex items-center gap-3">
                             <MessageSquare className="w-7 h-7 text-indigo-400" />
-                            Communications
+                            Helpdesk Tickets
                         </h3>
-                        <p className="text-[10px] text-slate-500 font-black uppercase tracking-[0.2em] mt-2">Tenant inbox · All messages</p>
+                        <p className="text-[10px] text-slate-500 font-black uppercase tracking-[0.2em] mt-2">Manage tenant communications</p>
                     </div>
-                    <div className={`px-5 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest border ${
-                        messages.length > 0 
-                        ? 'bg-indigo-600/10 text-indigo-400 border-indigo-500/20' 
-                        : 'bg-white/5 text-slate-500 border-white/5'
-                    }`}>
-                        {messages.length} {messages.length === 1 ? 'Message' : 'Messages'}
+                    
+                    <div className="flex bg-slate-900/50 p-1.5 rounded-2xl border border-white/5">
+                        <button onClick={() => setFilter('ACTIVE')} className={`px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${filter === 'ACTIVE' ? 'bg-indigo-600 shadow-lg text-white' : 'text-slate-500 hover:text-white'}`}>
+                            Action Required <span className="ml-2 bg-white/20 px-1.5 py-0.5 rounded-md">{activeMessages.length}</span>
+                        </button>
+                        <button onClick={() => setFilter('RESOLVED')} className={`px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${filter === 'RESOLVED' ? 'bg-emerald-600 shadow-lg text-white' : 'text-slate-500 hover:text-white'}`}>
+                            Resolved <span className="ml-2 bg-white/20 px-1.5 py-0.5 rounded-md">{resolvedMessages.length}</span>
+                        </button>
                     </div>
                 </div>
 
-                {messages.length === 0 ? (
+                {currentList.length === 0 ? (
                     <div className="text-center py-24 text-slate-600">
                         <div className="w-20 h-20 bg-white/5 rounded-[2rem] flex items-center justify-center mx-auto mb-6 border border-white/5">
-                            <MessageSquare className="w-10 h-10 opacity-30" />
+                            <CheckCircle2 className="w-10 h-10 opacity-30 text-emerald-400" />
                         </div>
-                        <p className="text-sm font-black uppercase tracking-[0.3em]">Inbox is empty</p>
-                        <p className="text-[10px] text-slate-700 font-bold mt-2">Messages sent by tenants will appear here</p>
+                        <p className="text-sm font-black uppercase tracking-[0.3em]">{filter === 'ACTIVE' ? 'Inbox Zero achieved!' : 'No resolved tickets'}</p>
+                        <p className="text-[10px] text-slate-700 font-bold mt-2">All caught up here.</p>
                     </div>
                 ) : (
                     <div className="space-y-5">
-                        {messages.map((msg, idx) => {
+                        {currentList.map((msg, idx) => {
                             const tenant = tenants.find(t => t.id === msg.tenantId);
-                            const waReplyLink = tenant ? `https://wa.me/${String(tenant.mobile || '').replace(/\D/g, '')}?text=${encodeURIComponent(`Hi ${String(tenant.name || 'Tenant').split(' ')[0]}, received your message: "${msg.content}". \n\n`)}` : '#';
                             const initials = (tenant?.name || '??').split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+                            const status = msg.status || 'UNREAD';
 
                             return (
                                 <Motion.div 
@@ -1792,63 +1827,79 @@ function MessagesManager({ tenants, messages, onMarkPaid, currency = 'USD' }) {
                                     initial={{ opacity: 0, y: 10 }}
                                     animate={{ opacity: 1, y: 0 }}
                                     transition={{ delay: idx * 0.05 }}
-                                    className="bg-white/[0.03] rounded-3xl p-6 border border-white/5 hover:border-indigo-500/20 hover:bg-white/[0.05] transition-all group"
+                                    className={`rounded-3xl p-6 border transition-all group ${
+                                        status === 'RESOLVED' ? 'bg-emerald-950/20 border-emerald-500/10 opacity-80' :
+                                        status === 'IN PROGRESS' ? 'bg-slate-900 border-amber-500/20 shadow-lg shadow-amber-500/5' :
+                                        'bg-white/[0.03] border-indigo-500/30 shadow-lg shadow-indigo-600/5'
+                                    }`}
                                 >
                                     <div className="flex flex-col md:flex-row justify-between items-start gap-6">
                                         <div className="flex-1">
-                                            <div className="flex items-center gap-4 mb-5">
-                                                <div className="w-12 h-12 bg-gradient-to-br from-indigo-600 to-violet-700 rounded-2xl flex items-center justify-center font-black text-sm text-white shadow-lg shadow-indigo-600/20 shrink-0">
+                                            <div className="flex items-center gap-4 mb-4">
+                                                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-black text-sm text-white shrink-0 ${
+                                                    status === 'RESOLVED' ? 'bg-emerald-600/50' : 'bg-gradient-to-br from-indigo-600 to-violet-700 shadow-lg shadow-indigo-600/20'
+                                                }`}>
                                                     {initials}
                                                 </div>
                                                 <div className="flex-1">
                                                     <div className="flex items-center gap-3">
-                                                        <h4 className="font-black text-white">{tenant?.name || 'Unknown Tenant'}</h4>
+                                                        <h4 className={`font-black tracking-tight ${status === 'RESOLVED' ? 'text-slate-400' : 'text-white'}`}>{tenant?.name || 'Unknown Tenant'}</h4>
                                                         <span className="text-[9px] text-indigo-400 font-black uppercase bg-indigo-500/10 px-2 py-0.5 rounded-md border border-indigo-500/10">Unit {tenant?.unit}</span>
                                                     </div>
-                                                    <p className="text-[10px] text-slate-600 font-black uppercase tracking-widest mt-1">
-                                                        {formatDate(msg.timestamp, true)}
-                                                    </p>
+                                                    <div className="flex items-center gap-3 mt-1.5 flex-wrap">
+                                                        <p className="text-[9px] text-slate-600 font-black uppercase tracking-widest">{formatDate(msg.timestamp, true)}</p>
+                                                        <span className="flex items-center gap-1.5 text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full border bg-opacity-10 border-opacity-30">
+                                                            {status === 'UNREAD' && <span className="text-red-400 border-red-500 bg-red-500 px-2 rounded-full">🔴 UNREAD</span>}
+                                                            {status === 'IN PROGRESS' && <span className="text-amber-400 border-amber-500 bg-amber-500 px-2 rounded-full">🟡 IN PROGRESS</span>}
+                                                            {status === 'RESOLVED' && <span className="text-emerald-400 border-emerald-500 bg-emerald-500 px-2 rounded-full">✅ RESOLVED</span>}
+                                                        </span>
+                                                        {msg.handledBy && (
+                                                            <p className="text-[9px] font-black uppercase tracking-widest text-indigo-300 bg-indigo-500/10 px-2 py-0.5 rounded-md">
+                                                                Handled by: {msg.handledBy}
+                                                            </p>
+                                                        )}
+                                                    </div>
                                                 </div>
                                             </div>
-                                            <div className="bg-slate-950/60 p-5 rounded-2xl border border-white/5 text-slate-300 text-sm italic leading-relaxed">
+                                            
+                                            <div className="bg-slate-950/40 p-5 rounded-2xl border border-white/5 text-slate-300 text-sm italic leading-relaxed">
                                                 <span className="text-slate-600 mr-1 text-lg leading-none">"</span>
                                                 {msg.content}
                                                 <span className="text-slate-600 ml-1 text-lg leading-none">"</span>
                                             </div>
+
                                             {msg.photoUrl && (
                                                 <div className="mt-4">
                                                     <a href={msg.photoUrl} target="_blank" rel="noopener noreferrer" className="inline-block relative">
-                                                        <img src={msg.photoUrl} alt="Attachment" className="h-36 w-auto rounded-2xl border border-white/10 shadow-xl group-hover:scale-[1.02] transition-transform" />
+                                                        <img src={msg.photoUrl} alt="Attachment" className={`h-24 w-auto rounded-2xl border border-white/10 shadow-xl transition-all ${status !== 'RESOLVED' && 'group-hover:scale-[1.02]'}`} />
                                                         <div className="absolute inset-0 bg-black/40 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center rounded-2xl">
-                                                            <ExternalLink className="w-5 h-5 text-white" />
+                                                            <span className="bg-slate-900/80 px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest text-white border border-white/10">View Image</span>
                                                         </div>
                                                     </a>
                                                 </div>
                                             )}
                                         </div>
-                                        <div className="w-full md:w-auto self-end flex flex-col md:flex-row gap-2 flex-shrink-0">
-                                            {tenant && (
+                                        
+                                        <div className="w-full md:w-auto self-end flex flex-col md:flex-row gap-2 md:gap-3 flex-shrink-0 pt-4 md:pt-0 border-t border-white/5 md:border-t-0">
+                                            {tenant && status !== 'RESOLVED' && (
                                                 <>
-                                                    {msg.photoUrl && (
-                                                        <Motion.button
-                                                            whileHover={{ scale: 1.04 }}
-                                                            whileTap={{ scale: 0.96 }}
-                                                            onClick={() => onMarkPaid(tenant.id, (Number(tenant.baseRent) + Number(tenant.utilityShare)).toFixed(2))}
-                                                            className="bg-indigo-600 hover:bg-indigo-500 text-white px-7 py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 shadow-xl shadow-indigo-600/20 transition-all border border-indigo-500/30"
-                                                        >
-                                                            <CheckCircle2 className="w-4 h-4" /> Verify & Send Receipt
-                                                        </Motion.button>
-                                                    )}
-                                                    <Motion.a
+                                                    <Motion.button
                                                         whileHover={{ scale: 1.04 }}
                                                         whileTap={{ scale: 0.96 }}
-                                                        href={waReplyLink}
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                        className="w-full md:w-auto bg-emerald-600/10 hover:bg-emerald-600/20 text-emerald-500 border border-emerald-500/20 px-7 py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-all"
+                                                        onClick={() => handleResolve(msg.id)}
+                                                        className="bg-emerald-600/10 hover:bg-emerald-600/20 text-emerald-500 border border-emerald-500/20 px-6 py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-all"
                                                     >
-                                                        <MessageSquare className="w-4 h-4" /> Reply on WhatsApp
-                                                    </Motion.a>
+                                                        <CheckCircle2 className="w-4 h-4" /> Mark Resolved
+                                                    </Motion.button>
+                                                    
+                                                    <Motion.button
+                                                        whileHover={{ scale: 1.04 }}
+                                                        whileTap={{ scale: 0.96 }}
+                                                        onClick={() => handleReply(msg, tenant)}
+                                                        className="bg-amber-500 hover:bg-amber-400 text-slate-900 px-6 py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 shadow-lg shadow-amber-500/20 transition-all"
+                                                    >
+                                                        <MessageSquare className="w-4 h-4" /> Reply
+                                                    </Motion.button>
                                                 </>
                                             )}
                                         </div>
