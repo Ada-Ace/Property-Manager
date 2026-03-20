@@ -2106,8 +2106,11 @@ function TenantDashboard({ tenant, unit, onSendMessage, currency = 'USD' }) {
                         </div>
                     </div>
 
-                    <button className="w-full bg-indigo-600 text-white font-black py-4 rounded-2xl hover:bg-indigo-500 transition-all shadow-xl shadow-indigo-600/20 text-xs uppercase tracking-widest mt-8 flex items-center justify-center gap-2">
-                        Make Instant Payment <ArrowUpRight className="w-4 h-4" />
+                    <button 
+                        onClick={() => setShowMsgModal(true)}
+                        className="w-full bg-indigo-600 text-white font-black py-4 rounded-2xl hover:bg-indigo-500 transition-all shadow-xl shadow-indigo-600/20 text-xs uppercase tracking-widest mt-8 flex items-center justify-center gap-2"
+                    >
+                        Upload Proof of Rent Payment <ArrowUpRight className="w-4 h-4" />
                     </button>
                 </div>
 
