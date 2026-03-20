@@ -334,6 +334,7 @@ export default function App() {
     const [propertyToEdit, setPropertyToEdit] = useState(null); // null means adding new
     const [syncStatus, setSyncStatus] = useState('offline'); // 'connecting', 'connected', 'error', 'offline'
     const [lastSyncError, setLastSyncError] = useState(null);
+    const [showPropertyPicker, setShowPropertyPicker] = useState(false);
 
     // Get ISO 4217 currency for the currently active property
     const activeCurrency = useMemo(() => {
@@ -957,25 +958,73 @@ export default function App() {
                                         {lastSyncTime ? `Last Updated: ${lastSyncTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : '— Local Cache Only'}
                                     </p>
                                 </div>
-                                <Building2 className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
-                                <select 
-                                    className="bg-transparent border-none text-[10px] font-black uppercase tracking-widest outline-none cursor-pointer text-indigo-400 max-w-[120px] md:max-w-[200px]"
-                                    value={activeProperty}
-                                    onChange={(e) => {
-                                        if (e.target.value === '__ADD_NEW__') {
-                                            handleAddProperty();
-                                        } else {
-                                            setActiveProperty(e.target.value);
-                                        }
-                                    }}
-                                >
-                                    <optgroup label="Select Property" className="bg-slate-900">
-                                        {Array.isArray(properties) && properties.map(p => <option key={p?.id || p} value={p?.name || p} className="bg-slate-900">{p?.name || p}</option>)}
-                                    </optgroup>
-                                    <optgroup label="Management" className="bg-slate-900">
-                                        <option value="__ADD_NEW__" className="bg-indigo-600 text-white font-bold">+ Register New Property</option>
-                                    </optgroup>
-                                </select>
+                                <div className="relative">
+                                    {/* Custom Property Picker Button */}
+                                    <button
+                                        onClick={() => setShowPropertyPicker(v => !v)}
+                                        className="flex items-center gap-2 text-indigo-400 hover:text-white transition-all"
+                                    >
+                                        <Building2 className="w-3.5 h-3.5 shrink-0" />
+                                        <span className="text-[10px] font-black uppercase tracking-widest max-w-[120px] md:max-w-[200px] truncate">{activeProperty}</span>
+                                        <ChevronDown className={`w-3 h-3 transition-transform duration-300 ${showPropertyPicker ? 'rotate-180' : ''}`} />
+                                    </button>
+
+                                    {/* Custom Dropdown Panel */}
+                                    <AnimatePresence>
+                                    {showPropertyPicker && (
+                                        <>
+                                            {/* Backdrop */}
+                                            <div className="fixed inset-0 z-[90]" onClick={() => setShowPropertyPicker(false)} />
+                                            <Motion.div
+                                                initial={{ opacity: 0, y: -8, scale: 0.96 }}
+                                                animate={{ opacity: 1, y: 0, scale: 1 }}
+                                                exit={{ opacity: 0, y: -8, scale: 0.96 }}
+                                                transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+                                                className="absolute top-full right-0 mt-3 w-64 bg-slate-900/95 backdrop-blur-xl border border-white/10 rounded-[1.5rem] shadow-2xl shadow-black/50 overflow-hidden z-[100]"
+                                            >
+                                                {/* Header label */}
+                                                <div className="px-4 pt-4 pb-2">
+                                                    <p className="text-[9px] font-black uppercase tracking-[0.25em] text-slate-600">Your Properties</p>
+                                                </div>
+
+                                                {/* Property List */}
+                                                <div className="px-2 pb-2 space-y-0.5">
+                                                    {Array.isArray(properties) && properties.map(p => (
+                                                        <button
+                                                            key={p?.id || p?.name}
+                                                            onClick={() => { setActiveProperty(p?.name || p); setShowPropertyPicker(false); }}
+                                                            className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl text-left transition-all group ${
+                                                                activeProperty === (p?.name || p)
+                                                                    ? 'bg-indigo-600/20 text-indigo-300 border border-indigo-500/20'
+                                                                    : 'text-slate-300 hover:bg-white/5 border border-transparent'
+                                                            }`}
+                                                        >
+                                                            <div className={`w-2 h-2 rounded-full shrink-0 ${
+                                                                activeProperty === (p?.name || p) ? 'bg-indigo-400' : 'bg-slate-700 group-hover:bg-slate-500'
+                                                            } transition-colors`} />
+                                                            <span className="text-[11px] font-black uppercase tracking-wide truncate">{p?.name || p}</span>
+                                                            {activeProperty === (p?.name || p) && (
+                                                                <CheckCircle2 className="w-3.5 h-3.5 text-indigo-400 ml-auto shrink-0" />
+                                                            )}
+                                                        </button>
+                                                    ))}
+                                                </div>
+
+                                                {/* Divider + Register New */}
+                                                <div className="p-2 border-t border-white/5">
+                                                    <button
+                                                        onClick={() => { handleAddProperty(); setShowPropertyPicker(false); }}
+                                                        className="w-full flex items-center gap-3 px-3 py-3 rounded-xl text-indigo-400 hover:bg-indigo-600 hover:text-white border border-dashed border-indigo-500/30 hover:border-indigo-500 transition-all group"
+                                                    >
+                                                        <PlusCircle className="w-4 h-4 shrink-0 group-hover:rotate-90 transition-transform duration-300" />
+                                                        <span className="text-[10px] font-black uppercase tracking-widest">Register New Property</span>
+                                                    </button>
+                                                </div>
+                                            </Motion.div>
+                                        </>
+                                    )}
+                                    </AnimatePresence>
+                                </div>
                             </div>
                         )}
                         {view === 'manager' && (
