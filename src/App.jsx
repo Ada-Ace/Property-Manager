@@ -557,7 +557,8 @@ export default function App() {
         const inputMobileCleaned = cleanMobile(mobileInput);
         
         if (inputMobileCleaned === cleanMobile(MANAGER_CREDENTIALS.mobile) && password === MANAGER_CREDENTIALS.password) {
-            const firstProp = (Array.isArray(properties) && properties[0]?.name) || INITIAL_PROPERTIES[0]?.name;
+            const activeProps = Array.isArray(properties) ? properties.filter(p => !p.isArchived) : [];
+            const firstProp = (activeProps.length > 0 && activeProps[0]?.name) || INITIAL_PROPERTIES[0]?.name;
             setActiveProperty(firstProp);
             setActiveManager({ name: 'Primary Admin' });
             setView('manager');
@@ -568,7 +569,8 @@ export default function App() {
         // Check Dynamic Managers from Cloud
         const cloudManager = managers.find(m => cleanMobile(m.mobile) === inputMobileCleaned && m.password === password);
         if (cloudManager) {
-            const firstProp = (Array.isArray(properties) && properties[0]?.name) || INITIAL_PROPERTIES[0]?.name;
+            const activeProps = Array.isArray(properties) ? properties.filter(p => !p.isArchived) : [];
+            const firstProp = (activeProps.length > 0 && activeProps[0]?.name) || INITIAL_PROPERTIES[0]?.name;
             setActiveProperty(firstProp);
             setActiveManager({ name: cloudManager.name });
             setView('manager');
@@ -1012,7 +1014,7 @@ export default function App() {
 
                                                 {/* Property List */}
                                                 <div className="px-2 pb-2 space-y-0.5">
-                                                    {Array.isArray(properties) && properties.map(p => (
+                                                    {Array.isArray(properties) && properties.filter(p => !p.isArchived).map(p => (
                                                         <button
                                                             key={p?.id || p?.name}
                                                             onClick={() => { setActiveProperty(p?.name || p); setShowPropertyPicker(false); }}
@@ -3542,6 +3544,7 @@ function PropertyModal({ initialData, apiStatus, onClose, onSave }) {
         name: '',
         address: '',
         currency: 'USD',
+        isArchived: false,
         ...initialData
     });
 
@@ -3625,6 +3628,19 @@ function PropertyModal({ initialData, apiStatus, onClose, onSave }) {
                                 Base currency for all rents and reports: {currentCurrencyInfo?.name}
                             </p>
                         </div>
+                        
+                        {initialData?.id && (
+                            <div className="pt-4 flex items-center justify-between bg-white/[0.02] p-4 rounded-2xl border border-white/5">
+                                <div>
+                                    <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest">Archive Property</p>
+                                    <p className="text-[9px] text-slate-600 mt-1 max-w-[200px]">Hide this property from your active dashboard without deleting any data.</p>
+                                </div>
+                                <label className="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" className="sr-only peer" checked={form.isArchived} onChange={e => setForm({ ...form, isArchived: e.target.checked })} />
+                                    <div className="w-11 h-6 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-slate-400 peer-checked:after:bg-white after:border-slate-500 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-500 border border-white/10"></div>
+                                </label>
+                            </div>
+                        )}
                     </div>
 
                     <div className="pt-6 border-t border-white/5">
