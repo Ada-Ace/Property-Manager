@@ -497,6 +497,7 @@ export default function App() {
                 const rawBills = Array.isArray(data.bills) ? data.bills : [];
                 const rawTasks = Array.isArray(data.tasks) ? data.tasks : [];
                 const rawMessages = Array.isArray(data.messages) ? data.messages : [];
+                const rawPayments = Array.isArray(data.payments) ? data.payments : [];
 
                 // Even if no properties are found, if we got a valid object, we are connected
                 setSyncStatus('connected');
@@ -519,6 +520,7 @@ export default function App() {
                     setUtilityBills(rawBills);
                     setTasks(rawTasks);
                     setTenantMessages(rawMessages);
+                    setPayments(rawPayments.length > 0 ? rawPayments : payments);
                     
                     if (!activeProperty) {
                         setActiveProperty(actualProperties[0].name);
@@ -1033,7 +1035,9 @@ export default function App() {
                             <ErrorBoundary>
                                 <ManagerDashboard
                                     key={activeProperty}
+                                    activeProperty={activeProperty}
                                     tenants={filteredTenants}
+                                    payments={payments}
                                     propertyUnits={filteredUnits}
                                     utilityBills={filteredBills}
                                     tasks={filteredTasks}
@@ -1073,7 +1077,7 @@ export default function App() {
 
 // --- Manager Components ---
 
-function ManagerDashboard({ tenants, propertyUnits, utilityBills, tasks, vendors, tenantMessages, currency = 'USD', onAddUnit, onEditUnit, onDeleteUnit, onAddTenant, onEditTenant, onUpdateFittings, onAddBill, onAddTask, onAddVendor, onEditVendor, onDeleteVendor, onMarkPaid, onUpdateLeaseDoc, onMoveOut }) {
+function ManagerDashboard({ activeProperty, tenants, payments, propertyUnits, utilityBills, tasks, vendors, tenantMessages, currency = 'USD', onAddUnit, onEditUnit, onDeleteUnit, onAddTenant, onEditTenant, onUpdateFittings, onAddBill, onAddTask, onAddVendor, onEditVendor, onDeleteVendor, onMarkPaid, onUpdateLeaseDoc, onMoveOut }) {
     const [activeTab, setActiveTab] = useState('rents');
     const [showLeaseModal, setShowLeaseModal] = useState(false);
     const [editingTenant, setEditingTenant] = useState(null);
