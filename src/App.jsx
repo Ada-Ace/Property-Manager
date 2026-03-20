@@ -58,7 +58,11 @@ import {
     PieChart,
     LayoutGrid,
     MessageCircle,
-    RefreshCcw
+    RefreshCcw,
+    UploadCloud,
+    TrendingUp,
+    History,
+    Package
 } from 'lucide-react';
 
 // --- Mock Initial Data ---
@@ -290,6 +294,18 @@ const API = {
             console.error('Drive Upload Error:', err);
             return { success: false, message: 'Upload failed' };
         }
+    },
+
+    async uploadFile(file) {
+        if (!file || !this.isValid()) return null;
+        return new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onloadend = async () => {
+                const res = await this.uploadToDrive(reader.result, file.name);
+                resolve(res.success ? res.url : null);
+            };
+            reader.readAsDataURL(file);
+        });
     },
 
     async saveToSheet(action, sheetName, data) {
@@ -656,7 +672,8 @@ export default function App() {
         let docUrl = null;
         if (newTenant.leaseFile) {
             setGlobalMessage({ type: 'info', text: "Uploading documentation to cloud..." });
-            docUrl = await API.uploadFile(newTenant.leaseFile);
+            const uploadedUrl = await API.uploadFile(newTenant.leaseFile);
+            if (uploadedUrl) docUrl = uploadedUrl;
         }
 
         const tenantData = {
@@ -693,41 +710,42 @@ export default function App() {
     const editTenant = async (updatedTenant) => {
         setGlobalMessage({ type: 'info', text: "Updating agreement details..." });
         
-        let docUrl = updatedTenant.leaseDocument;
+        let docUrl = updatedTenant.leaseDocument || null;
         if (updatedTenant.leaseFile) {
-            setGlobalMessage({ type: 'info', text: "Uploading new documentation..." });
-            const uploadRes = await API.uploadFile(updatedTenant.leaseFile);
-            if (uploadRes) docUrl = uploadRes;
+            setGlobalMessage({ type: 'info', text: "Uploading documentation to cloud..." });
+            const uploadedUrl = await API.uploadFile(updatedTenant.leaseFile);
+            if (uploadedUrl) docUrl = uploadedUrl;
         }
 
-        const finalTenant = { 
+        const tenantData = { 
             ...updatedTenant, 
-            leaseDocument: docUrl 
+            leaseDocument: docUrl,
+            lastUpdated: new Date().toISOString() 
         };
-        delete finalTenant.leaseFile;
+        delete tenantData.leaseFile; // Don't send file object to sheet
 
-        setTenants(prev => prev.map(t => t.id === finalTenant.id ? { ...t, ...finalTenant } : t));
-        const oldTenant = tenants.find(t => t.id === finalTenant.id);
+        setTenants(prev => prev.map(t => t.id === updatedTenant.id ? tenantData : t));
+        const oldTenant = tenants.find(t => t.id === updatedTenant.id);
         
-        if (finalTenant.unit) {
+        if (tenantData.unit) {
             // Update local units state
             setPropertyUnits(prev => prev.map(u => {
-                if (u.unitNumber === finalTenant.unit) return { ...u, status: 'Occupied' };
-                if (oldTenant && oldTenant.unit === u.unitNumber && oldTenant.unit !== finalTenant.unit) return { ...u, status: 'Available' };
+                if (u.unitNumber === tenantData.unit) return { ...u, status: 'Occupied' };
+                if (oldTenant && oldTenant.unit === u.unitNumber && oldTenant.unit !== tenantData.unit) return { ...u, status: 'Available' };
                 return u;
             }));
 
             // Sync unit changes to cloud
-            const newUnit = propertyUnits.find(u => u.unitNumber === finalTenant.unit);
+            const newUnit = propertyUnits.find(u => u.unitNumber === tenantData.unit);
             if (newUnit) await API.saveToSheet('UPDATE', 'Units', { ...newUnit, status: 'Occupied' });
             
-            if (oldTenant && oldTenant.unit !== finalTenant.unit) {
+            if (oldTenant && oldTenant.unit !== tenantData.unit) {
                 const prevUnit = propertyUnits.find(u => u.unitNumber === oldTenant.unit);
                 if (prevUnit) await API.saveToSheet('UPDATE', 'Units', { ...prevUnit, status: 'Available' });
             }
         }
         
-        const res = await API.saveToSheet('UPDATE', 'Tenants', finalTenant);
+        const res = await API.saveToSheet('UPDATE', 'Tenants', tenantData);
         if (res.success) {
             setGlobalMessage({ type: 'success', text: `Agreement Finalized & Synced` });
             syncWithCloud(true);
@@ -773,8 +791,12 @@ export default function App() {
         try {
             setGlobalMessage({ type: 'info', text: 'Processing Move-Out...' });
             
-            // 1. Mark unit as Available
-            const updatedUnit = { ...unit, status: 'Available' };
+            // 1. Mark unit as Available with Vacancy Tracking
+            const updatedUnit = { 
+                ...unit, 
+                status: 'Available',
+                vacantSince: new Date().toISOString().split('T')[0] // Track when lost revenue starts
+            };
             await editUnitInCatalog(updatedUnit);
 
             // 2. Mark tenant as archived
@@ -1053,7 +1075,11 @@ function ManagerDashboard({ tenants, propertyUnits, utilityBills, tasks, tenantM
                                         unit={unit}
                                         tenant={tenant}
                                         currency={currency}
-                                        onUpdateFittings={(newFittings) => onUpdateFittings(unit.id, newFittings)}
+                                        history={{
+                                            rents: utilityBills?.filter(b => b.unit === unit.unitNumber).slice(0, 3) || [],
+                                            tasks: tasks?.filter(t => t.unit === unit.unitNumber).slice(0, 3) || []
+                                        }}
+                                        onUpdateFittings={onUpdateFittings}
                                         onEditUnit={() => setEditingUnit(unit)}
                                         onDeleteUnit={() => onDeleteUnit(unit.id)}
                                         onAddLease={() => { setEditingTenant(null); setShowLeaseModal(true); setEditingUnit(unit); }}
@@ -1486,7 +1512,7 @@ function UtilityManager({ tenants, utilityBills, onAddBill, currency = 'USD' }) 
                                         <input type="file" id="billUpload" className="hidden" onChange={e => setBillFile(e.target.files[0])} />
                                         <label htmlFor="billUpload" className="flex items-center justify-between w-full bg-slate-800 hover:bg-slate-700/50 rounded-xl p-3 cursor-pointer transition-colors group border border-dashed border-white/10 hover:border-indigo-500/50">
                                             <span className="text-sm text-slate-400 font-medium truncate pr-4">{billFile ? billFile.name : 'Upload PDF/Image'}</span>
-                                            <Upload className="w-4 h-4 text-slate-500 group-hover:text-indigo-400 shrink-0" />
+                                            <UploadCloud className="w-4 h-4 text-slate-500 group-hover:text-indigo-400 shrink-0" />
                                         </label>
                                     </div>
                                 </div>
@@ -2054,8 +2080,8 @@ function MessageModal({ onClose, onSubmit }) {
     );
 }
 
-function FittingsModal({ fittings, onClose, onSave }) {
-    const [localFittings, setLocalFittings] = useState([...fittings]);
+function InventoryModal({ unit, onClose, onSave }) {
+    const [localFittings, setLocalFittings] = useState([...(unit.fittings || [])]);
     const [newItem, setNewItem] = useState('');
     const addItem = () => { if (newItem.trim()) { setLocalFittings([...localFittings, newItem.trim()]); setNewItem(''); } };
     const removeItem = (index) => { setLocalFittings(localFittings.filter((_, i) => i !== index)); };
@@ -2089,12 +2115,17 @@ function FittingsModal({ fittings, onClose, onSave }) {
     );
 }
 
-function UnitCard({ unit, tenant, currency = 'USD', onUpdateFittings, onEditUnit, onDeleteUnit, onAddLease, onEditLease, onUpdateLeaseDoc, onMoveOut }) {
+function UnitCard({ unit, tenant, currency = 'USD', history, onUpdateFittings, onEditUnit, onDeleteUnit, onAddLease, onEditLease, onUpdateLeaseDoc, onMoveOut }) {
     const [activeSubTab, setActiveSubTab] = useState('info');
     const tenantName = tenant?.name;
     const actualRent = tenant?.baseRent;
     const [showInventoryModal, setShowInventoryModal] = useState(false);
     const isOccupied = unit.status === 'Occupied' && !!tenant;
+
+    // Financial Intelligence: Yield & Vacancy
+    const yieldGap = isOccupied ? (Number(tenant.baseRent || 0) - Number(unit.expectedRent || 0)) : 0;
+    const vacancyDays = !isOccupied && unit.vacantSince ? Math.ceil((new Date() - new Date(unit.vacantSince)) / (1000 * 60 * 60 * 24)) : 0;
+    const lostRevenue = !isOccupied ? (Number(unit.expectedRent || 0) / 30) * vacancyDays : 0;
 
     // Decision Intelligence: Lease Expiry Calculation
     const getLeaseStatus = () => {
@@ -2110,6 +2141,8 @@ function UnitCard({ unit, tenant, currency = 'USD', onUpdateFittings, onEditUnit
     };
     const leaseStatus = getLeaseStatus();
 
+    const fmtDate = (d) => d ? new Date(d).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A';
+
     return (
         <Motion.div 
             layout
@@ -2122,11 +2155,6 @@ function UnitCard({ unit, tenant, currency = 'USD', onUpdateFittings, onEditUnit
             <div className={`h-48 relative flex items-center justify-center overflow-hidden bg-slate-800/50`}>
                 <div className="absolute inset-0 bg-gradient-to-b from-transparent to-slate-900/80 z-10" />
                 
-                {/* Visual Expiry Glow */}
-                {leaseStatus && (
-                    <div className={`absolute inset-0 opacity-20 bg-gradient-to-t ${leaseStatus.color.split(' ')[0]} transition-opacity`} />
-                )}
-
                 {unit.image ? (
                     <img src={unit.image} alt="" className="absolute inset-0 w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
                 ) : (
@@ -2135,6 +2163,31 @@ function UnitCard({ unit, tenant, currency = 'USD', onUpdateFittings, onEditUnit
                         <span className="text-[10px] font-black uppercase tracking-[0.3em] opacity-30">Unit {unit.unitNumber}</span>
                     </div>
                 )}
+
+                {/* Quick Actions (Floating) */}
+                <div className="absolute top-6 left-6 flex flex-col gap-2 z-20">
+                    <button 
+                        onClick={(e) => { e.stopPropagation(); onEditUnit(); }}
+                        className="p-2.5 bg-slate-900/60 backdrop-blur-xl border border-white/5 rounded-2xl text-slate-400 hover:text-white hover:border-indigo-500/50 transition-all hover:scale-110"
+                    >
+                        <Settings className="w-4 h-4" />
+                    </button>
+                    {isOccupied && (
+                        <div className={`px-4 py-2 rounded-2xl text-[9px] font-black uppercase tracking-tight flex items-center gap-2 border backdrop-blur-xl shadow-xl ${
+                            yieldGap >= 0 ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' : 
+                            'bg-amber-500/20 text-amber-400 border-amber-500/30'
+                        }`}>
+                            <TrendingUp className="w-3.5 h-3.5" />
+                            {yieldGap >= 0 ? `+${yieldGap} Yield` : `${yieldGap} Below Mkt`}
+                        </div>
+                    )}
+                    {vacancyDays > 0 && (
+                        <div className="px-4 py-2 rounded-2xl text-[9px] font-black uppercase tracking-tight flex items-center gap-2 border bg-red-500/20 text-red-400 border-red-500/30 backdrop-blur-xl shadow-xl">
+                            <AlertCircle className="w-3.5 h-3.5 animate-pulse" />
+                            -{vacancyDays}d / ${Math.round(lostRevenue)} Loss
+                        </div>
+                    )}
+                </div>
 
                 {/* Status Badges */}
                 <div className="absolute top-6 right-6 flex flex-col items-end gap-2 z-20">
@@ -2152,27 +2205,6 @@ function UnitCard({ unit, tenant, currency = 'USD', onUpdateFittings, onEditUnit
                         </div>
                     )}
                 </div>
-
-                <div className="absolute top-6 left-6 flex gap-2 z-20 opacity-0 group-hover:opacity-100 transition-all">
-                    <Motion.button
-                        whileHover={{ scale: 1.1 }}
-                        whileTap={{ scale: 0.9 }}
-                        onClick={() => onEditUnit(unit)}
-                        title="Edit Unit Properties"
-                        className="p-2.5 rounded-xl text-slate-400 hover:text-white bg-slate-900/60 border border-white/10 hover:border-white/30 backdrop-blur-xl shadow-2xl transition-all"
-                    >
-                        <Settings className="w-5 h-5" />
-                    </Motion.button>
-                    <Motion.button
-                        whileHover={{ scale: 1.1, backgroundColor: 'rgba(239, 68, 68, 0.2)' }}
-                        whileTap={{ scale: 0.9 }}
-                        onClick={onDeleteUnit}
-                        title="Delete Unit"
-                        className="p-2.5 rounded-xl text-red-500/50 hover:text-red-400 bg-slate-900/60 border border-white/10 hover:border-red-500/30 backdrop-blur-xl shadow-2xl transition-all"
-                    >
-                        <Trash2 className="w-5 h-5" />
-                    </Motion.button>
-                </div>
             </div>
 
             <div className="p-8 flex-1 flex flex-col relative">
@@ -2183,24 +2215,24 @@ function UnitCard({ unit, tenant, currency = 'USD', onUpdateFittings, onEditUnit
                             <Maximize className="w-3.5 h-3.5" /> {unit.size} SQFT Space
                         </p>
                     </div>
-                    <div className="flex bg-slate-950/40 p-1 rounded-2xl border border-white/5 shadow-inner">
-                        {[
-                            { id: 'info', label: 'Finance' },
-                            { id: 'fittings', label: 'Inventory' }
-                        ].map(st => (
-                            <button 
-                                key={st.id}
-                                onClick={() => setActiveSubTab(st.id)} 
-                                className={`px-4 py-2 rounded-xl text-[9px] font-black transition-all uppercase tracking-tight ${
-                                    activeSubTab === st.id 
-                                    ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20' 
-                                    : 'text-slate-500 hover:text-slate-300'
-                                }`}
-                            >
-                                {st.label}
-                            </button>
-                        ))}
-                    </div>
+                </div>
+
+                <div className="flex bg-slate-800/40 p-1 rounded-2xl border border-white/5 mb-6 backdrop-blur-md">
+                    {[
+                        { id: 'info', icon: <Info className="w-3.5 h-3.5" />, label: 'Financials' },
+                        { id: 'ledger', icon: <History className="w-3.5 h-3.5" />, label: 'Ledger' },
+                        { id: 'inventory', icon: <Package className="w-3.5 h-3.5" />, label: 'Inventory' }
+                    ].map((tab) => (
+                        <button
+                            key={tab.id}
+                            onClick={() => setActiveSubTab(tab.id)}
+                            className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${
+                                activeSubTab === tab.id ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20' : 'text-slate-500 hover:text-slate-300'
+                            }`}
+                        >
+                            {tab.icon} {tab.label}
+                        </button>
+                    ))}
                 </div>
 
                 <div className="flex-1 min-h-[140px]">
@@ -2216,93 +2248,46 @@ function UnitCard({ unit, tenant, currency = 'USD', onUpdateFittings, onEditUnit
                             {activeSubTab === 'info' ? (
                                 isOccupied ? (
                                     <div className="flex flex-col gap-6 pt-2">
-                                        {/* Lease Details Grid */}
                                         <div className="grid grid-cols-2 gap-4">
                                             <div className="bg-slate-950/40 p-4 rounded-2xl border border-white/5 space-y-1.5">
-                                                <p className="text-[8px] font-black text-slate-600 uppercase tracking-widest flex items-center gap-1.5">
-                                                    <User className="w-3 h-3 text-indigo-500" /> Resident
-                                                </p>
-                                                <p className="text-white font-black text-sm truncate uppercase tracking-tight">{tenantName}</p>
+                                                <p className="text-[8px] font-black text-slate-600 uppercase tracking-widest">Resident</p>
+                                                <p className="text-white font-black text-sm truncate uppercase">{tenantName}</p>
                                             </div>
                                             <div className="bg-indigo-600/10 p-4 rounded-2xl border border-indigo-500/20 space-y-1.5">
-                                                <p className="text-[8px] font-black text-indigo-400 uppercase tracking-widest flex items-center gap-1.5 px-0.5">
-                                                    <DollarSign className="w-3 h-3" /> Actual Rent
-                                                </p>
-                                                <p className="text-white font-black text-lg leading-none tracking-tighter">
+                                                <p className="text-[8px] font-black text-indigo-400 uppercase tracking-widest">Base Rent</p>
+                                                <p className="text-white font-black text-lg tracking-tighter">
                                                     <span className="text-xs text-indigo-500 mr-0.5">{currency}</span>{Number(actualRent).toLocaleString()}
                                                 </p>
                                             </div>
                                         </div>
-
-                                        {/* Timeline & Actions */}
                                         <div className="bg-slate-950/20 rounded-2xl border border-white/5 p-4 space-y-4">
-                                            <div className="flex items-center justify-between text-[9px] font-bold uppercase tracking-widest text-slate-500 border-b border-white/5 pb-3">
-                                                <span>Lease Timeline</span>
-                                                <div className="flex gap-4">
-                                                    <span>{fmtDate(tenant.leaseStart)}</span>
-                                                    <ChevronRight className="w-3 h-3 opacity-30" />
-                                                    <span className="text-indigo-400">{fmtDate(tenant.leaseEnd)}</span>
-                                                </div>
+                                            <div className="flex items-center justify-between text-[9px] font-bold uppercase text-slate-500 border-b border-white/5 pb-3">
+                                                <span>Tenure</span>
+                                                <span className="text-indigo-400">{fmtDate(tenant.leaseStart)} - {fmtDate(tenant.leaseEnd)}</span>
                                             </div>
-
                                             <div className="flex items-center justify-between gap-3">
-                                                <div className="flex-1 space-y-1.5">
-                                                    <p className="text-[8px] font-black text-slate-600 uppercase tracking-widest ml-1">Documentation</p>
+                                                <div className="flex-1">
                                                     {tenant.leaseDocument ? (
-                                                        <a 
-                                                            href={tenant.leaseDocument} 
-                                                            target="_blank" 
-                                                            rel="noopener noreferrer"
-                                                            className="flex items-center gap-2.5 text-xs font-bold text-emerald-400 bg-emerald-500/5 hover:bg-emerald-500/10 border border-emerald-500/10 rounded-xl px-4 py-2.5 transition-all group/doc"
-                                                        >
-                                                            <FileText className="w-4 h-4" />
-                                                            <span>View Agreement</span>
-                                                            <ExternalLink className="w-3 h-3 ml-auto opacity-0 group-hover/doc:opacity-100 transition-all" />
+                                                        <a href={tenant.leaseDocument} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2.5 text-xs font-bold text-emerald-400 bg-emerald-500/5 px-4 py-2.5 rounded-xl border border-emerald-500/10 hover:bg-emerald-500/10 transition-all">
+                                                            <FileText className="w-4 h-4" /> View Agreement
                                                         </a>
                                                     ) : (
-                                                        <label className="flex items-center gap-2.5 text-[10px] font-black text-slate-500 uppercase tracking-tight bg-white/5 hover:bg-white/10 border border-dashed border-white/10 hover:border-white/30 rounded-xl px-4 py-2.5 cursor-pointer transition-all">
-                                                            <Upload className="w-4 h-4" />
-                                                            <span>Upload Lease</span>
-                                                            <input 
-                                                                type="file" 
-                                                                className="hidden" 
-                                                                accept="application/pdf,image/*" 
-                                                                onChange={(e) => {
-                                                                    const file = e.target.files[0];
-                                                                    if (file && onUpdateLeaseDoc) onUpdateLeaseDoc(tenant.id, file);
-                                                                }} 
-                                                            />
+                                                        <label className="flex items-center gap-2.5 text-[10px] font-black text-slate-500 uppercase bg-white/5 px-4 py-2.5 rounded-xl border border-dashed border-white/10 cursor-pointer">
+                                                            <Upload className="w-4 h-4" /> Upload Lease
+                                                            <input type="file" className="hidden" onChange={(e) => e.target.files[0] && onUpdateLeaseDoc(tenant.id, e.target.files[0])} />
                                                         </label>
                                                     )}
                                                 </div>
-                                                <button 
-                                                    onClick={onEditLease}
-                                                    className="p-3 bg-slate-900 border border-white/10 text-slate-500 hover:text-white rounded-xl hover:bg-slate-800 transition-all mt-4"
-                                                    title="Edit Lease Details"
-                                                >
-                                                    <Settings className="w-4 h-4" />
-                                                </button>
+                                                <button onClick={onEditLease} className="p-3 bg-slate-900 border border-white/5 text-slate-500 hover:text-white rounded-xl transition-all"><Settings className="w-4 h-4" /></button>
                                             </div>
                                         </div>
-
-                                        <div className="flex gap-2.5 pt-2">
-                                            <a 
-                                                href={`https://wa.me/${String(tenant.mobile || '').replace(/\D/g, '')}`}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                className="flex-1 bg-slate-900 border border-white/5 hover:border-emerald-500/30 text-emerald-500 hover:text-emerald-400 font-black rounded-2xl py-3.5 flex items-center justify-center gap-2.5 text-[10px] uppercase tracking-widest transition-all hover:bg-emerald-500/5 group"
-                                            >
-                                                <MessageCircle className="w-4 h-4 transition-transform group-hover:scale-110" />
-                                                Contact
+                                        <div className="flex gap-2.5">
+                                            <a href={`https://wa.me/${String(tenant.mobile || '').replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" className="flex-1 bg-slate-900 border border-white/5 text-emerald-500 font-black rounded-2xl py-3.5 flex items-center justify-center gap-2.5 text-[10px] uppercase tracking-widest transition-all">
+                                                <MessageCircle className="w-4 h-4" /> CONTACT
                                             </a>
-                                            <button 
-                                                onClick={onMoveOut}
-                                                className="flex-1 bg-slate-900 border border-white/5 hover:border-red-500/30 text-slate-500 hover:text-red-400 font-black rounded-2xl py-3.5 flex items-center justify-center gap-2.5 text-[10px] uppercase tracking-widest transition-all hover:bg-red-500/5"
-                                            >
-                                                <LogOut className="w-4 h-4" />
-                                                Move Out
+                                            <button onClick={onMoveOut} className="flex-1 bg-slate-900 border border-white/5 text-slate-500 hover:text-red-400 font-black rounded-2xl py-3.5 flex items-center justify-center gap-2.5 text-[10px] uppercase tracking-widest transition-all">
+                                                <LogOut className="w-4 h-4" /> MOVE OUT
                                             </button>
-                                            <WhatsAppRentButton tenant={tenant} mode="renewal" currency={currency} />
                                         </div>
                                     </div>
                                 ) : (
@@ -2315,59 +2300,69 @@ function UnitCard({ unit, tenant, currency = 'USD', onUpdateFittings, onEditUnit
                                                 </div>
                                             </div>
                                             <div className="text-right">
-                                                <p className="text-[8px] font-black text-slate-600 uppercase tracking-widest mb-1.5 px-1 truncate">Market Target</p>
-                                                <p className="text-2xl font-black text-white tracking-tighter leading-none">
+                                                <p className="text-[8px] font-black text-slate-600 uppercase tracking-widest mb-1">Target Rent</p>
+                                                <p className="text-2xl font-black text-white tracking-tighter">
                                                     <span className="text-xs mr-0.5">$</span>{Number(unit.expectedRent).toLocaleString()}
                                                 </p>
                                             </div>
                                         </div>
-                                        <div className="mt-auto pt-6">
-                                            <Motion.button 
-                                                whileHover={{ scale: 1.02, y: -2 }}
-                                                whileTap={{ scale: 0.98 }}
-                                                onClick={onAddLease} 
-                                                className="w-full py-4 bg-emerald-600 hover:bg-emerald-500 text-white font-black rounded-2xl shadow-xl shadow-emerald-500/10 uppercase tracking-widest text-[10px] flex items-center justify-center gap-2 transition-all border border-emerald-400/20"
-                                            >
-                                                <PlusCircle className="w-4 h-4" /> Create New Lease
-                                            </Motion.button>
-                                        </div>
+                                        <button onClick={onAddLease} className="w-full mt-10 py-4 bg-emerald-600 hover:bg-emerald-500 text-white font-black rounded-2xl shadow-xl uppercase tracking-widest text-[10px] flex items-center justify-center gap-2 transition-all">
+                                            <PlusCircle className="w-4 h-4" /> Create New Lease
+                                        </button>
                                     </div>
                                 )
-                            ) : (
-                                <div className="space-y-4 h-full flex flex-col">
-                                    <div className="flex flex-wrap gap-2 pt-1">
-                                        {unit.fittings?.length > 0 ? (
-                                            unit.fittings.map((fit, idx) => (
-                                                <span key={idx} className="bg-slate-800/40 border border-white/5 text-slate-400 text-[9px] font-black px-3 py-2 rounded-xl uppercase tracking-tight flex items-center gap-2">
-                                                    <CheckCircle2 className="w-3 h-3 text-indigo-500" />
-                                                    {fit}
-                                                </span>
-                                            ))
-                                        ) : (
-                                            <div className="w-full py-6 text-center border border-dashed border-white/5 rounded-2xl text-slate-600">
-                                                <p className="text-[9px] font-black uppercase tracking-widest">No inventory items listed</p>
+                            ) : activeSubTab === 'ledger' ? (
+                                <div className="space-y-5 pt-2">
+                                    <div className="space-y-3">
+                                        <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-2">
+                                            <Receipt className="w-3 h-3 text-emerald-500" /> Recent Rents
+                                        </p>
+                                        {history?.rents?.length > 0 ? history.rents.map((r, i) => (
+                                            <div key={i} className="bg-slate-950/40 border border-white/5 p-3 rounded-xl flex justify-between items-center text-[11px]">
+                                                <span className="text-white font-bold">{new Date(r.dueDate).toLocaleDateString([], { month: 'short', year: 'numeric' })} Bill</span>
+                                                <span className="text-emerald-400 font-black">{currency} {r.totalAmount}</span>
                                             </div>
-                                        )}
+                                        )) : <p className="text-[10px] text-slate-600 italic">No rent history.</p>}
                                     </div>
-                                    <Motion.button 
-                                        whileHover={{ scale: 1.02 }}
-                                        whileTap={{ scale: 0.98 }}
-                                        onClick={() => setShowInventoryModal(true)} 
-                                        className="w-full py-4 bg-white/5 hover:bg-white/10 rounded-2xl flex items-center justify-center gap-3 text-[10px] font-black uppercase text-slate-400 hover:text-white transition-all border border-white/5 mt-auto"
-                                    >
-                                        <PlusCircle className="w-4 h-4" /> Manage Catalog
-                                    </Motion.button>
+                                    <div className="space-y-3">
+                                        <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-2">
+                                            <Wrench className="w-3 h-3 text-amber-500" /> Maintenance
+                                        </p>
+                                        {history?.tasks?.length > 0 ? history.tasks.map((t, i) => (
+                                            <div key={i} className="bg-slate-950/40 border border-white/5 p-3 rounded-xl flex justify-between items-center text-[10px]">
+                                                <span className="text-white font-bold truncate max-w-[120px]">{t.task}</span>
+                                                <span className="text-slate-400 font-black uppercase text-[8px] px-2 py-0.5 bg-slate-800 rounded-lg">{t.status}</span>
+                                            </div>
+                                        )) : <p className="text-[10px] text-slate-600 italic">No tasks recorded.</p>}
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="space-y-4 h-full flex flex-col pt-2">
+                                    <div className="flex flex-wrap gap-2">
+                                        {unit.fittings?.length > 0 ? unit.fittings.map((fit, idx) => (
+                                            <span key={idx} className="bg-slate-800/40 border border-white/5 text-slate-400 text-[9px] font-black px-3 py-2 rounded-xl uppercase flex items-center gap-2">
+                                                <CheckCircle2 className="w-3 h-3 text-indigo-500" /> {fit}
+                                            </span>
+                                        )) : <p className="text-xs text-slate-600 italic">No inventory items.</p>}
+                                    </div>
+                                    <button onClick={() => setShowInventoryModal(true)} className="w-full mt-auto py-3 bg-slate-800 hover:bg-slate-700 text-slate-300 font-black rounded-xl uppercase tracking-widest text-[9px] border border-white/5 transition-all">
+                                        Manage Inventory
+                                    </button>
                                 </div>
                             )}
                         </Motion.div>
                     </AnimatePresence>
                 </div>
             </div>
+
             {showInventoryModal && (
-                <FittingsModal 
-                    fittings={unit.fittings || []} 
+                <InventoryModal 
+                    unit={unit} 
                     onClose={() => setShowInventoryModal(false)} 
-                    onSave={(newFittings) => { onUpdateFittings(newFittings); setShowInventoryModal(false); }} 
+                    onSave={(newInventory) => {
+                        onUpdateFittings(unit.id, newInventory);
+                        setShowInventoryModal(false);
+                    }} 
                 />
             )}
         </Motion.div>
