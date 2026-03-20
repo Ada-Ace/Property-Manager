@@ -1006,6 +1006,7 @@ function ManagerDashboard({ tenants, propertyUnits, utilityBills, tasks, tenantM
     const [editingTenant, setEditingTenant] = useState(null);
     const [showUnitModal, setShowUnitModal] = useState(false);
     const [editingUnit, setEditingUnit] = useState(null);
+    const [selectedUnitForLease, setSelectedUnitForLease] = useState(null);
 
     const totalRevenue = useMemo(() => (Array.isArray(tenants) ? tenants.reduce((a, b) => a + (Number(b?.baseRent) || 0), 0) : 0), [tenants]);
     const occupiedUnits = useMemo(() => (Array.isArray(propertyUnits) ? propertyUnits.filter(u => tenants.some(t => t.unit === u.unitNumber)).length : 0), [propertyUnits, tenants]);
@@ -1082,8 +1083,8 @@ function ManagerDashboard({ tenants, propertyUnits, utilityBills, tasks, tenantM
                                         onUpdateFittings={onUpdateFittings}
                                         onEditUnit={() => setEditingUnit(unit)}
                                         onDeleteUnit={() => onDeleteUnit(unit.id)}
-                                        onAddLease={() => { setEditingTenant(null); setShowLeaseModal(true); setEditingUnit(unit); }}
-                                        onEditLease={() => { setEditingTenant(tenant); setShowLeaseModal(true); setEditingUnit(unit); }}
+                                        onAddLease={() => { setEditingTenant(null); setSelectedUnitForLease(unit); setShowLeaseModal(true); }}
+                                        onEditLease={() => { setEditingTenant(tenant); setSelectedUnitForLease(unit); setShowLeaseModal(true); }}
                                         onUpdateLeaseDoc={onUpdateLeaseDoc}
                                         onMoveOut={() => onMoveOut(unit, tenant)}
                                     />
@@ -1110,12 +1111,20 @@ function ManagerDashboard({ tenants, propertyUnits, utilityBills, tasks, tenantM
 
             {showUnitModal && <UnitModal onClose={() => setShowUnitModal(false)} onSubmit={onAddUnit} />}
             {editingUnit && <UnitModal initialData={editingUnit} onClose={() => setEditingUnit(null)} onSubmit={(data) => { onEditUnit(data); setEditingUnit(null); }} />}
-            {showLeaseModal && <LeaseModal availableUnits={propertyUnits.filter(u => !tenants.some(t => t.unit === u.unitNumber))} onClose={() => setShowLeaseModal(false)} onSubmit={onAddTenant} />}
-            {editingTenant && <LeaseModal initialData={editingTenant} availableUnits={propertyUnits.filter(u => !tenants.some(t => t.unit === u.unitNumber) || u.unitNumber === editingTenant.unit)} onClose={() => setEditingTenant(null)} onSubmit={(data) => { 
-                if (data.id) onEditTenant(data);
-                else onAddTenant(data);
-                setEditingTenant(null); 
-            }} />}
+            {showLeaseModal && (
+                <LeaseModal 
+                    initialData={selectedUnitForLease ? { unit: selectedUnitForLease.unitNumber } : (editingTenant || {})}
+                    availableUnits={propertyUnits.filter(u => !tenants.some(t => t.unit === u.unitNumber) || (editingTenant && u.unitNumber === editingTenant.unit) || (selectedUnitForLease && u.unitNumber === selectedUnitForLease.unitNumber))} 
+                    onClose={() => { setShowLeaseModal(false); setEditingTenant(null); setSelectedUnitForLease(null); }} 
+                    onSubmit={async (data) => { 
+                        if (data.id || editingTenant) await onEditTenant(data);
+                        else await onAddTenant(data);
+                        setShowLeaseModal(false);
+                        setEditingTenant(null);
+                        setSelectedUnitForLease(null);
+                    }} 
+                />
+            )}
         </div>
     );
 }
