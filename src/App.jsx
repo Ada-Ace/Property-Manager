@@ -321,7 +321,8 @@ export default function App() {
     const [globalMessage, setGlobalMessage] = useState(null);
     const [properties, setProperties] = useState([]);
     const [tenantMessages, setTenantMessages] = useState([]);
-    const [showPropertySettings, setShowPropertySettings] = useState(false);
+    const [showPropertyModal, setShowPropertyModal] = useState(false);
+    const [propertyToEdit, setPropertyToEdit] = useState(null); // null means adding new
     const [syncStatus, setSyncStatus] = useState('offline'); // 'connecting', 'connected', 'error', 'offline'
     const [lastSyncError, setLastSyncError] = useState(null);
 
@@ -392,22 +393,26 @@ export default function App() {
         await API.saveToSheet('UPDATE', 'Vendors', vendor);
     };
 
-    const handleAddProperty = async () => {
-        const name = window.prompt('Enter New Property Name:');
-        if (name && name.trim()) {
-            const cleanName = name.trim();
-            // Prevent duplicate names
-            if (properties.some(p => p.name.toLowerCase() === cleanName.toLowerCase())) {
-                alert('A property with this name already exists.');
-                return;
-            }
-            const newProp = { id: `cloud-${Date.now()}`, name: cleanName, address: 'Set Address in Settings', currency: 'USD' };
-            setProperties(prev => [...prev, newProp]);
-            setActiveProperty(newProp.name);
-            await API.saveToSheet('ADD', 'Properties', newProp);
-            setGlobalMessage({ type: 'success', text: `Property "${cleanName}" Created` });
-            setTimeout(() => setGlobalMessage(null), 3000);
+    const handleAddProperty = () => {
+        setPropertyToEdit(null); // Clear for new
+        setShowPropertyModal(true);
+    };
+
+    const savePropertyDetails = async (propData) => {
+        const isNew = !propData.id;
+        const finalProp = isNew ? { ...propData, id: `cloud-${Date.now()}` } : propData;
+        
+        if (isNew) {
+            setProperties(prev => [...prev, finalProp]);
+        } else {
+            setProperties(prev => prev.map(p => p.id === finalProp.id ? finalProp : p));
         }
+        
+        setActiveProperty(finalProp.name);
+        await API.saveToSheet(isNew ? 'ADD' : 'UPDATE', 'Properties', finalProp);
+        setShowPropertyModal(false);
+        setGlobalMessage({ type: 'success', text: `Property "${finalProp.name}" ${isNew ? 'Registered' : 'Updated'}` });
+        setTimeout(() => setGlobalMessage(null), 3000);
     };
 
     const syncWithCloud = async (isBackground = false) => {
@@ -963,7 +968,11 @@ export default function App() {
                                 whileHover={{ scale: 1.05, rotate: 30 }}
                                 whileTap={{ scale: 0.95 }}
                                 title="Property Settings"
-                                onClick={() => setShowPropertySettings(true)}
+                                onClick={() => {
+                                    const current = properties.find(p => p.name === activeProperty) || { name: activeProperty, currency: 'USD' };
+                                    setPropertyToEdit(current);
+                                    setShowPropertyModal(true);
+                                }}
                                 className="p-2.5 text-slate-500 hover:text-indigo-400 bg-white/5 hover:bg-indigo-500/10 rounded-2xl border border-white/5 hover:border-indigo-500/20 transition-all"
                             >
                                 <Settings className="w-4 h-4" />
@@ -982,17 +991,16 @@ export default function App() {
                 </div>
             </nav>
 
-            {showPropertySettings && (
-                <PropertySettingsModal
-                    property={properties.find(p => p.name === activeProperty) || { name: activeProperty, currency: 'USD' }}
+            {showPropertyModal && (
+                <PropertyModal
+                    initialData={propertyToEdit}
                     apiStatus={{ 
                         url: API_URL, 
                         status: syncStatus, 
-                        lastSync: lastSyncTime,
                         error: lastSyncError
                     }}
-                    onClose={() => setShowPropertySettings(false)}
-                    onSave={(currency) => { updatePropertyCurrency(currency); setShowPropertySettings(false); }}
+                    onClose={() => setShowPropertyModal(false)}
+                    onSave={savePropertyDetails}
                 />
             )}
 
@@ -3246,6 +3254,144 @@ class ErrorBoundary extends React.Component {
         return this.props.children;
     }
 }
+
+function PropertyModal({ initialData, apiStatus, onClose, onSave }) {
+    const [form, setForm] = useState({
+        name: '',
+        address: '',
+        currency: 'USD',
+        ...initialData
+    });
+
+    const currentCurrencyInfo = ISO_CURRENCIES.find(c => c.code === form.currency);
+
+    return (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-6 sm:p-8 bg-slate-950/80 backdrop-blur-md overflow-hidden">
+            {/* Background Polish */}
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_10%,rgba(79,70,229,0.1),transparent_50%)]" />
+            
+            <Motion.div 
+                initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+                className="relative z-10 w-full max-w-lg bg-slate-900 rounded-[2.5rem] border border-white/10 shadow-2xl shadow-black/50 overflow-hidden"
+            >
+                {/* Header */}
+                <div className="p-8 border-b border-white/5">
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-4">
+                            <div className="p-3 bg-indigo-600/20 rounded-2xl border border-indigo-500/20">
+                                <Building2 className="w-5 h-5 text-indigo-400" />
+                            </div>
+                            <div>
+                                <h2 className="text-lg font-black text-white tracking-tight">
+                                    {initialData?.id ? 'Configure Property' : 'Register New Property'}
+                                </h2>
+                                <p className="text-[10px] text-slate-500 font-black uppercase tracking-[0.2em] mt-0.5">Asset & Legal Details</p>
+                            </div>
+                        </div>
+                        <Motion.button
+                            whileHover={{ scale: 1.1, rotate: 90 }}
+                            whileTap={{ scale: 0.9 }}
+                            onClick={onClose}
+                            className="p-2 text-slate-500 hover:text-white bg-white/5 rounded-xl border border-white/5 transition-all"
+                        >
+                            <X className="w-4 h-4" />
+                        </Motion.button>
+                    </div>
+                </div>
+
+                {/* Body */}
+                <div className="p-8 space-y-6 max-h-[70vh] overflow-y-auto no-scrollbar">
+                    <div className="grid grid-cols-1 gap-6">
+                        <div className="space-y-2">
+                            <label className="text-[10px] text-slate-500 font-black uppercase tracking-[0.25em] ml-1">Commercial Name</label>
+                            <input 
+                                required
+                                className="w-full bg-slate-800 border border-white/10 focus:border-indigo-500/50 rounded-2xl p-4 text-white text-sm font-bold outline-none transition-all placeholder:text-slate-600"
+                                placeholder="e.g. Skyline Towers"
+                                value={form.name}
+                                onChange={e => setForm({ ...form, name: e.target.value })}
+                            />
+                        </div>
+
+                        <div className="space-y-2">
+                            <label className="text-[10px] text-slate-500 font-black uppercase tracking-[0.25em] ml-1">Legal Address</label>
+                            <textarea
+                                required
+                                rows={2}
+                                className="w-full bg-slate-800 border border-white/10 focus:border-indigo-500/50 rounded-2xl p-4 text-white text-sm font-bold outline-none transition-all placeholder:text-slate-600"
+                                placeholder="Full street address, postal code, city"
+                                value={form.address}
+                                onChange={e => setForm({ ...form, address: e.target.value })}
+                            />
+                        </div>
+
+                        <div className="space-y-2">
+                            <label className="text-[10px] text-slate-500 font-black uppercase tracking-[0.25em] ml-1">Operating Currency</label>
+                            <select
+                                value={form.currency}
+                                onChange={e => setForm({ ...form, currency: e.target.value })}
+                                className="w-full bg-slate-800 border border-white/10 focus:border-indigo-500/40 rounded-2xl px-5 py-4 text-white font-black text-sm outline-none cursor-pointer transition-all appearance-none"
+                            >
+                                {ISO_CURRENCIES.map(c => (
+                                    <option key={c.code} value={c.code} className="bg-slate-900">{c.code} - {c.name}</option>
+                                ))}
+                            </select>
+                            <p className="mt-2 text-[9px] text-indigo-400/60 font-medium px-1">
+                                Base currency for all rents and reports: {currentCurrencyInfo?.name}
+                            </p>
+                        </div>
+                    </div>
+
+                    <div className="pt-6 border-t border-white/5">
+                        <h4 className="text-[10px] font-black text-slate-600 uppercase tracking-widest mb-4">Connectivity status</h4>
+                        <div className="bg-black/20 rounded-2xl p-4 space-y-3 border border-white/5">
+                            <div className="flex justify-between items-center">
+                                <span className="text-[9px] text-slate-500 font-bold uppercase">Sync Mode</span>
+                                <span className={`text-[9px] font-black uppercase ${apiStatus.status === 'connected' ? 'text-emerald-400' : 'text-red-400'}`}>
+                                    {apiStatus.status === 'connected' ? 'Cloud Integrated' : 'Maintenance Required'}
+                                </span>
+                            </div>
+                            <p className="text-[8px] text-slate-600 font-medium leading-relaxed italic mt-1">
+                                Changes are immediately pushed to your linked Google Sheet.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Footer */}
+                <div className="p-8 border-t border-white/5 flex gap-3">
+                    <Motion.button
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        onClick={onClose}
+                        className="flex-1 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest text-slate-400 bg-white/5 border border-white/5 hover:bg-white/10 transition-all font-black"
+                    >
+                        Back
+                    </Motion.button>
+                    <Motion.button
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        onClick={() => {
+                            if (!form.name || !form.address) {
+                                alert('Please provide name and address.');
+                                return;
+                            }
+                            onSave(form);
+                        }}
+                        className="flex-[2] py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest text-white bg-indigo-600 hover:bg-indigo-500 shadow-xl shadow-indigo-600/20 transition-all flex items-center justify-center gap-2"
+                    >
+                        <CheckCircle2 className="w-4 h-4" /> 
+                        {initialData?.id ? 'Apply Updates' : 'Confirm Registration'}
+                    </Motion.button>
+                </div>
+            </Motion.div>
+        </div>
+    );
+}
+
 // --- Property Settings Modal ---
 function PropertySettingsModal({ property, apiStatus, onClose, onSave }) {
     const [currency, setCurrency] = useState(property?.currency || 'USD');
