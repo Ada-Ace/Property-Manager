@@ -67,75 +67,16 @@ import {
 } from 'lucide-react';
 
 // --- Mock Initial Data ---
-const INITIAL_TENANTS = [
-    {
-        id: 'T1',
-        name: 'Alice Wong',
-        unit: '12-A',
-        email: 'alice@example.com',
-        mobile: '+1234567890',
-        password: 'password123',
-        baseRent: 2200,
-        deposit: 4400,
-        leaseStart: '2024-01-01',
-        leaseEnd: '2024-12-31',
-        maintenanceSelection: null,
-        utilityShare: 45.50,
-        notifications: [],
-        leaseDocument: null,
-        propertyName: 'Skyline Residency',
-        lastPaymentDate: '2024-03-05'
-    },
-    {
-        id: 'T2',
-        name: 'Bob Smith',
-        unit: '12-B',
-        email: 'bob@example.com',
-        mobile: '+1987654321',
-        password: 'password123',
-        baseRent: 1800,
-        deposit: 3600,
-        leaseStart: '2024-02-15',
-        leaseEnd: '2025-02-14',
-        maintenanceSelection: null,
-        utilityShare: 32.20,
-        notifications: [],
-        leaseDocument: 'lease_agreement_B.pdf',
-        propertyName: 'Skyline Residency'
-    },
-    {
-        id: 'T3',
-        name: 'Charlie Brown',
-        unit: '10-A',
-        email: 'charlie@example.com',
-        mobile: '+1122334455',
-        password: 'password123',
-        baseRent: 2500,
-        deposit: 5000,
-        leaseStart: '2024-03-01',
-        leaseEnd: '2025-02-28',
-        maintenanceSelection: null,
-        utilityShare: 15.00,
-        notifications: [],
-        leaseDocument: null,
-        propertyName: 'Uptown@Farrer'
-    }
-];
-
-const INITIAL_UNITS = [
-    { id: 'U1', unitNumber: '12-A', size: 850, expectedRent: 2200, status: 'Occupied', image: null, fittings: ['Aircon x2', 'Fridge (Samsung)', 'Washing Machine'], propertyName: 'Skyline Residency' },
-    { id: 'U2', unitNumber: '12-B', size: 720, expectedRent: 1800, status: 'Occupied', image: null, fittings: ['Aircon x1', 'Microwave'], propertyName: 'Skyline Residency' },
-    { id: 'U3', unitNumber: '14-C', size: 1100, expectedRent: 3100, status: 'Available', image: null, fittings: [], propertyName: 'Skyline Residency' },
-    { id: 'U4', unitNumber: '08-G', size: 650, expectedRent: 1550, status: 'Available', image: null, fittings: [], propertyName: 'Skyline Residency' },
-    { id: 'U5', unitNumber: '10-A', size: 900, expectedRent: 2500, status: 'Available', image: null, fittings: [], propertyName: 'Uptown@Farrer' }
-];
-
+const INITIAL_TENANTS = [];
+const INITIAL_UNITS = [];
 const INITIAL_PROPERTIES = [
-    { id: 'P1', name: 'Skyline Residency', address: '123 Skyline St', currency: 'USD' },
-    { id: 'P2', name: 'Uptown@Farrer', address: '456 Uptown Rd', currency: 'SGD' },
-    { id: 'P3', name: 'Emerald Heights', address: '789 Emerald Ave', currency: 'MYR' },
-    { id: 'P4', name: 'Oakwood Terrace', address: '101 Oakwood Lane', currency: 'GBP' }
+    { id: 'P1', name: 'Your First Property', address: 'Set Address in Settings', currency: 'USD' }
 ];
+const INITIAL_BILLS = [];
+const INITIAL_TASKS = [];
+const INITIAL_MESSAGES = [];
+const INITIAL_VENDORS = [];
+const INITIAL_PAYMENTS = [];
 
 // ISO 4217 currency list for property settings
 const ISO_CURRENCIES = [
@@ -170,9 +111,6 @@ const ISO_CURRENCIES = [
     { code: 'BDT', name: 'Bangladeshi Taka' },
     { code: 'VND', name: 'Vietnamese Dong' },
 ];
-
-
-const INITIAL_BILLS = [];
 
 // --- Global Configuration ---
 const APP_TIMEZONE = 'Asia/Kuala_Lumpur'; // GMT+8
@@ -434,16 +372,8 @@ export default function App() {
     const [lastSyncTime, setLastSyncTime] = useState(null);
     const [isRefreshing, setIsRefreshing] = useState(false);
 
-    const [vendors, setVendors] = useState([
-        { id: 'V1', name: 'Dr. Pipe Plumbing', mobile: '+12345678', type: 'Plumbing', rating: 4.8 },
-        { id: 'V2', name: 'VoltMaster Electrical', mobile: '+12345679', type: 'Electrical', rating: 4.9 },
-        { id: 'V3', name: 'CoolAir Solutions', mobile: '+12345680', type: 'HVAC', rating: 4.5 }
-    ]);
-
-    const [payments, setPayments] = useState([
-        { id: 'P1', tenantId: 'T1', amount: 2200, date: '2024-03-05', propertyName: 'Skyline Residency' },
-        { id: 'P2', tenantId: 'T2', amount: 1800, date: '2024-03-10', propertyName: 'Skyline Residency' }
-    ]);
+    const [vendors, setVendors] = useState(INITIAL_VENDORS);
+    const [payments, setPayments] = useState(INITIAL_PAYMENTS);
 
     const handleAddVendor = async (vendor) => {
         const newVendor = { ...vendor, propertyName: activeProperty };
