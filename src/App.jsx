@@ -320,13 +320,19 @@ const API = {
         }
         try {
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 6000); // 6s safety timeout
+            const timeoutId = setTimeout(() => controller.abort(), 15000); // 15s timeout for cold starts
             
-            const resp = await fetch(API_URL, { signal: controller.signal });
+            const resp = await fetch(API_URL, { 
+                signal: controller.signal,
+                method: 'GET',
+                mode: 'cors',
+                headers: { 'Accept': 'application/json' }
+            });
             clearTimeout(timeoutId);
             
-            if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-            return await resp.json();
+            if (!resp.ok) throw new Error(`HTTP ${resp.status} - Cloud Script Error`);
+            const content = await resp.json();
+            return content;
         } catch (err) {
             console.error('Cloud Sync Error (Using Offline Mode):', err);
             return null;
@@ -347,6 +353,8 @@ export default function App() {
     const [properties, setProperties] = useState([]);
     const [tenantMessages, setTenantMessages] = useState([]);
     const [showPropertySettings, setShowPropertySettings] = useState(false);
+    const [syncStatus, setSyncStatus] = useState('offline'); // 'connecting', 'connected', 'error', 'offline'
+    const [lastSyncError, setLastSyncError] = useState(null);
 
     // Get ISO 4217 currency for the currently active property
     const activeCurrency = useMemo(() => {
@@ -402,21 +410,23 @@ export default function App() {
 
     const syncWithCloud = async (isBackground = false) => {
         if (!API.isValid()) {
+            setSyncStatus('offline');
             if (!isBackground) {
                 // Fallback to local/demo data if no cloud URL
                 setProperties(INITIAL_PROPERTIES);
                 setTenants(INITIAL_TENANTS);
                 setPropertyUnits(INITIAL_UNITS);
                 setUtilityBills(INITIAL_BILLS);
-                setTenantMessages(INITIAL_MESSAGES);
+                setTenantMessages(INITIAL_MESSAGES || []);
                 setActiveProperty(INITIAL_PROPERTIES[0].name);
-                setTimeout(() => setIsLoading(false), 500); // Small delay for smooth entry
+                setTimeout(() => setIsLoading(false), 500); 
             }
             return;
         }
 
         if (!isBackground) setIsLoading(true);
         else setIsRefreshing(true);
+        setSyncStatus('connecting');
         
         try {
             const data = await API.getAllData();
@@ -433,6 +443,10 @@ export default function App() {
                 const rawBills = Array.isArray(data.bills) ? data.bills : [];
                 const rawTasks = Array.isArray(data.tasks) ? data.tasks : [];
                 const rawMessages = Array.isArray(data.messages) ? data.messages : [];
+
+                // Even if no properties are found, if we got a valid object, we are connected
+                setSyncStatus('connected');
+                setLastSyncTime(new Date());
 
                 if (actualProperties.length === 0) {
                     const foundNames = [...rawUnits, ...rawTenants, ...rawBills, ...rawTasks, ...rawMessages]
@@ -451,26 +465,35 @@ export default function App() {
                     setUtilityBills(rawBills);
                     setTasks(rawTasks);
                     setTenantMessages(rawMessages);
-                    setLastSyncTime(new Date());
                     
                     if (!activeProperty) {
                         setActiveProperty(actualProperties[0].name);
                     }
+                } else {
+                    // Successful connection but no data found in cloud
+                    if (!isBackground) {
+                        setProperties(INITIAL_PROPERTIES);
+                        setTenants(INITIAL_TENANTS);
+                    }
                 }
             } else {
-                // Handle success with no data or invalid data format returned
+                // API returned invalid format
+                setSyncStatus('error');
                 if (!isBackground) {
                     setProperties(INITIAL_PROPERTIES);
                     setTenants(INITIAL_TENANTS);
                 }
             }
         } catch (err) {
+            const errMsg = err.name === 'AbortError' ? 'Timeout (Cold Start)' : err.message;
             console.error('Core sync failure:', err);
+            setSyncStatus('error');
+            setLastSyncError(errMsg);
             if (!isBackground) {
-                setGlobalMessage({ type: 'error', text: "Cloud Sync Error - Using Demo Data" });
+                setGlobalMessage({ type: 'error', text: `Connection Failed: ${errMsg}` });
                 setProperties(INITIAL_PROPERTIES);
                 setTenants(INITIAL_TENANTS);
-                setActiveProperty(INITIAL_PROPERTIES[0].name);
+                if (!activeProperty) setActiveProperty(INITIAL_PROPERTIES[0].name);
             }
         } finally {
             setIsLoading(false);
@@ -642,6 +665,7 @@ export default function App() {
         setGlobalMessage({ type: 'info', text: "Creating lease in cloud..." });
         const res = await API.saveToSheet('ADD', 'Tenants', tenantData);
         
+        const unit = propertyUnits.find(u => u.unitNumber === newTenant.unit);
         if (unit) {
             await API.saveToSheet('UPDATE', 'Units', { ...unit, status: 'Occupied' });
         }
@@ -657,10 +681,23 @@ export default function App() {
 
     const editTenant = async (updatedTenant) => {
         setTenants(prev => prev.map(t => t.id === updatedTenant.id ? { ...t, ...updatedTenant } : t));
+        const oldTenant = tenants.find(t => t.id === updatedTenant.id);
         if (updatedTenant.unit) {
-            setPropertyUnits(prev => prev.map(u => u.unitNumber === updatedTenant.unit ? { ...u, status: 'Occupied' } : u));
-            const unit = propertyUnits.find(u => u.unitNumber === updatedTenant.unit);
-            if (unit) await API.saveToSheet('UPDATE', 'Units', { ...unit, status: 'Occupied' });
+            // Update local units state
+            setPropertyUnits(prev => prev.map(u => {
+                if (u.unitNumber === updatedTenant.unit) return { ...u, status: 'Occupied' };
+                if (oldTenant && oldTenant.unit === u.unitNumber && oldTenant.unit !== updatedTenant.unit) return { ...u, status: 'Available' };
+                return u;
+            }));
+
+            // Sync unit changes to cloud
+            const newUnit = propertyUnits.find(u => u.unitNumber === updatedTenant.unit);
+            if (newUnit) await API.saveToSheet('UPDATE', 'Units', { ...newUnit, status: 'Occupied' });
+            
+            if (oldTenant && oldTenant.unit !== updatedTenant.unit) {
+                const prevUnit = propertyUnits.find(u => u.unitNumber === oldTenant.unit);
+                if (prevUnit) await API.saveToSheet('UPDATE', 'Units', { ...prevUnit, status: 'Available' });
+            }
         }
         setGlobalMessage({ type: 'info', text: "Updating lease in cloud..." });
         const res = await API.saveToSheet('UPDATE', 'Tenants', updatedTenant);
@@ -747,17 +784,19 @@ export default function App() {
                             <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-2xl px-4 py-2.5 hover:bg-white/10 transition-all">
                                 <div className="flex flex-col items-end gap-0.5 pr-2 border-r border-white/10">
                                     <div className="flex items-center gap-1.5 leading-none">
-                                        <p className="text-[7px] text-slate-500 font-black uppercase tracking-tight">Cloud Link</p>
+                                        <p className={`text-[7px] font-black uppercase tracking-tight ${syncStatus === 'connected' ? 'text-emerald-400' : syncStatus === 'error' ? 'text-red-400' : 'text-slate-500'}`}>
+                                            {syncStatus === 'connected' ? 'Cloud Live' : syncStatus === 'error' ? 'Sync Error' : syncStatus === 'connecting' ? 'Connecting' : 'Offline Mode'}
+                                        </p>
                                         <button 
                                             onClick={() => syncWithCloud()} 
                                             title="Force Refresh Data"
-                                            className={`p-0.5 hover:scale-110 active:scale-95 transition-all ${isRefreshing ? 'animate-spin text-indigo-400' : 'text-slate-500 hover:text-emerald-400'}`}
+                                            className={`p-0.5 hover:scale-110 active:scale-95 transition-all ${isRefreshing || syncStatus === 'connecting' ? 'animate-spin text-indigo-400' : 'text-slate-500 hover:text-emerald-400'}`}
                                         >
                                             <RefreshCcw className="w-2.5 h-2.5" />
                                         </button>
                                     </div>
                                     <p className="text-[7px] text-slate-600 font-black uppercase tracking-tight tabular-nums">
-                                        {lastSyncTime ? lastSyncTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '...'}
+                                        {lastSyncTime ? `Last Updated: ${lastSyncTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : '— Local Cache Only'}
                                     </p>
                                 </div>
                                 <Building2 className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
@@ -797,6 +836,12 @@ export default function App() {
             {showPropertySettings && (
                 <PropertySettingsModal
                     property={properties.find(p => p.name === activeProperty) || { name: activeProperty, currency: 'USD' }}
+                    apiStatus={{ 
+                        url: API_URL, 
+                        status: syncStatus, 
+                        lastSync: lastSyncTime,
+                        error: lastSyncError
+                    }}
                     onClose={() => setShowPropertySettings(false)}
                     onSave={(currency) => { updatePropertyCurrency(currency); setShowPropertySettings(false); }}
                 />
@@ -2272,13 +2317,42 @@ function LeaseModal({ initialData, availableUnits, onClose, onSubmit }) {
                         <input type="number" className="w-full bg-slate-800 border-none rounded-xl p-3 text-white text-sm" placeholder="Deposit ($)" value={leaseForm.deposit} onChange={e => setLeaseForm({ ...leaseForm, deposit: Number(e.target.value) })} />
                     </div>
                     <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-1">
-                            <label className="text-[10px] text-slate-500 font-bold uppercase tracking-widest pl-1">Lease Start</label>
-                            <input required type="date" style={{ colorScheme: 'dark' }} className="w-full bg-slate-800 border-none rounded-xl p-3 text-white text-sm outline-none" value={leaseForm.leaseStart} onChange={e => setLeaseForm({ ...leaseForm, leaseStart: e.target.value })} />
+                        <div className="space-y-2">
+                            <label className="text-[10px] text-slate-500 font-black uppercase tracking-widest pl-1">Lease Start</label>
+                            <input 
+                                required 
+                                type="date" 
+                                style={{ colorScheme: 'dark' }} 
+                                className="w-full bg-slate-800 border border-white/5 focus:border-indigo-500/50 rounded-xl p-3 text-white text-sm outline-none transition-all" 
+                                value={leaseForm.leaseStart} 
+                                onChange={e => setLeaseForm({ ...leaseForm, leaseStart: e.target.value })} 
+                            />
                         </div>
-                        <div className="space-y-1">
-                            <label className="text-[10px] text-slate-500 font-bold uppercase tracking-widest pl-1">Lease End</label>
-                            <input required type="date" style={{ colorScheme: 'dark' }} className="w-full bg-slate-800 border-none rounded-xl p-3 text-white text-sm outline-none" value={leaseForm.leaseEnd} onChange={e => setLeaseForm({ ...leaseForm, leaseEnd: e.target.value })} />
+                        <div className="space-y-2">
+                            <div className="flex justify-between items-center px-1">
+                                <label className="text-[10px] text-slate-500 font-black uppercase tracking-widest">Lease End</label>
+                                <button 
+                                    type="button"
+                                    onClick={() => {
+                                        const baseDate = leaseForm.leaseEnd || leaseForm.leaseStart;
+                                        if (!baseDate) return;
+                                        const d = new Date(baseDate);
+                                        d.setMonth(d.getMonth() + 6);
+                                        setLeaseForm({ ...leaseForm, leaseEnd: d.toISOString().split('T')[0] });
+                                    }}
+                                    className="text-[8px] font-black text-indigo-400 hover:text-indigo-300 uppercase tracking-tighter bg-indigo-500/10 px-2 py-0.5 rounded-lg border border-indigo-500/20 transition-all active:scale-95"
+                                >
+                                    + 6 Months
+                                </button>
+                            </div>
+                            <input 
+                                required 
+                                type="date" 
+                                style={{ colorScheme: 'dark' }} 
+                                className="w-full bg-slate-800 border border-white/5 focus:border-indigo-500/50 rounded-xl p-3 text-white text-sm outline-none transition-all" 
+                                value={leaseForm.leaseEnd} 
+                                onChange={e => setLeaseForm({ ...leaseForm, leaseEnd: e.target.value })} 
+                            />
                         </div>
                     </div>
                     <button type="submit" className={`w-full py-4 text-white font-black rounded-2xl uppercase tracking-widest text-[10px] transition-all shadow-xl ${initialData?.id ? 'bg-indigo-600 hover:bg-indigo-500 shadow-indigo-600/20' : 'bg-emerald-600 hover:bg-emerald-500 shadow-emerald-500/20'}`}>
@@ -2483,9 +2557,9 @@ class ErrorBoundary extends React.Component {
     }
 }
 // --- Property Settings Modal ---
-function PropertySettingsModal({ property, onClose, onSave }) {
-    const [selectedCurrency, setSelectedCurrency] = useState(property?.currency || 'USD');
-    const currentCurrencyInfo = ISO_CURRENCIES.find(c => c.code === selectedCurrency);
+function PropertySettingsModal({ property, apiStatus, onClose, onSave }) {
+    const [currency, setCurrency] = useState(property?.currency || 'USD');
+    const currentCurrencyInfo = ISO_CURRENCIES.find(c => c.code === currency);
 
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
@@ -2527,33 +2601,46 @@ function PropertySettingsModal({ property, onClose, onSave }) {
                 </div>
 
                 {/* Body */}
-                <div className="p-8 space-y-6">
+                <div className="p-8 space-y-6 max-h-[70vh] overflow-y-auto custom-scrollbar">
                     <div>
                         <label className="text-[10px] text-slate-500 font-black uppercase tracking-[0.25em] mb-3 flex items-center gap-2">
                             <DollarSign className="w-3 h-3" /> Currency (ISO 4217)
                         </label>
                         <select
-                            value={selectedCurrency}
-                            onChange={e => setSelectedCurrency(e.target.value)}
+                            value={currency}
+                            onChange={e => setCurrency(e.target.value)}
                             className="w-full bg-slate-800 border border-white/10 hover:border-indigo-500/40 rounded-2xl px-5 py-4 text-white font-black text-sm outline-none cursor-pointer transition-all"
                         >
                             {ISO_CURRENCIES.map(c => (
-                                <option key={c.code} value={c.code} className="bg-slate-900">
-                                    {c.code} — {c.name}
-                                </option>
+                                <option key={c.code} value={c.code} className="bg-slate-900">{c.code} - {c.name}</option>
                             ))}
                         </select>
+                        <p className="mt-3 text-[9px] text-indigo-400/60 font-medium px-1 flex items-center gap-1.5">
+                            <Info className="w-3 h-3" />
+                            Selected: {currentCurrencyInfo?.name}
+                        </p>
+                    </div>
 
-                        {/* Live preview */}
-                        <div className="mt-4 bg-white/[0.03] rounded-2xl border border-white/5 p-5 flex items-center justify-between">
-                            <div>
-                                <p className="text-[9px] font-black text-slate-600 uppercase tracking-widest mb-1">Preview</p>
-                                <p className="text-white font-black text-sm">{currentCurrencyInfo?.name || selectedCurrency}</p>
+                    <div className="pt-6 border-t border-white/5">
+                        <h4 className="text-[10px] font-black text-slate-600 uppercase tracking-widest mb-4">Diagnostics</h4>
+                        <div className="bg-black/20 rounded-2xl p-4 space-y-3 border border-white/5">
+                            <div className="flex justify-between items-center">
+                                <span className="text-[9px] text-slate-500 font-bold uppercase">Cloud Sync Status</span>
+                                <span className={`text-[9px] font-black uppercase ${apiStatus.status === 'connected' ? 'text-emerald-400' : 'text-red-400'}`}>{apiStatus.status}</span>
                             </div>
-                            <div className="text-right">
-                                <p className="text-[9px] font-black text-slate-600 uppercase tracking-widest mb-1">Sample Amount</p>
-                                <p className="text-2xl font-black text-emerald-400 tracking-tighter">{selectedCurrency} 2,500</p>
+                            <div className="flex justify-between items-center overflow-hidden">
+                                <span className="text-[9px] text-slate-500 font-bold uppercase shrink-0 mr-4">Active Endpoint</span>
+                                <span className="text-[9px] text-slate-400 font-mono truncate">{apiStatus.url ? '.../' + apiStatus.url.split('/').pop() : 'NOT SET'}</span>
                             </div>
+                            {apiStatus.error && (
+                                <div className="p-2 bg-red-500/10 rounded-lg border border-red-500/20">
+                                    <p className="text-[8px] text-red-500 font-black uppercase tracking-widest">Last Error:</p>
+                                    <p className="text-[9px] text-red-300 font-medium leading-tight mt-1">{apiStatus.error}</p>
+                                </div>
+                            )}
+                            <p className="text-[8px] text-slate-600 font-medium leading-relaxed italic mt-2">
+                                Note: If you updated Vercel environment variables, a "Redeploy" is usually required to apply changes to the live site.
+                            </p>
                         </div>
                     </div>
                 </div>
@@ -2571,10 +2658,10 @@ function PropertySettingsModal({ property, onClose, onSave }) {
                     <Motion.button
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
-                        onClick={() => onSave(selectedCurrency)}
+                        onClick={() => onSave(currency)}
                         className="flex-2 flex-grow py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-widest text-white bg-indigo-600 hover:bg-indigo-500 shadow-xl shadow-indigo-600/20 transition-all flex items-center justify-center gap-2"
                     >
-                        <CheckCircle2 className="w-4 h-4" /> Save Currency
+                        <CheckCircle2 className="w-4 h-4" /> Save Settings
                     </Motion.button>
                 </div>
             </Motion.div>

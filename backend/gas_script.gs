@@ -68,12 +68,11 @@ function doPost(e) {
       const blob = Utilities.newBlob(bytes, contentType, fileName);
       const file = folder.createFile(blob);
       
-      // Set permissions: Anyone with link can view
       file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
       
       return ContentService.createTextOutput(JSON.stringify({ 
         success: true, 
-        url: file.getDownloadUrl().replace("?e=download", ""), // Clean download/preview link
+        url: file.getDownloadUrl().replace("?e=download", ""), 
         fileId: file.getId() 
       })).setMimeType(ContentService.MimeType.JSON);
     } catch (err) {
@@ -81,19 +80,20 @@ function doPost(e) {
     }
   }
 
-  // Handle Sheet Operations (Action: ADD or UPDATE)
+  // Handle Sheet Operations
   const sheet = ss.getSheetByName(sheetName);
   if (!sheet) return errorResponse("Sheet not found: " + sheetName);
 
+  // Get headers and define utility for case-insensitive lookup
+  const headers = sheet.getRange(1, 1, 1, Math.max(1, sheet.getLastColumn())).getValues()[0];
+  const findIdx = (name) => headers.findIndex(h => String(h).toLowerCase() === name.toLowerCase());
+
   if (action === "ADD") {
-    const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
     const newRow = headers.map(header => {
-      // Find matching key in data (case-insensitive)
       const dataKey = Object.keys(data).find(k => k.toLowerCase() === String(header).toLowerCase());
-      let val = dataKey ? data[dataKey] : undefined;
-      
+      let val = dataKey ? data[dataKey] : "";
       if (typeof val === 'object' && val !== null) val = JSON.stringify(val);
-      return val !== undefined ? val : "";
+      return val;
     });
     sheet.appendRow(newRow);
     return successResponse("Data added successfully");
@@ -101,49 +101,47 @@ function doPost(e) {
   
   if (action === "UPDATE") {
     const rows = sheet.getDataRange().getValues();
-    const headers = rows.shift();
-    const idIndex = headers.indexOf("id");
-    const nameIndex = headers.indexOf("name"); // Fallback for Settings persistence
+    const idIndex = findIdx("id");
+    const nameIndex = findIdx("name");
     
-    for (let i = 0; i < rows.length; i++) {
-        // Normalised comparison (trim + String + lowercase)
-        const normDataId = data.id ? String(data.id).trim().toLowerCase() : null;
-        const normRowId = rows[i][idIndex] ? String(rows[i][idIndex]).trim().toLowerCase() : null;
-        const normDataName = data.name ? String(data.name).trim().toLowerCase() : null;
-        const normRowName = nameIndex !== -1 ? String(rows[i][nameIndex]).trim().toLowerCase() : null;
+    // Normalised input data for comparison
+    const targetId = data.id ? String(data.id).trim().toLowerCase() : null;
+    const targetName = data.name ? String(data.name).trim().toLowerCase() : null;
+
+    for (let i = 1; i < rows.length; i++) { // Skip header row
+        const rowId = idIndex !== -1 ? String(rows[i][idIndex]).trim().toLowerCase() : null;
+        const rowName = nameIndex !== -1 ? String(rows[i][nameIndex]).trim().toLowerCase() : null;
         
-        const isPropertyMatch = (sheetName === "Properties" && normDataName && normRowName === normDataName);
-        const isIdMatch = (normDataId && normRowId === normDataId);
+        const isIdMatch = (targetId && rowId === targetId);
+        const isPropertyMatch = (sheetName === "Properties" && targetName && rowName === targetName);
 
         if (isIdMatch || isPropertyMatch) {
-        const range = sheet.getRange(i + 2, 1, 1, headers.length);
-        const updatedRow = headers.map((header, colIdx) => {
-          // Find the key in the data object that matches the header (case-insensitive)
-          const dataKey = Object.keys(data).find(k => k.toLowerCase() === String(header).toLowerCase());
-          let val = dataKey ? data[dataKey] : undefined;
-          
-          if (typeof val === 'object' && val !== null) val = JSON.stringify(val);
-          // Preserve existing value if not provided in update
-          return val !== undefined ? val : rows[i][colIdx];
-        });
-        range.setValues([updatedRow]);
-        return successResponse("Data updated successfully");
-      }
+            const updatedRow = headers.map((header, colIdx) => {
+                const dataKey = Object.keys(data).find(k => k.toLowerCase() === String(header).toLowerCase());
+                let val = dataKey ? data[dataKey] : undefined;
+                
+                if (typeof val === 'object' && val !== null) val = JSON.stringify(val);
+                // Preserve existing value if not provided in update
+                return val !== undefined ? val : rows[i][colIdx];
+            });
+            sheet.getRange(i + 1, 1, 1, headers.length).setValues([updatedRow]);
+            return successResponse("Data updated successfully");
+        }
     }
+    return errorResponse("Record not found to update (" + (targetId || targetName) + ")");
   }
 
-  // Handle DELETE Action
   if (action === "DELETE") {
-    // If it's the last row, getLastRow() - 1 will be 0. We need to handle that.
-    const lastRow = sheet.getLastRow();
-    if (lastRow <= 1) return errorResponse("Sheet empty");
+    const rows = sheet.getDataRange().getValues();
+    const idIndex = findIdx("id");
+    if (idIndex === -1) return errorResponse("No ID column found for deletion");
+
+    const targetId = String(data.id).trim().toLowerCase();
     
-    const rows = sheet.getRange(2, 1, lastRow - 1, headers.length).getValues();
-    const idIndex = headers.indexOf("id");
-    
-    for (let i = 0; i < rows.length; i++) {
-        if (String(rows[i][idIndex]) === String(data.id)) {
-            sheet.deleteRow(i + 2);
+    for (let i = 1; i < rows.length; i++) {
+        const rowId = String(rows[i][idIndex]).trim().toLowerCase();
+        if (rowId === targetId) {
+            sheet.deleteRow(i + 1);
             return successResponse("Deleted successfully from " + sheetName);
         }
     }
