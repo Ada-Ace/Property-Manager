@@ -59,6 +59,7 @@ Create a Google Sheet with the following **exact** tabs and headers:
 - **Messages**: `id`, `tenantId`, `content`, `timestamp`, `photoUrl`, `propertyName`
 - **Vendors**: `id`, `name`, `mobile`, `type`, `rating`, `email`, `propertyName`
 - **Properties**: `id`, `name`, `address`, `currency`
+- **Managers**: `id`, `name`, `mobile`, `password`
 
 ### 2. Backend API Deployment
 1. Go to **Extensions > Apps Script** in your Google Sheet.

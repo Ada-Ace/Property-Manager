@@ -9,6 +9,7 @@
  *    - Tasks (Headers: id, title, tenantId, status, dateOptions, propertyName)
  *    - Messages (Headers: id, tenantId, content, timestamp, photoUrl, propertyName)
  *    - Properties (Headers: id, name, address, currency)
+ *    - Managers (Headers: id, name, mobile, password)
  * 2. In Google Drive, create a folder for uploads and COPY THE FOLDER ID.
  * 3. In Google Sheets: Extensions > Apps Script.
  * 4. Paste this code and ADD YOUR FOLDER ID to the constant below.

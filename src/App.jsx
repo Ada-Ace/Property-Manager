@@ -77,6 +77,9 @@ const INITIAL_TASKS = [];
 const INITIAL_MESSAGES = [];
 const INITIAL_VENDORS = [];
 const INITIAL_PAYMENTS = [];
+const INITIAL_MANAGERS = [
+    { id: 'M1', name: 'Primary Admin', mobile: MANAGER_CREDENTIALS.mobile, password: MANAGER_CREDENTIALS.password }
+];
 
 // ISO 4217 currency list for property settings
 const ISO_CURRENCIES = [
@@ -374,6 +377,7 @@ export default function App() {
 
     const [vendors, setVendors] = useState(INITIAL_VENDORS);
     const [payments, setPayments] = useState(INITIAL_PAYMENTS);
+    const [managers, setManagers] = useState(INITIAL_MANAGERS);
 
     const handleAddVendor = async (vendor) => {
         const newVendor = { ...vendor, propertyName: activeProperty };
@@ -402,6 +406,7 @@ export default function App() {
                 setPropertyUnits(INITIAL_UNITS);
                 setUtilityBills(INITIAL_BILLS);
                 setTenantMessages(INITIAL_MESSAGES || []);
+                setManagers(INITIAL_MANAGERS);
                 setActiveProperty(INITIAL_PROPERTIES[0].name);
                 setTimeout(() => setIsLoading(false), 500); 
             }
@@ -428,6 +433,7 @@ export default function App() {
                 const rawTasks = Array.isArray(data.tasks) ? data.tasks : [];
                 const rawMessages = Array.isArray(data.messages) ? data.messages : [];
                 const rawPayments = Array.isArray(data.payments) ? data.payments : [];
+                const rawManagers = Array.isArray(data.managers) ? data.managers : [];
 
                 // Even if no properties are found, if we got a valid object, we are connected
                 setSyncStatus('connected');
@@ -451,6 +457,7 @@ export default function App() {
                     setTasks(rawTasks);
                     setTenantMessages(rawMessages);
                     setPayments(rawPayments.length > 0 ? rawPayments : payments);
+                    if (rawManagers.length > 0) setManagers(rawManagers);
                     
                     if (!activeProperty) {
                         setActiveProperty(actualProperties[0].name);
@@ -503,6 +510,16 @@ export default function App() {
         const inputMobileCleaned = cleanMobile(mobileInput);
         
         if (inputMobileCleaned === cleanMobile(MANAGER_CREDENTIALS.mobile) && password === MANAGER_CREDENTIALS.password) {
+            const firstProp = (Array.isArray(properties) && properties[0]?.name) || INITIAL_PROPERTIES[0]?.name;
+            setActiveProperty(firstProp);
+            setView('manager');
+            setIsLoading(false);
+            return { success: true };
+        }
+
+        // Check Dynamic Managers from Cloud
+        const cloudManager = managers.find(m => cleanMobile(m.mobile) === inputMobileCleaned && m.password === password);
+        if (cloudManager) {
             const firstProp = (Array.isArray(properties) && properties[0]?.name) || INITIAL_PROPERTIES[0]?.name;
             setActiveProperty(firstProp);
             setView('manager');
