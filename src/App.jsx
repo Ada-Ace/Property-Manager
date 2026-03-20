@@ -58,6 +58,7 @@ import {
     PieChart,
     LayoutGrid,
     MessageCircle,
+    Activity,
     RefreshCcw,
     UploadCloud,
     TrendingUp,
