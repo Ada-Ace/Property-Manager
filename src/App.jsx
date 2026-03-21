@@ -960,11 +960,9 @@ export default function App() {
                             <Home className="w-5 h-5 text-white" />
                         </div>
                         <div className="flex flex-col leading-none">
-                            <span className="text-white font-black text-base tracking-tight">
-                                {import.meta.env.VITE_APP_NAME || "MDO"}
-                                <span className="text-indigo-400 font-light italic ml-1 text-sm">Pro</span>
+                            <span className="text-white font-black text-base tracking-tight uppercase">
+                                My PropMan
                             </span>
-                            <span className="text-[9px] text-slate-600 font-black uppercase tracking-[0.2em] mt-0.5">Enterprise Suite</span>
                         </div>
                     </div>
 
