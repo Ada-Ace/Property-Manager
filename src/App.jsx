@@ -946,13 +946,13 @@ export default function App() {
                     </Motion.div>
 
                     <div className="text-center space-y-3">
-                        <h2 className="text-white font-black text-2xl italic tracking-tighter uppercase">Initializing MDO...</h2>
+                        <h2 className="text-white font-black text-2xl tracking-tighter uppercase">Initializing MDO...</h2>
                         <div className="flex items-center justify-center gap-3">
                             <div className="w-1.5 h-1.5 bg-indigo-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
                             <div className="w-1.5 h-1.5 bg-indigo-500 rounded-full animate-bounce" style={{ animationDelay: '200ms' }} />
                             <div className="w-1.5 h-1.5 bg-indigo-500 rounded-full animate-bounce" style={{ animationDelay: '400ms' }} />
                         </div>
-                        <p className="text-slate-500 text-[9px] uppercase font-black tracking-[0.4em] opacity-60">Syncing Cloud Properties & Assets</p>
+                        <p className="text-slate-500 text-[9px] uppercase font-black tracking-[0.4em] opacity-60">Aim. Do. Own. &bull; Syncing Cloud Assets</p>
                     </div>
                     
                     <div className="mt-12 w-48 h-1 bg-white/5 rounded-full overflow-hidden relative">
@@ -3630,8 +3630,8 @@ function LoginPage({ onLogin }) {
                             <span className="absolute text-white text-3xl font-black select-none pointer-events-none drop-shadow-2xl">M</span>
                         </div>
                     </Motion.div>
-                    <h1 className="text-6xl font-black text-white italic tracking-tighter mb-3 leading-none uppercase">MDO</h1>
-                    <p className="text-slate-500 font-black uppercase tracking-[0.4em] text-[10px] opacity-70 italic">Aim. Do. Own.</p>
+                    <h1 className="text-6xl font-black text-white tracking-tighter mb-3 leading-none uppercase">MDO</h1>
+                    <p className="text-slate-500 font-black uppercase tracking-[0.4em] text-[10px] opacity-70">Aim. Do. Own.</p>
                 </div>
 
                 <div className="premium-card p-12 rounded-[3.5rem] space-y-8">
