@@ -952,7 +952,7 @@ export default function App() {
                             <div className="w-1.5 h-1.5 bg-indigo-500 rounded-full animate-bounce" style={{ animationDelay: '200ms' }} />
                             <div className="w-1.5 h-1.5 bg-indigo-500 rounded-full animate-bounce" style={{ animationDelay: '400ms' }} />
                         </div>
-                        <p className="text-slate-500 text-[9px] uppercase font-black tracking-[0.4em] opacity-60">Command Your Day &bull; Syncing Cloud Assets</p>
+                        <p className="text-slate-500 text-[9px] uppercase font-black tracking-[0.4em] opacity-60">Command Your Day &bull; MyDay OS</p>
                     </div>
                     
                     <div className="mt-12 w-48 h-1 bg-white/5 rounded-full overflow-hidden relative">
