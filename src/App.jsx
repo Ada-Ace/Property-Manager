@@ -61,6 +61,7 @@ import {
     MessageCircle,
     Activity,
     RefreshCcw,
+    Terminal,
     UploadCloud,
     TrendingUp,
     History,
