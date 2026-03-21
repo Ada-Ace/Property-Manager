@@ -25,14 +25,18 @@ function doGet(e) {
   
   const sheets = ss.getSheets();
   sheets.forEach(sheet => {
-    const sheetName = sheet.getName();
+    // Normalise sheet name to prevent mismatch (e.g. "Managers " vs "managers")
+    const sheetName = sheet.getName().toLowerCase().trim();
     const rows = sheet.getDataRange().getValues();
     const headers = rows.shift();
     
     if (headers && headers.length > 0) {
-      data[sheetName.toLowerCase()] = rows.map(row => {
+      // Normalise headers to lowercase and trim
+      const cleanHeaders = headers.map(h => String(h).toLowerCase().trim());
+      
+      data[sheetName] = rows.map(row => {
         const obj = {};
-        headers.forEach((header, index) => {
+        cleanHeaders.forEach((header, index) => {
           let val = row[index];
           // Parse JSON strings if needed
           if (typeof val === 'string' && (val.startsWith('[') || val.startsWith('{'))) {
@@ -43,7 +47,7 @@ function doGet(e) {
         return obj;
       });
     } else {
-      data[sheetName.toLowerCase()] = [];
+      data[sheetName] = [];
     }
   });
 

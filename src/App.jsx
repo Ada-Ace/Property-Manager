@@ -128,9 +128,18 @@ const APP_TIMEZONE = 'Asia/Kuala_Lumpur'; // GMT+8
 const LOCALE = 'en-MY'; // Or your preferred region for GMT+8
 
 // --- Helper Functions ---
+const cleanMobile = (str) => String(str || '').replace(/[^\d]/g, ''); // Digits Only for max compatibility
+
+const findCollection = (payload, name) => {
+    if (!payload || typeof payload !== 'object') return [];
+    const normalizedName = name.toLowerCase().trim();
+    // Try to find the key case-insensitively (handles "Managers" vs "managers" vs "Managers ")
+    const key = Object.keys(payload).find(k => k.toLowerCase().trim() === normalizedName);
+    return key ? (Array.isArray(payload[key]) ? payload[key] : []) : [];
+};
+
 const getLocalDate = () => {
     try {
-        // More robust way to get a UTC-based date for specific timezone comparison
         const d = new Date();
         return new Date(d.toLocaleString("en-US", { timeZone: APP_TIMEZONE }));
     } catch (e) {
@@ -483,17 +492,22 @@ export default function App() {
                 setSyncStatus('connected');
                 setLastSyncTime(new Date());
 
-                if (actualProperties.length === 0) {
-                    const foundNames = [...rawUnits, ...rawTenants, ...rawBills, ...rawTasks, ...rawMessages]
-                        .map(item => item?.propertyName)
-                        .filter(Boolean)
-                        .map(n => String(n).trim());
-                    
-                    const uniqueNames = Array.from(new Set(foundNames));
-                    actualProperties = uniqueNames.map((name, idx) => ({ id: generateId('PRP'), name, address: 'Synced Property' }));
-                }
+                // DIAGNOSTIC LOG (F12 Console): See exactly what cloud data structure looks like
+                console.log('--- Sync Snapshot ---', {
+                    managers: data.managers ? data.managers.length : 'MISSING TAB',
+                    keys: Object.keys(data)
+                });
 
-                // Always sync all collections regardless of properties existence
+                // Robustly Extract Collections (Keys are now lowercased & trimmed from GAS)
+                const rawUnits = findCollection(data, 'units');
+                const rawTenants = findCollection(data, 'tenants');
+                const rawBills = findCollection(data, 'bills');
+                const rawTasks = findCollection(data, 'tasks');
+                const rawMessages = findCollection(data, 'messages');
+                const rawPayments = findCollection(data, 'payments');
+                const rawManagers = findCollection(data, 'managers');
+
+                // Update Local UI States
                 setTenants(rawTenants);
                 setPropertyUnits(rawUnits);
                 setUtilityBills(rawBills);
@@ -504,14 +518,13 @@ export default function App() {
 
                 if (actualProperties.length > 0) {
                     setProperties(actualProperties);
-                    if (!activeProperty) {
-                        setActiveProperty(actualProperties[0].name);
-                    }
+                    if (!activeProperty) setActiveProperty(actualProperties[0].name);
                 } else {
-                    // Connected but no properties found - keep initial properties for start-up
                     setProperties(INITIAL_PROPERTIES);
                     if (!activeProperty) setActiveProperty(INITIAL_PROPERTIES[0].name);
                 }
+                setSyncStatus('connected');
+                setLastSyncTime(new Date());
             } else {
                 // API returned invalid format
                 setSyncStatus('error');
@@ -544,30 +557,31 @@ export default function App() {
         return () => clearInterval(interval);
     }, []);
 
-    const handleLogin = (mobileInput, password) => {
-        // Strip out any non-numeric/plus characters to make matching robust
-        const cleanMobile = (str) => String(str || '').replace(/[^\d+]/g, '');
-        const inputMobileCleaned = cleanMobile(mobileInput);
-        
-        if (inputMobileCleaned === cleanMobile(MANAGER_CREDENTIALS.mobile) && password === MANAGER_CREDENTIALS.password) {
-            const activeProps = Array.isArray(properties) ? properties.filter(p => !p.isArchived) : [];
-            const firstProp = (activeProps.length > 0 && activeProps[0]?.name) || INITIAL_PROPERTIES[0]?.name;
-            setActiveProperty(firstProp);
-            setActiveManager({ name: 'Primary Admin' });
+    const handleLogin = (mobileInput, passwordInput) => {
+        // Deep stringification and trimming for robust matching
+        const inputMobile = cleanMobile(mobileInput);
+        const inputPass = String(passwordInput || '').trim();
+
+        // 1. Check Root Admin (Environment Variables)
+        const rootMobile = cleanMobile(MANAGER_CREDENTIALS.mobile);
+        const rootPass = String(MANAGER_CREDENTIALS.password || '').trim();
+
+        if (inputMobile === rootMobile && inputPass === rootPass && rootMobile.length > 5) {
             setView('manager');
-            setIsLoading(false);
+            setActiveManager({ name: 'Root Administrator' });
             return { success: true };
         }
 
-        // Check Dynamic Managers from Cloud
-        const cloudManager = managers.find(m => cleanMobile(m.mobile) === inputMobileCleaned && m.password === password);
+        // 2. Check Cloud Managers (Fetched from Google Sheet)
+        const cloudManager = managers.find(m => {
+            const mMobile = cleanMobile(m.mobile);
+            const mPass = String(m.password || '').trim();
+            return mMobile === inputMobile && mPass === inputPass;
+        });
+
         if (cloudManager) {
-            const activeProps = Array.isArray(properties) ? properties.filter(p => !p.isArchived) : [];
-            const firstProp = (activeProps.length > 0 && activeProps[0]?.name) || INITIAL_PROPERTIES[0]?.name;
-            setActiveProperty(firstProp);
             setActiveManager({ name: cloudManager.name });
             setView('manager');
-            setIsLoading(false);
             return { success: true };
         }
 
