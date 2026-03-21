@@ -2599,7 +2599,7 @@ function TenantDashboard({ tenant, unit, tenantMessages = [], onSendMessage, cur
         return (
             <div className="flex flex-col items-center justify-center py-40">
                 <div className="w-12 h-12 border-4 border-indigo-500/20 border-t-indigo-500 rounded-full animate-spin mb-4"></div>
-                <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest animate-pulse">Syncing Lease Profile...</p>
+                <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest animate-pulse">Accessing MDO Resident Portal...</p>
             </div>
         );
     }
@@ -2609,7 +2609,7 @@ function TenantDashboard({ tenant, unit, tenantMessages = [], onSendMessage, cur
         <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 pb-2 border-b border-white/5">
                 <div>
-                    <h2 className="text-4xl font-black text-white tracking-tighter italic">Howdy, {String(tenant.name || 'Tenant').split(' ')[0]}</h2>
+                    <h2 className="text-4xl font-black text-white tracking-tighter italic">Greetings, {String(tenant.name || 'Resident').split(' ')[0]}</h2>
                     <div className="flex items-center gap-4 mt-2">
                         <div className="flex items-center gap-2 bg-indigo-500/10 px-3 py-1 rounded-full border border-indigo-500/20">
                             <Home className="w-3.5 h-3.5 text-indigo-400" />
@@ -2627,7 +2627,7 @@ function TenantDashboard({ tenant, unit, tenantMessages = [], onSendMessage, cur
                     className="bg-slate-900 border border-white/10 text-slate-300 px-5 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 hover:bg-slate-800 hover:text-white transition-all"
                 >
                     <MessageSquare className="w-4 h-4 text-indigo-400" />
-                    Message Manager
+                    Contact Assistant
                 </button>
             </div>
 
@@ -2681,7 +2681,7 @@ function TenantDashboard({ tenant, unit, tenantMessages = [], onSendMessage, cur
                         onClick={() => setShowMsgModal(true)}
                         className="w-full bg-indigo-600 text-white font-black py-4 md:py-5 rounded-2xl hover:bg-indigo-500 transition-all shadow-xl shadow-indigo-600/20 text-[11px] md:text-xs uppercase tracking-widest mt-8 flex items-center justify-center gap-2 active:scale-95"
                     >
-                        Upload Proof of Rent Payment <ArrowUpRight className="w-5 h-5" />
+                        Verify my Rent Payment <ArrowUpRight className="w-5 h-5" />
                     </button>
                 </div>
 
@@ -2751,7 +2751,7 @@ function TenantDashboard({ tenant, unit, tenantMessages = [], onSendMessage, cur
                     <div>
                         <h3 className="text-xl font-black text-white italic flex items-center gap-3">
                             <MessageSquare className="w-5 h-5 text-indigo-500" />
-                            My Support Tickets
+                            My Service Requests
                         </h3>
                         <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 mt-1">Communication Log</p>
                     </div>
@@ -2760,7 +2760,7 @@ function TenantDashboard({ tenant, unit, tenantMessages = [], onSendMessage, cur
                         className="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 transition-all shadow-xl shadow-indigo-500/20"
                     >
                         <PlusCircle className="w-3.5 h-3.5" />
-                        New Request
+                        New Assistance Request
                     </button>
                 </div>
 
