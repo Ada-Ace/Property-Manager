@@ -1253,12 +1253,14 @@ function ManagerDashboard({ activeProperty, tenants, payments, propertyUnits, ut
                 onSubmit={editingVendor ? handleUpdateVendor : handleAddVendor} 
                 editingVendor={editingVendor} 
             />
-            <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <StatCard index={0} title="Monthly Revenue" value={cur(totalRevenue)} icon={<CreditCard className="text-emerald-400 group-hover:text-emerald-300 transition-colors" />} />
-                <StatCard index={1} title="Occupancy Rate" value={totalUnits > 0 ? `${Math.round((occupiedUnits / totalUnits) * 100)}%` : '0%'} icon={<Users className="text-blue-400 group-hover:text-blue-300 transition-colors" />} />
-                <StatCard index={2} title="Available Units" value={vacantUnits || 0} icon={<Building2 className="text-sky-400 group-hover:text-sky-300 transition-colors" />} />
-                <StatCard index={3} title="Active Maintenance" value={(tasksCount || 0).toString()} icon={<Wrench className="text-amber-400 group-hover:text-amber-300 transition-colors" />} />
-            </div>
+            <CompactStatsBar 
+                stats={[
+                    { title: "Revenue", value: cur(totalRevenue), icon: <CreditCard className="text-emerald-400" /> },
+                    { title: "Occupancy", value: totalUnits > 0 ? `${Math.round((occupiedUnits / totalUnits) * 100)}%` : '0%', icon: <Users className="text-blue-400" /> },
+                    { title: "Available", value: vacantUnits || 0, icon: <Building2 className="text-sky-400" /> },
+                    { title: "Maintenance", value: (tasksCount || 0).toString(), icon: <Wrench className="text-amber-400" /> }
+                ]}
+            />
 
             <div className="hidden md:flex bg-slate-900/40 p-1 rounded-2xl border border-white/5 w-full md:w-fit overflow-x-auto no-scrollbar snap-x relative backdrop-blur-md">
                 {(Array.isArray(tenants) ? [
@@ -3509,7 +3511,28 @@ function LeaseModal({ initialData, availableUnits, onClose, onSubmit }) {
     );
 }
 
+function CompactStatsBar({ stats }) {
+    return (
+        <div className="sticky top-[72px] z-30 -mx-4 md:-mx-12 px-4 md:px-12 py-3 bg-slate-950/40 backdrop-blur-xl border-b border-white/5 shadow-2xl shadow-black/20 overflow-x-auto no-scrollbar snap-x">
+            <div className="flex items-center gap-6 md:gap-12 min-w-max">
+                {stats.map((stat, idx) => (
+                    <div key={idx} className="flex items-center gap-3 snap-start group">
+                        <div className="p-2 bg-white/5 rounded-lg border border-white/5 group-hover:bg-indigo-500/10 group-hover:border-indigo-500/20 transition-all">
+                            {React.cloneElement(stat.icon, { className: "w-3.5 h-3.5" })}
+                        </div>
+                        <div className="flex flex-col">
+                            <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest leading-none mb-1 group-hover:text-slate-400 transition-colors">{stat.title}</span>
+                            <span className="text-sm font-black text-white italic tracking-tighter leading-none group-hover:text-indigo-400 transition-colors">{stat.value}</span>
+                        </div>
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+}
+
 function StatCard({ title, value, icon, index, trend }) {
+    // Legacy big card if needed elsewhere, but currently replaced by compact bar
     return (
         <Motion.div 
             initial={{ opacity: 0, y: 20 }}
