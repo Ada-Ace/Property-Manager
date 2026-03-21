@@ -3593,7 +3593,7 @@ function LoginPage({ onLogin }) {
                     >
                         <div className="relative flex items-center justify-center">
                             <Shield className="w-20 h-20 text-white fill-indigo-600" strokeWidth={3} />
-                            <span className="absolute text-white text-3xl font-black italic select-none pointer-events-none drop-shadow-2xl">M</span>
+                            <span className="absolute text-white text-3xl font-black select-none pointer-events-none drop-shadow-2xl">M</span>
                         </div>
                     </Motion.div>
                     <h1 className="text-6xl font-black text-white italic tracking-tighter mb-3 leading-none uppercase">MDO</h1>
