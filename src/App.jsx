@@ -493,25 +493,24 @@ export default function App() {
                     actualProperties = uniqueNames.map((name, idx) => ({ id: generateId('PRP'), name, address: 'Synced Property' }));
                 }
 
+                // Always sync all collections regardless of properties existence
+                setTenants(rawTenants);
+                setPropertyUnits(rawUnits);
+                setUtilityBills(rawBills);
+                setTasks(rawTasks);
+                setTenantMessages(rawMessages);
+                setPayments(rawPayments.length > 0 ? rawPayments : payments);
+                setManagers(rawManagers.length > 0 ? rawManagers : managers);
+
                 if (actualProperties.length > 0) {
                     setProperties(actualProperties);
-                    setTenants(rawTenants);
-                    setPropertyUnits(rawUnits);
-                    setUtilityBills(rawBills);
-                    setTasks(rawTasks);
-                    setTenantMessages(rawMessages);
-                    setPayments(rawPayments.length > 0 ? rawPayments : payments);
-                    if (rawManagers.length > 0) setManagers(rawManagers);
-                    
                     if (!activeProperty) {
                         setActiveProperty(actualProperties[0].name);
                     }
                 } else {
-                    // Successful connection but no data found in cloud
-                    if (!isBackground) {
-                        setProperties(INITIAL_PROPERTIES);
-                        setTenants(INITIAL_TENANTS);
-                    }
+                    // Connected but no properties found - keep initial properties for start-up
+                    setProperties(INITIAL_PROPERTIES);
+                    if (!activeProperty) setActiveProperty(INITIAL_PROPERTIES[0].name);
                 }
             } else {
                 // API returned invalid format
@@ -546,9 +545,6 @@ export default function App() {
     }, []);
 
     const handleLogin = (mobileInput, password) => {
-        // Force-clear landing delay if logging in manually
-        setIsLoading(false); 
-        
         // Strip out any non-numeric/plus characters to make matching robust
         const cleanMobile = (str) => String(str || '').replace(/[^\d+]/g, '');
         const inputMobileCleaned = cleanMobile(mobileInput);
@@ -923,9 +919,17 @@ export default function App() {
         }
     };
 
+    if (isLoading && syncStatus === 'connecting') {
+        return (
+            <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-6">
+                <div className="w-12 h-12 border-4 border-indigo-500/20 border-t-indigo-500 rounded-full animate-spin mb-6"></div>
+                <h2 className="text-white font-black text-xl italic tracking-tighter mb-2">Syncing with Cloud...</h2>
+                <p className="text-slate-500 text-[10px] uppercase font-black tracking-[0.3em]">Preparing your properties</p>
+            </div>
+        );
+    }
+
     if (view === 'login') return <LoginPage onLogin={handleLogin} />;
-    
-    // Property selection view removed as requested - admins now go direct
 
     return (
         <div className="min-h-screen bg-slate-950 text-slate-200 font-sans selection:bg-indigo-500/30 premium-gradient selection:text-white">
