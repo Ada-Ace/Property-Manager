@@ -69,14 +69,9 @@ import {
 
 // --- System Credentials & Configuration ---
 const MANAGER_CREDENTIALS = {
-    email: import.meta.env.VITE_MANAGER_EMAIL || 'admin@propmanage.com',
-    password: import.meta.env.VITE_MANAGER_PASSWORD || 'admin',
-    mobile: import.meta.env.VITE_MANAGER_MOBILE || '+1555000111'
-};
-
-const TENANT_DEMO_CREDENTIALS = {
-    mobile: import.meta.env.VITE_TENANT_MOBILE || '+1555111222',
-    password: import.meta.env.VITE_TENANT_PASSWORD || 'tenant'
+    email: import.meta.env.VITE_MANAGER_EMAIL,
+    password: import.meta.env.VITE_MANAGER_PASSWORD,
+    mobile: import.meta.env.VITE_MANAGER_MOBILE
 };
 
 // --- Mock Initial Data ---
@@ -580,17 +575,7 @@ export default function App() {
             return { success: true };
         }
 
-        // --- NEW: Tenant Demo Credentials Access ---
-        if (inputMobileCleaned === cleanMobile(TENANT_DEMO_CREDENTIALS.mobile) && password === TENANT_DEMO_CREDENTIALS.password) {
-            const firstTenant = Array.isArray(tenants) && tenants.length > 0 ? tenants[0] : null;
-            if (firstTenant) {
-                setActiveTenantId(firstTenant.id);
-                setActiveProperty(firstTenant.propertyName);
-                setView('tenant');
-                setIsLoading(false);
-                return { success: true };
-            }
-        }
+        // Main login logic continues...
         
         const tenant = tenants.find(t => cleanMobile(t.mobile) === inputMobileCleaned && t.password === password);
         if (tenant) {
@@ -3629,13 +3614,6 @@ function LoginPage({ onLogin }) {
                         </Motion.button>
                     </form>
 
-                    <div className="pt-8 border-t border-white/5 flex flex-col items-center">
-                        <p className="text-[9px] text-slate-700 font-black uppercase tracking-widest mb-6">Simulation access</p>
-                        <div className="flex gap-4 w-full">
-                            <button type="button" onClick={() => { setMobile('+1555000111'); setPassword('admin') }} className="flex-1 py-4 rounded-2xl bg-indigo-500/5 text-indigo-400 text-[10px] font-black border border-indigo-500/10 hover:bg-indigo-600 hover:text-white transition-all uppercase tracking-tighter">Admin Portal</button>
-                            <button type="button" onClick={() => { setMobile('+1234567890'); setPassword('password123') }} className="flex-1 py-4 rounded-2xl bg-emerald-500/5 text-emerald-400 text-[10px] font-black border border-emerald-500/10 hover:bg-emerald-600 hover:text-white transition-all uppercase tracking-tighter">Tenant View</button>
-                        </div>
-                    </div>
                 </div>
             </Motion.div>
         </div>
