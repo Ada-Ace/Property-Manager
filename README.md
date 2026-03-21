@@ -1,4 +1,4 @@
-# MDO - MyDay, all in One
+# MDO - Aim. Do. Own.
 
 A modern, high-performance property management application built with **React**, **Vite**, and **Framer Motion**. Optimized for real-time tracking, financial auditing, and tenant communication.
 

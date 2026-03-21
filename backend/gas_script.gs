@@ -1,5 +1,5 @@
 /**
- * MDO - MyDay, all in One
+ * MDO - Aim. Do. Own.
  * 
  * Instructions:
  * 1. Create a Google Sheet with the following tabs (ALL CAPS):

@@ -3593,7 +3593,7 @@ function LoginPage({ onLogin }) {
                         <ShieldCheck className="w-12 h-12 text-white" />
                     </Motion.div>
                     <h1 className="text-6xl font-black text-white italic tracking-tighter mb-3 leading-none uppercase">MDO</h1>
-                    <p className="text-slate-500 font-black uppercase tracking-[0.4em] text-[10px] opacity-70 italic">MyDay, all in One</p>
+                    <p className="text-slate-500 font-black uppercase tracking-[0.4em] text-[10px] opacity-70 italic">Aim. Do. Own.</p>
                 </div>
 
                 <div className="premium-card p-12 rounded-[3.5rem] space-y-8">
