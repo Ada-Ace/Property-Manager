@@ -348,6 +348,7 @@ export default function App() {
     const [syncStatus, setSyncStatus] = useState('offline'); // 'connecting', 'connected', 'error', 'offline'
     const [lastSyncError, setLastSyncError] = useState(null);
     const [showPropertyPicker, setShowPropertyPicker] = useState(false);
+    const [activeTabForNav, setActiveTabForNav] = useState('rents');
 
     // Get ISO 4217 currency for the currently active property
     const activeCurrency = useMemo(() => {
@@ -1148,6 +1149,8 @@ export default function App() {
                                     onMoveOut={handleMoveOut}
                                     onUpdateMessage={handleUpdateMessage}
                                     activeManager={activeManager}
+                                    activeTab={activeTabForNav}
+                                    setActiveTab={setActiveTabForNav}
                                 />
                             </ErrorBoundary>
                         ) : (
@@ -1162,14 +1165,64 @@ export default function App() {
                     </Motion.div>
                 )}
             </main>
+
+            {/* Mobile Bottom Navigation */}
+            {view !== 'login' && !isLoading && (
+                <div className="md:hidden h-24" /> // Spacer for bottom nav
+            )}
+            {view === 'manager' && !isLoading && (
+                <MobileBottomNav 
+                    activeTab={activeTabForNav} 
+                    setActiveTab={setActiveTabForNav} 
+                    tenantMessages={filteredMessages}
+                />
+            )}
+        </div>
+    );
+}
+
+function MobileBottomNav({ activeTab, setActiveTab, tenantMessages }) {
+    const tabs = [
+        { id: 'rents', icon: <Receipt className="w-5 h-5" />, label: 'Rents' },
+        { id: 'inventory', icon: <LayoutGrid className="w-5 h-5" />, label: 'Units' },
+        { id: 'tasks', icon: <Wrench className="w-5 h-5" />, label: 'Tasks' },
+        { id: 'messages', icon: <MessageSquare className="w-5 h-5" />, label: 'Chat', badge: tenantMessages?.length > 0 },
+        { id: 'utilities', icon: <Droplets className="w-5 h-5" />, label: 'Utils' }
+    ];
+
+    return (
+        <div className="fixed bottom-0 left-0 right-0 z-[100] md:hidden bg-slate-950/80 backdrop-blur-2xl border-t border-white/10 px-4 py-3 pb-8 flex justify-around items-center">
+            {tabs.map((tab) => (
+                <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`relative flex flex-col items-center gap-1 transition-all ${
+                        activeTab === tab.id ? 'text-indigo-400' : 'text-slate-500 hover:text-slate-300'
+                    }`}
+                >
+                    <div className={`p-2 rounded-xl transition-all ${activeTab === tab.id ? 'bg-indigo-500/10' : ''}`}>
+                        {tab.icon}
+                        {tab.badge && <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full border-2 border-slate-950"></span>}
+                    </div>
+                    <span className="text-[9px] font-black uppercase tracking-widest">{tab.label}</span>
+                    {activeTab === tab.id && (
+                        <Motion.div 
+                            layoutId="activeTabUnderline"
+                            className="absolute -bottom-2 w-8 h-1 bg-indigo-500 rounded-full"
+                        />
+                    )}
+                </button>
+            ))}
         </div>
     );
 }
 
 // --- Manager Components ---
 
-function ManagerDashboard({ activeProperty, tenants, payments, propertyUnits, utilityBills, tasks, vendors, tenantMessages, currency = 'USD', onAddUnit, onEditUnit, onDeleteUnit, onAddTenant, onEditTenant, onUpdateFittings, onAddBill, onAddTask, onAddVendor, onEditVendor, onDeleteVendor, onMarkPaid, onUpdateLeaseDoc, onMoveOut, onUpdateMessage, activeManager }) {
-    const [activeTab, setActiveTab] = useState('rents');
+function ManagerDashboard({ activeProperty, tenants, payments, propertyUnits, utilityBills, tasks, vendors, tenantMessages, currency = 'USD', onAddUnit, onEditUnit, onDeleteUnit, onAddTenant, onEditTenant, onUpdateFittings, onAddBill, onAddTask, onAddVendor, onEditVendor, onDeleteVendor, onMarkPaid, onUpdateLeaseDoc, onMoveOut, onUpdateMessage, activeManager, activeTab: externalActiveTab, setActiveTab: setExternalActiveTab }) {
+    const [internalActiveTab, setInternalActiveTab] = useState('rents');
+    const activeTab = externalActiveTab || internalActiveTab;
+    const setActiveTab = setExternalActiveTab || setInternalActiveTab;
     const [showLeaseModal, setShowLeaseModal] = useState(false);
     const [editingTenant, setEditingTenant] = useState(null);
     const [showUnitModal, setShowUnitModal] = useState(false);
@@ -1215,7 +1268,7 @@ function ManagerDashboard({ activeProperty, tenants, payments, propertyUnits, ut
                 <StatCard index={3} title="Active Maintenance" value={(tasksCount || 0).toString()} icon={<Wrench className="text-amber-400 group-hover:text-amber-300 transition-colors" />} />
             </div>
 
-            <div className="flex bg-slate-900/40 p-1 rounded-2xl border border-white/5 w-full md:w-fit overflow-x-auto no-scrollbar snap-x relative backdrop-blur-md">
+            <div className="hidden md:flex bg-slate-900/40 p-1 rounded-2xl border border-white/5 w-full md:w-fit overflow-x-auto no-scrollbar snap-x relative backdrop-blur-md">
                 {(Array.isArray(tenants) ? [
                     { id: 'rents', icon: <Receipt className="w-3.5 h-3.5" />, label: 'Rent Summary' },
                     { id: 'inventory', icon: <Building2 className="w-3.5 h-3.5" />, label: 'Property Catalog' },
@@ -2599,9 +2652,9 @@ function TenantDashboard({ tenant, unit, tenantMessages = [], onSendMessage, cur
 
                     <button 
                         onClick={() => setShowMsgModal(true)}
-                        className="w-full bg-indigo-600 text-white font-black py-4 rounded-2xl hover:bg-indigo-500 transition-all shadow-xl shadow-indigo-600/20 text-xs uppercase tracking-widest mt-8 flex items-center justify-center gap-2"
+                        className="w-full bg-indigo-600 text-white font-black py-4 md:py-5 rounded-2xl hover:bg-indigo-500 transition-all shadow-xl shadow-indigo-600/20 text-[11px] md:text-xs uppercase tracking-widest mt-8 flex items-center justify-center gap-2 active:scale-95"
                     >
-                        Upload Proof of Rent Payment <ArrowUpRight className="w-4 h-4" />
+                        Upload Proof of Rent Payment <ArrowUpRight className="w-5 h-5" />
                     </button>
                 </div>
 
@@ -2628,10 +2681,10 @@ function TenantDashboard({ tenant, unit, tenantMessages = [], onSendMessage, cur
                                 </div>
                             </div>
                             <div>
-                                <p className="text-[9px] font-black text-slate-600 uppercase tracking-widest mb-1">Security Deposit</p>
+                                <p className="text-[10px] font-black text-slate-600 uppercase tracking-widest mb-1">Security Deposit</p>
                                 <div className="flex items-center gap-2">
-                                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-                                    <p className="text-sm font-black text-white tracking-tight">${tenant.deposit?.toLocaleString()}</p>
+                                    <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                                    <p className="text-sm font-black text-white tracking-tight">{currency} {Number(tenant.deposit || 0).toLocaleString()}</p>
                                 </div>
                             </div>
                             <div className="col-span-2 mt-2">
@@ -2952,8 +3005,8 @@ function UnitCard({ unit, tenant, currency = 'USD', history, onUpdateFittings, o
                 <div className="flex justify-between items-start mb-8">
                     <div>
                         <h4 className="text-2xl font-black text-white tracking-tighter italic">Unit {unit.unitNumber}</h4>
-                        <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest flex items-center gap-2 mt-1.5 opacity-60">
-                            <Maximize className="w-3.5 h-3.5" /> {unit.size} SQFT Space
+                        <p className="text-xs text-slate-500 font-black uppercase tracking-widest flex items-center gap-2 mt-2 opacity-60">
+                            <Maximize className="w-4 h-4" /> {unit.size} SQFT Space
                         </p>
                     </div>
                 </div>
@@ -3464,23 +3517,33 @@ function LeaseModal({ initialData, availableUnits, onClose, onSubmit }) {
     );
 }
 
-function StatCard({ title, value, icon, index }) {
+function StatCard({ title, value, icon, index, trend }) {
     return (
         <Motion.div 
-            initial={{ opacity: 0, scale: 0.9, y: 20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            transition={{ delay: index * 0.05, duration: 0.5, type: "spring", stiffness: 100 }}
-            whileHover={{ y: -5, scale: 1.02 }}
-            className="premium-card p-6 md:p-8 rounded-[2rem] relative overflow-hidden group border border-white/5 hover:border-white/10"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: index * 0.1 }}
+            whileTap={{ scale: 0.98 }}
+            className="premium-card p-5 md:p-6 lg:p-8 rounded-[2rem] flex flex-col gap-3 md:gap-4 relative overflow-hidden group h-full"
         >
-            <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-600/5 blur-3xl rounded-full -mr-16 -mt-16 group-hover:bg-indigo-600/10 transition-all duration-700" />
-            <div className="absolute bottom-0 left-0 w-24 h-24 bg-emerald-600/5 blur-3xl rounded-full -ml-12 -mb-12 group-hover:opacity-100 transition-opacity" />
-            
-            <div className="flex justify-between items-start mb-6">
-                <p className="text-[9px] font-black text-slate-500 uppercase tracking-[0.2em] group-hover:text-slate-400 transition-colors">{title}</p>
-                <div className="p-3.5 bg-slate-800/60 rounded-2xl border border-white/5 shadow-inner group-hover:bg-slate-700/60 group-hover:border-indigo-500/20 group-hover:rotate-6 transition-all duration-300">{icon}</div>
+            <div className="absolute top-0 right-0 p-4 md:p-6 opacity-10 group-hover:opacity-20 transition-opacity">
+                {React.cloneElement(icon, { className: "w-12 h-12 md:w-16 md:h-16" })}
             </div>
-            <p className="text-3xl md:text-4xl font-black text-white tracking-tighter leading-none group-hover:scale-[1.03] transition-transform origin-left">{value}</p>
+            <div className="flex items-center gap-3">
+                <div className="p-2.5 md:p-3 bg-white/5 rounded-xl border border-white/5">
+                    {React.cloneElement(icon, { className: "w-4 h-4 md:w-5 md:h-5" })}
+                </div>
+                <p className="text-[10px] md:text-xs font-black text-slate-500 uppercase tracking-[0.2em] leading-tight">{title}</p>
+            </div>
+            <div className="relative z-10">
+                <h4 className="text-2xl md:text-3xl font-black text-white tracking-tighter italic">{value}</h4>
+                {trend && (
+                    <div className="flex items-center gap-1.5 mt-2">
+                        <TrendingUp className="w-3.5 h-3.5 text-emerald-400" />
+                        <span className="text-[9px] md:text-[11px] font-black text-emerald-400 uppercase tracking-widest">{trend}</span>
+                    </div>
+                )}
+            </div>
         </Motion.div>
     );
 }
