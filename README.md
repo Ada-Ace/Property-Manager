@@ -49,17 +49,17 @@ A modern, high-performance property management application built with **React**,
 The application uses Google Sheets as a lightweight, real-time database.
 
 ### 1. Spreadsheet Structure
-Create a Google Sheet with the following **exact** tabs and headers:
+Create a Google Sheet with the following **exact** tabs and headers (ALL-CAPS Recommended):
 
-- **Units**: `id`, `unitNumber`, `size`, `expectedRent`, `status`, `fittings`, `propertyName`
-- **Tenants**: `id`, `name`, `unit`, `mobile`, `password`, `baseRent`, `deposit`, `leaseStart`, `leaseEnd`, `propertyName`, `lastPaymentDate`, `leaseDocument`
-- **Payments**: `id`, `tenantId`, `amount`, `date`, `propertyName`
-- **Bills**: `id`, `type`, `date`, `amount`, `mode`, `allocations`, `propertyName`
-- **Tasks**: `id`, `title`, `tenantId`, `status`, `dateOptions`, `propertyName`
-- **Messages**: `id`, `tenantId`, `content`, `timestamp`, `photoUrl`, `propertyName`
-- **Vendors**: `id`, `name`, `mobile`, `type`, `rating`, `email`, `propertyName`
-- **Properties**: `id`, `name`, `address`, `currency`
-- **Managers**: `id`, `name`, `mobile`, `password`
+- **UNITS**: `ID`, `UNITNUMBER`, `SIZE`, `EXPECTEDRENT`, `STATUS`, `FITTINGS`, `PROPERTYNAME`
+- **TENANTS**: `ID`, `NAME`, `UNIT`, `MOBILE`, `PASSWORD`, `BASERENT`, `DEPOSIT`, `LEASESTART`, `LEASEEND`, `PROPERTYNAME`, `LASTPAYMENTDATE`, `LEASEDOCUMENT`
+- **PAYMENTS**: `ID`, `TENANTID`, `AMOUNT`, `DATE`, `PROPERTYNAME`
+- **BILLS**: `ID`, `TYPE`, `DATE`, `AMOUNT`, `MODE`, `ALLOCATIONS`, `PROPERTYNAME`
+- **TASKS**: `ID`, `TITLE`, `TENANTID`, `STATUS`, `DATEOPTIONS`, `PROPERTYNAME`
+- **MESSAGES**: `ID`, `TENANTID`, `CONTENT`, `TIMESTAMP`, `PHOTOURL`, `PROPERTYNAME`
+- **VENDORS**: `ID`, `NAME`, `MOBILE`, `TYPE`, `RATING`, `EMAIL`, `PROPERTYNAME`
+- **PROPERTIES**: `ID`, `NAME`, `ADDRESS`, `CURRENCY`
+- **MANAGERS**: `ID`, `NAME`, `MOBILE`, `PASSWORD`
 
 ### 2. Backend API Deployment
 1. Go to **Extensions > Apps Script** in your Google Sheet.
