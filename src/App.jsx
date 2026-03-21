@@ -925,10 +925,44 @@ export default function App() {
 
     if (isLoading && syncStatus === 'connecting') {
         return (
-            <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-6">
-                <div className="w-12 h-12 border-4 border-indigo-500/20 border-t-indigo-500 rounded-full animate-spin mb-6"></div>
-                <h2 className="text-white font-black text-xl italic tracking-tighter mb-2">Syncing with Cloud...</h2>
-                <p className="text-slate-500 text-[10px] uppercase font-black tracking-[0.3em]">Preparing your properties</p>
+            <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-6 relative overflow-hidden">
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-indigo-600/10 blur-[120px] rounded-full animate-pulse" />
+                
+                <Motion.div 
+                    initial={{ scale: 0.8, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={{ duration: 0.8, ease: "easeOut" }}
+                    className="relative z-10 flex flex-col items-center"
+                >
+                    <Motion.div 
+                        animate={{ y: [0, -10, 0] }}
+                        transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+                        className="bg-indigo-600 w-24 h-24 rounded-[2.5rem] flex items-center justify-center mb-8 shadow-[0_0_50px_rgba(79,70,229,0.3)] border border-indigo-400/20"
+                    >
+                        <div className="relative flex items-center justify-center">
+                            <Shield className="w-20 h-20 text-white fill-indigo-600" strokeWidth={3} />
+                            <span className="absolute text-white text-3xl font-black select-none drop-shadow-2xl">M</span>
+                        </div>
+                    </Motion.div>
+
+                    <div className="text-center space-y-3">
+                        <h2 className="text-white font-black text-2xl italic tracking-tighter uppercase">Initializing MDO...</h2>
+                        <div className="flex items-center justify-center gap-3">
+                            <div className="w-1.5 h-1.5 bg-indigo-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                            <div className="w-1.5 h-1.5 bg-indigo-500 rounded-full animate-bounce" style={{ animationDelay: '200ms' }} />
+                            <div className="w-1.5 h-1.5 bg-indigo-500 rounded-full animate-bounce" style={{ animationDelay: '400ms' }} />
+                        </div>
+                        <p className="text-slate-500 text-[9px] uppercase font-black tracking-[0.4em] opacity-60">Syncing Cloud Properties & Assets</p>
+                    </div>
+                    
+                    <div className="mt-12 w-48 h-1 bg-white/5 rounded-full overflow-hidden relative">
+                        <Motion.div 
+                            animate={{ x: [-200, 200] }}
+                            transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
+                            className="w-1/2 h-full bg-gradient-to-r from-transparent via-indigo-500 to-transparent" 
+                        />
+                    </div>
+                </Motion.div>
             </div>
         );
     }
