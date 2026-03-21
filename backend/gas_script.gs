@@ -1,5 +1,5 @@
 /**
- * PropManage Pro - Backend API with Google Drive Upload (v2)
+ * MDO - MyDay, all in One
  * 
  * Instructions:
  * 1. Create a Google Sheet with the following tabs (ALL CAPS):

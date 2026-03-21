@@ -961,7 +961,7 @@ export default function App() {
                         </div>
                         <div className="flex flex-col leading-none">
                             <span className="text-white font-black text-base tracking-tight">
-                                {import.meta.env.VITE_APP_NAME || "PropManage"}
+                                {import.meta.env.VITE_APP_NAME || "MDO"}
                                 <span className="text-indigo-400 font-light italic ml-1 text-sm">Pro</span>
                             </span>
                             <span className="text-[9px] text-slate-600 font-black uppercase tracking-[0.2em] mt-0.5">Enterprise Suite</span>
@@ -3594,8 +3594,8 @@ function LoginPage({ onLogin }) {
                     >
                         <ShieldCheck className="w-12 h-12 text-white" />
                     </Motion.div>
-                    <h1 className="text-6xl font-black text-white italic tracking-tighter mb-3 leading-none">PropManage</h1>
-                    <p className="text-slate-500 font-black uppercase tracking-[0.4em] text-[10px] opacity-70">The Enterprise Standard</p>
+                    <h1 className="text-6xl font-black text-white italic tracking-tighter mb-3 leading-none uppercase">MDO</h1>
+                    <p className="text-slate-500 font-black uppercase tracking-[0.4em] text-[10px] opacity-70 italic">MyDay, all in One</p>
                 </div>
 
                 <div className="premium-card p-12 rounded-[3.5rem] space-y-8">
