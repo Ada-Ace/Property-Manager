@@ -24,6 +24,7 @@ import {
     Hammer,
     Lock,
     User,
+    Shield,
     ShieldCheck,
     Trash2,
     Briefcase,
@@ -3590,7 +3591,10 @@ function LoginPage({ onLogin }) {
                         transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
                         className="bg-indigo-600 w-24 h-24 rounded-[2.5rem] flex items-center justify-center mx-auto mb-8 shadow-[0_0_50px_rgba(79,70,229,0.3)] border border-indigo-400/20"
                     >
-                        <span className="text-white text-6xl font-black italic select-none">M</span>
+                        <div className="relative flex items-center justify-center">
+                            <Shield className="w-16 h-16 text-white/20" strokeWidth={1.5} />
+                            <span className="absolute text-white text-3xl font-black italic select-none mt-1">M</span>
+                        </div>
                     </Motion.div>
                     <h1 className="text-6xl font-black text-white italic tracking-tighter mb-3 leading-none uppercase">MDO</h1>
                     <p className="text-slate-500 font-black uppercase tracking-[0.4em] text-[10px] opacity-70 italic">Aim. Do. Own.</p>
