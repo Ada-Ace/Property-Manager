@@ -1297,11 +1297,11 @@ function ManagerDashboard({ activeProperty, tenants, payments, propertyUnits, ut
 
             <div className="hidden md:flex bg-slate-900/40 p-1 rounded-2xl border border-white/5 w-full md:w-fit overflow-x-auto no-scrollbar snap-x relative backdrop-blur-md">
                 {(Array.isArray(tenants) ? [
-                    { id: 'rents', icon: <Receipt className="w-3.5 h-3.5" />, label: 'Rent Summary' },
-                    { id: 'inventory', icon: <Building2 className="w-3.5 h-3.5" />, label: 'Property Catalog' },
-                    { id: 'utilities', icon: <Droplets className="w-3.5 h-3.5" />, label: 'Utilities Share' },
-                    { id: 'tasks', icon: <Hammer className="w-3.5 h-3.5" />, label: 'Maintenance' },
-                    { id: 'messages', icon: <MessageSquare className="w-3.5 h-3.5" />, label: 'Messages', badge: (tenantMessages?.length > 0) }
+                    { id: 'rents', icon: <Receipt className="w-3.5 h-3.5" />, label: 'My Collections' },
+                    { id: 'inventory', icon: <Building2 className="w-3.5 h-3.5" />, label: 'My Property Assets' },
+                    { id: 'utilities', icon: <Droplets className="w-3.5 h-3.5" />, label: 'Utility Ledger' },
+                    { id: 'tasks', icon: <Hammer className="w-3.5 h-3.5" />, label: 'Maintenance Desk' },
+                    { id: 'messages', icon: <MessageSquare className="w-3.5 h-3.5" />, label: 'Communications', badge: (tenantMessages?.length > 0) }
                 ] : []).map((tab) => (
                     <Motion.button 
                         key={tab.id}
@@ -1379,7 +1379,7 @@ function ManagerDashboard({ activeProperty, tenants, payments, propertyUnits, ut
                                 <div className="p-5 bg-slate-800 rounded-3xl group-hover:bg-indigo-600 transition-colors">
                                     <PlusCircle className="w-10 h-10 group-hover:text-white" />
                                 </div>
-                                <span className="text-[10px] font-black uppercase tracking-[0.3em]">Add New Unit</span>
+                                <span className="text-[10px] font-black uppercase tracking-[0.3em]">Catalog a New Unit for me</span>
                             </Motion.button>
                         </div>
                     )}
@@ -1862,7 +1862,7 @@ function VendorModal({ isOpen, onClose, onSubmit, editingVendor }) {
                 <div className="p-10 pt-0">
                     <button onClick={() => onSubmit(vendorForm)} className="w-full py-6 bg-indigo-600 hover:bg-indigo-500 text-white font-black rounded-3xl shadow-xl shadow-indigo-600/30 uppercase tracking-[0.2em] text-xs flex items-center justify-center gap-3 transition-all transform active:scale-95">
                         {editingVendor ? <RefreshCcw className="w-5 h-5" /> : <PlusCircle className="w-5 h-5" />}
-                        {editingVendor ? 'Confirm Modifications' : 'Enlist Contractor'}
+                        {editingVendor ? 'Process my Modifications' : 'Enlist a New Partner'}
                     </button>
                 </div>
             </div>
@@ -1897,7 +1897,7 @@ function MessagesManager({ tenants, messages, onUpdateMessage, activeManager }) 
                     <div>
                         <h3 className="font-black text-2xl text-white italic tracking-tight flex items-center gap-3">
                             <MessageSquare className="w-7 h-7 text-indigo-400" />
-                            Helpdesk Tickets
+                            My Helpdesk Tickets
                         </h3>
                         <p className="text-[10px] text-slate-500 font-black uppercase tracking-[0.2em] mt-2">Manage tenant communications</p>
                     </div>
@@ -1995,7 +1995,7 @@ function MessagesManager({ tenants, messages, onUpdateMessage, activeManager }) 
                                                         onClick={() => handleResolve(msg.id)}
                                                         className="bg-emerald-600/10 hover:bg-emerald-600/20 text-emerald-500 border border-emerald-500/20 px-6 py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-all"
                                                     >
-                                                        <CheckCircle2 className="w-4 h-4" /> Mark Resolved
+                                                        <CheckCircle2 className="w-4 h-4" /> Mark as Resolved
                                                     </Motion.button>
                                                     
                                                     <Motion.button
@@ -2004,7 +2004,7 @@ function MessagesManager({ tenants, messages, onUpdateMessage, activeManager }) 
                                                         onClick={() => handleReply(msg, tenant)}
                                                         className="bg-amber-500 hover:bg-amber-400 text-slate-900 px-6 py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 shadow-lg shadow-amber-500/20 transition-all"
                                                     >
-                                                        <MessageSquare className="w-4 h-4" /> Reply
+                                                        <MessageSquare className="w-4 h-4" /> Reply to Tenant
                                                     </Motion.button>
                                                 </>
                                             )}
@@ -2160,9 +2160,9 @@ function UtilityManager({ tenants, utilityBills, onAddBill, currency = 'USD' }) 
     return (
         <div className="space-y-6">
             <div className="flex bg-slate-900/50 p-1 rounded-2xl border border-white/5 w-fit">
-                <button onClick={() => setActiveTab('new')} className={`px-6 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-2 ${activeTab === 'new' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20' : 'text-slate-500 hover:text-slate-300'}`}><PlusCircle className="w-4 h-4" /> Add Bill</button>
-                <button onClick={() => setActiveTab('monthly')} className={`px-6 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-2 ${activeTab === 'monthly' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20' : 'text-slate-500 hover:text-slate-300'}`}><Calendar className="w-4 h-4" /> Monthly Summary</button>
-                <button onClick={() => setActiveTab('history')} className={`px-6 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-2 ${activeTab === 'history' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20' : 'text-slate-500 hover:text-slate-300'}`}><Clock className="w-4 h-4" /> Bill History</button>
+                <button onClick={() => setActiveTab('new')} className={`px-6 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-2 ${activeTab === 'new' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20' : 'text-slate-500 hover:text-slate-300'}`}><PlusCircle className="w-4 h-4" /> Process a New Bill</button>
+                <button onClick={() => setActiveTab('monthly')} className={`px-6 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-2 ${activeTab === 'monthly' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20' : 'text-slate-500 hover:text-slate-300'}`}><Calendar className="w-4 h-4" /> My Monthly Summary</button>
+                <button onClick={() => setActiveTab('history')} className={`px-6 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-2 ${activeTab === 'history' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20' : 'text-slate-500 hover:text-slate-300'}`}><Clock className="w-4 h-4" /> My Bill History</button>
             </div>
 
             {activeTab === 'new' && (
@@ -2293,7 +2293,7 @@ function UtilityManager({ tenants, utilityBills, onAddBill, currency = 'USD' }) 
                     <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 border-b border-white/5 pb-6 gap-4">
                         <div>
                             <h3 className="font-black text-2xl text-white italic tracking-tight flex items-center gap-3">
-                                <Calendar className="w-6 h-6 text-indigo-400" /> Monthly Utility Breakdown
+                                <Calendar className="w-6 h-6 text-indigo-400" /> My Monthly Utility Breakdown
                             </h3>
                             <p className="text-[10px] text-slate-500 font-black uppercase tracking-[0.2em] mt-2">Bills per tenant · {new Date(effectiveMonth + '-01').toLocaleString('default', { month: 'long', year: 'numeric' })}</p>
                         </div>
@@ -2378,7 +2378,7 @@ function UtilityManager({ tenants, utilityBills, onAddBill, currency = 'USD' }) 
 
             {activeTab === 'history' && (
                 <div className="bg-slate-900/50 rounded-[2.5rem] border border-white/5 p-8 backdrop-blur-sm shadow-xl animate-in fade-in slide-in-from-top-4">
-                    <h3 className="font-bold text-lg flex items-center gap-2 text-white italic mb-8"><Receipt className="w-5 h-5 text-indigo-400" /> Bill History</h3>
+                    <h3 className="font-bold text-lg flex items-center gap-2 text-white italic mb-8"><Receipt className="w-5 h-5 text-indigo-400" /> My Bill History</h3>
                     {utilityBills.length === 0 ? (
                         <div className="text-center py-12 text-slate-500">
                             <Receipt className="w-12 h-12 mx-auto mb-4 opacity-20" />
@@ -2464,8 +2464,8 @@ function TasksManager({ tenants, tasks, vendors, onAddTask, onAddVendor, onEditV
         <div className="space-y-8 animate-in fade-in slide-in-from-top-4">
             <div className="flex bg-slate-900/40 p-1 rounded-2xl border border-white/5 w-fit backdrop-blur-md">
                 {[
-                    { id: 'active', icon: <Hammer className="w-3.5 h-3.5" />, label: 'Work Orders' },
-                    { id: 'vendors', icon: <Briefcase className="w-3.5 h-3.5" />, label: 'Service Network' }
+                    { id: 'active', icon: <Hammer className="w-3.5 h-3.5" />, label: 'My Work Orders' },
+                    { id: 'vendors', icon: <Briefcase className="w-3.5 h-3.5" />, label: 'My Service Network' }
                 ].map(t => (
                     <button key={t.id} onClick={() => setSubTab(t.id)} className={`px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 ${subTab === t.id ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}>
                         {t.icon} {t.label}
@@ -2478,7 +2478,7 @@ function TasksManager({ tenants, tasks, vendors, onAddTask, onAddVendor, onEditV
                     <div className="lg:col-span-1 space-y-6">
                         <div className="bg-slate-900/50 border border-white/5 p-8 rounded-[2.5rem] shadow-xl">
                             <h3 className="text-sm font-black text-white italic mb-8 flex items-center gap-2">
-                                <PlusCircle className="w-4 h-4 text-indigo-400" /> Dispatch New Order
+                                <PlusCircle className="w-4 h-4 text-indigo-400" /> Dispatch a New Order
                             </h3>
                             <div className="space-y-5">
                                 <div className="space-y-1.5">
@@ -2583,7 +2583,7 @@ function TasksManager({ tenants, tasks, vendors, onAddTask, onAddVendor, onEditV
                     ))}
                     <div onClick={onAddVendor} className="border-2 border-dashed border-white/5 rounded-[2.5rem] flex flex-col items-center justify-center p-12 text-slate-600 hover:text-indigo-400 hover:border-indigo-500/40 transition-all cursor-pointer group bg-white/[0.02]">
                         <PlusSquare className="w-10 h-10 mb-4 group-hover:scale-110 transition-transform" />
-                        <p className="text-[10px] font-black uppercase tracking-widest">Enlist New Contractor</p>
+                        <p className="text-[10px] font-black uppercase tracking-widest">Enlist a New Partner</p>
                     </div>
                 </div>
             )}
@@ -2847,7 +2847,7 @@ function MessageModal({ onClose, onSubmit }) {
                 <div className="flex justify-between items-center mb-6">
                     <h2 className="text-xl font-black text-white italic flex items-center gap-3">
                         <MessageSquare className="w-6 h-6 text-indigo-500" />
-                        Message Manager
+                        My Message Manager
                     </h2>
                     <button onClick={onClose} className="text-slate-500 hover:text-white transition-colors">✕</button>
                 </div>
@@ -2902,7 +2902,7 @@ function InventoryModal({ unit, onClose, onSave }) {
             <div className="bg-slate-900 border border-white/10 w-full max-w-md rounded-[2.5rem] p-8 shadow-2xl">
                 <div className="flex justify-between items-center mb-6">
                     <h2 className="text-xl font-black text-white italic flex items-center gap-3">
-                        <Box className="w-6 h-6 text-indigo-500" /> Inventory & Fittings
+                        <Box className="w-6 h-6 text-indigo-500" /> My Inventory & Fittings
                     </h2>
                     <button onClick={onClose} className="text-slate-500 hover:text-white transition-colors">✕</button>
                 </div>
@@ -3040,9 +3040,9 @@ function UnitCard({ unit, tenant, currency = 'USD', history, onUpdateFittings, o
 
                 <div className="flex bg-slate-800/40 p-1 rounded-2xl border border-white/5 mb-6 backdrop-blur-md">
                     {[
-                        { id: 'info', icon: <CreditCard className="w-3.5 h-3.5" />, label: 'Financials' },
-                        { id: 'activity', icon: <Activity className="w-3.5 h-3.5" />, label: 'Activity' },
-                        { id: 'inventory', icon: <ShieldCheck className="w-3.5 h-3.5" />, label: 'Inventory' }
+                        { id: 'info', icon: <CreditCard className="w-3.5 h-3.5" />, label: 'My Financials' },
+                        { id: 'activity', icon: <Activity className="w-3.5 h-3.5" />, label: 'My Activity' },
+                        { id: 'inventory', icon: <ShieldCheck className="w-3.5 h-3.5" />, label: 'My Inventory' }
                     ].map((tab) => (
                         <button
                             key={tab.id}
@@ -3281,7 +3281,7 @@ function UnitModal({ initialData, onSubmit, onClose }) {
                 <div className="flex justify-between items-center mb-10">
                     <h2 className="text-2xl md:text-3xl font-black text-white italic flex items-center gap-4 tracking-tighter">
                         {initialData ? <Settings className="w-8 h-8 text-indigo-500" /> : <PlusCircle className="w-8 h-8 text-indigo-500" />}
-                        {initialData ? 'Edit Property' : 'Add New Unit'}
+                        {initialData ? 'Edit my Property' : 'Catalog a New Unit'}
                     </h2>
                     <button onClick={onClose} className="p-2 text-slate-500 hover:text-white transition-colors"><X className="w-6 h-6" /></button>
                 </div>
@@ -3358,7 +3358,7 @@ function UnitModal({ initialData, onSubmit, onClose }) {
                             className="w-full py-5 bg-indigo-600 hover:bg-indigo-500 text-white font-black rounded-2xl uppercase tracking-[0.2em] text-[11px] shadow-xl shadow-indigo-600/20 transition-all flex items-center justify-center gap-3"
                         >
                             <CheckCircle2 className="w-5 h-5" />
-                            {initialData ? 'Update Property' : 'Add to Collection'}
+                            {initialData ? 'Update my Property' : 'Add to my Collection'}
                         </Motion.button>
                     </div>
                 </form>
@@ -3395,7 +3395,7 @@ function LeaseModal({ initialData, availableUnits, onClose, onSubmit }) {
                     <div>
                         <h2 className="text-2xl md:text-3xl font-black text-white italic flex items-center gap-4 tracking-tighter">
                             {initialData?.id ? <Settings className="w-8 h-8 text-indigo-500" /> : <PlusCircle className="w-8 h-8 text-emerald-500" />}
-                            {initialData?.id ? 'Adjust Agreement' : 'Register New Lease'}
+                            {initialData?.id ? 'Adjust my Agreement' : 'Register a New Lease'}
                         </h2>
                         <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest mt-2 ml-1 opacity-60">Legal Tenure Configuration</p>
                     </div>
@@ -3535,7 +3535,7 @@ function LeaseModal({ initialData, availableUnits, onClose, onSubmit }) {
                             className={`w-full py-5 text-white font-black rounded-[2rem] uppercase tracking-[0.2em] text-[11px] transition-all shadow-2xl flex items-center justify-center gap-4 ${initialData?.id ? 'bg-indigo-600 hover:bg-indigo-500 shadow-indigo-600/20' : 'bg-emerald-600 hover:bg-emerald-500 shadow-emerald-500/20'}`}
                         >
                             <FileCheck className="w-5 h-5" />
-                            {initialData?.id ? 'Update Lease Agreement' : 'Finalize & Create Lease'}
+                            {initialData?.id ? 'Update my Lease Agreement' : 'Finalize & Create Lease'}
                         </Motion.button>
                     </div>
                 </form>
@@ -3676,7 +3676,7 @@ function LoginPage({ onLogin }) {
                             type="submit" 
                             className="w-full bg-white text-slate-950 font-black py-5 rounded-2xl mt-4 hover:shadow-[0_0_30px_rgba(255,255,255,0.2)] transition-all uppercase tracking-[0.2em] text-[11px]"
                         >
-                            Establish Connection
+                            Access my Dashboard
                         </Motion.button>
                     </form>
 
@@ -3796,7 +3796,7 @@ function PropertyModal({ initialData, apiStatus, onClose, onSave }) {
                             </div>
                             <div>
                                 <h2 className="text-lg font-black text-white tracking-tight">
-                                    {initialData?.id ? 'Configure Property' : 'Register New Property'}
+                                    {initialData?.id ? 'Configure my Property' : 'Register a New Property'}
                                 </h2>
                                 <p className="text-[10px] text-slate-500 font-black uppercase tracking-[0.2em] mt-0.5">Asset & Legal Details</p>
                             </div>
@@ -3907,7 +3907,7 @@ function PropertyModal({ initialData, apiStatus, onClose, onSave }) {
                         className="flex-[2] py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest text-white bg-indigo-600 hover:bg-indigo-500 shadow-xl shadow-indigo-600/20 transition-all flex items-center justify-center gap-2"
                     >
                         <CheckCircle2 className="w-4 h-4" /> 
-                        {initialData?.id ? 'Apply Updates' : 'Confirm Registration'}
+                        {initialData?.id ? 'Apply my Updates' : 'Confirm Registration'}
                     </Motion.button>
                 </div>
             </Motion.div>
@@ -3944,7 +3944,7 @@ function PropertySettingsModal({ property, apiStatus, onClose, onSave }) {
                                 <Settings className="w-5 h-5 text-indigo-400" />
                             </div>
                             <div>
-                                <h2 className="text-lg font-black text-white tracking-tight">Property Settings</h2>
+                                <h2 className="text-lg font-black text-white tracking-tight">My Property Settings</h2>
                                 <p className="text-[10px] text-slate-500 font-black uppercase tracking-[0.2em] mt-0.5">{property?.name}</p>
                             </div>
                         </div>
@@ -4020,7 +4020,7 @@ function PropertySettingsModal({ property, apiStatus, onClose, onSave }) {
                         onClick={() => onSave(currency)}
                         className="flex-2 flex-grow py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-widest text-white bg-indigo-600 hover:bg-indigo-500 shadow-xl shadow-indigo-600/20 transition-all flex items-center justify-center gap-2"
                     >
-                        <CheckCircle2 className="w-4 h-4" /> Save Settings
+                        <CheckCircle2 className="w-4 h-4" /> Save my Settings
                     </Motion.button>
                 </div>
             </Motion.div>
@@ -4117,7 +4117,7 @@ function OffboardingModal({ tenant, unit, utilityBills, currency, onClose, onSub
                 <div className="p-8 pt-0 border-t border-white/5 bg-slate-900/50 flex flex-col pt-8 space-y-4">
                     <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest text-center px-4 leading-relaxed">By clicking execute, the tenant's portal login will be permanently disabled, and a maintenance turnover task will be generated.</p>
                     <button onClick={() => onSubmit(data)} className="w-full py-6 bg-red-600 hover:bg-red-500 text-white font-black rounded-3xl shadow-xl shadow-red-600/30 uppercase tracking-[0.2em] text-xs flex items-center justify-center gap-3 transition-all transform active:scale-95">
-                        <LogOut className="w-5 h-5" /> Execute Offboarding
+                        <LogOut className="w-5 h-5" /> Finalize Move-out Protocol
                     </button>
                 </div>
             </Motion.div>
