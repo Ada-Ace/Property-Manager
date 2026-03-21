@@ -952,7 +952,7 @@ export default function App() {
                             <div className="w-1.5 h-1.5 bg-indigo-500 rounded-full animate-bounce" style={{ animationDelay: '200ms' }} />
                             <div className="w-1.5 h-1.5 bg-indigo-500 rounded-full animate-bounce" style={{ animationDelay: '400ms' }} />
                         </div>
-                        <p className="text-slate-500 text-[9px] uppercase font-black tracking-[0.4em] opacity-60">Aim. Do. Own. &bull; Syncing Cloud Assets</p>
+                        <p className="text-slate-500 text-[9px] uppercase font-black tracking-[0.4em] opacity-60">Command Your Day &bull; Syncing Cloud Assets</p>
                     </div>
                     
                     <div className="mt-12 w-48 h-1 bg-white/5 rounded-full overflow-hidden relative">
@@ -1954,7 +1954,7 @@ function MessagesManager({ tenants, messages, onUpdateMessage, activeManager }) 
                                                     </div>
                                                     <div className="flex items-center gap-3 mt-1.5 flex-wrap">
                                                         <p className="text-[9px] text-slate-600 font-black uppercase tracking-widest">{formatDate(msg.timestamp, true)}</p>
-                                                        <span className="flex items-center gap-1.5 text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full border bg-opacity-10 border-opacity-30">
+                                                        <span className="flex items-center gap-1.5 text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full border bg-opacity-10 border-opacity 30">
                                                             {status === 'UNREAD' && <span className="text-red-400 border-red-500 bg-red-500 px-2 rounded-full">🔴 UNREAD</span>}
                                                             {status === 'IN PROGRESS' && <span className="text-amber-400 border-amber-500 bg-amber-500 px-2 rounded-full">🟡 IN PROGRESS</span>}
                                                             {status === 'RESOLVED' && <span className="text-emerald-400 border-emerald-500 bg-emerald-500 px-2 rounded-full">✅ RESOLVED</span>}
@@ -1978,7 +1978,7 @@ function MessagesManager({ tenants, messages, onUpdateMessage, activeManager }) 
                                                 <div className="mt-4">
                                                     <a href={msg.photoUrl} target="_blank" rel="noopener noreferrer" className="inline-block relative">
                                                         <img src={msg.photoUrl} alt="Attachment" className={`h-24 w-auto rounded-2xl border border-white/10 shadow-xl transition-all ${status !== 'RESOLVED' && 'group-hover:scale-[1.02]'}`} />
-                                                        <div className="absolute inset-0 bg-black/40 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center rounded-2xl">
+                                                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-2xl">
                                                             <span className="bg-slate-900/80 px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest text-white border border-white/10">View Image</span>
                                                         </div>
                                                     </a>
@@ -3631,7 +3631,7 @@ function LoginPage({ onLogin }) {
                         </div>
                     </Motion.div>
                     <h1 className="text-6xl font-black text-white tracking-tighter mb-3 leading-none uppercase">MDO</h1>
-                    <p className="text-slate-500 font-black uppercase tracking-[0.4em] text-[10px] opacity-70">Aim. Do. Own.</p>
+                    <p className="text-slate-500 font-black uppercase tracking-[0.4em] text-[10px] opacity-70">Command Your Day</p>
                 </div>
 
                 <div className="premium-card p-12 rounded-[3.5rem] space-y-8">

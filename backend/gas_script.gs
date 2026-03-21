@@ -1,5 +1,5 @@
 /**
- * MDO - Aim. Do. Own.
+ * MDO - Command Your Day
  * 
  * Instructions:
  * 1. Create a Google Sheet with the following tabs (ALL CAPS):
