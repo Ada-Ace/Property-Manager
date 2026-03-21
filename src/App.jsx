@@ -479,15 +479,6 @@ export default function App() {
                     name: String(p.name || '').trim(),
                     currency: p.currency || 'USD' 
                 })) : [];
-                
-                const rawUnits = Array.isArray(data.units) ? data.units : [];
-                const rawTenants = Array.isArray(data.tenants) ? data.tenants : [];
-                const rawBills = Array.isArray(data.bills) ? data.bills : [];
-                const rawTasks = Array.isArray(data.tasks) ? data.tasks : [];
-                const rawMessages = Array.isArray(data.messages) ? data.messages : [];
-                const rawPayments = Array.isArray(data.payments) ? data.payments : [];
-                const rawManagers = Array.isArray(data.managers) ? data.managers : [];
-
                 // Even if no properties are found, if we got a valid object, we are connected
                 setSyncStatus('connected');
                 setLastSyncTime(new Date());
@@ -523,8 +514,6 @@ export default function App() {
                     setProperties(INITIAL_PROPERTIES);
                     if (!activeProperty) setActiveProperty(INITIAL_PROPERTIES[0].name);
                 }
-                setSyncStatus('connected');
-                setLastSyncTime(new Date());
             } else {
                 // API returned invalid format
                 setSyncStatus('error');
