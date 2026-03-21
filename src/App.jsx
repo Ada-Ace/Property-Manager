@@ -335,7 +335,7 @@ const API = {
     }
 };
 
-export default function App() {
+function App() {
     const [view, setView] = useState('login');
     const [isLoading, setIsLoading] = useState(true);
     const [tenants, setTenants] = useState([]);
@@ -406,26 +406,43 @@ export default function App() {
 
     const [lastSyncTime, setLastSyncTime] = useState(null);
     const [isRefreshing, setIsRefreshing] = useState(false);
+    const [processingMessage, setProcessingMessage] = useState(null);
+
 
     const [vendors, setVendors] = useState(INITIAL_VENDORS);
     const [payments, setPayments] = useState(INITIAL_PAYMENTS);
     const [managers, setManagers] = useState(INITIAL_MANAGERS);
 
     const handleAddVendor = async (vendor) => {
-        const newVendor = { ...vendor, id: generateId('VEN'), propertyName: activeProperty };
-        setVendors(prev => [...prev, newVendor]);
-        await API.saveToSheet('ADD', 'Vendors', newVendor);
+        setProcessingMessage('ENLISTING_NEW_PARTNER');
+        try {
+            const newVendor = { ...vendor, id: generateId('VEN'), propertyName: activeProperty };
+            setVendors(prev => [...prev, newVendor]);
+            await API.saveToSheet('ADD', 'Vendors', newVendor);
+        } finally {
+            setProcessingMessage(null);
+        }
     };
 
     const handleEditVendor = async (vendor) => {
-        setVendors(prev => prev.map(v => v.id === vendor.id ? vendor : v));
-        await API.saveToSheet('UPDATE', 'Vendors', vendor);
+        setProcessingMessage('UPDATING_PARTNER_PROFILE');
+        try {
+            setVendors(prev => prev.map(v => v.id === vendor.id ? vendor : v));
+            await API.saveToSheet('UPDATE', 'Vendors', vendor);
+        } finally {
+            setProcessingMessage(null);
+        }
     };
 
     const handleDeleteVendor = async (vendorId) => {
         if (!window.confirm('Are you sure you want to remove this contractor?')) return;
-        setVendors(prev => prev.filter(v => v.id !== vendorId));
-        await API.saveToSheet('DELETE', 'Vendors', { id: vendorId });
+        setProcessingMessage('DECOMMISSIONING_PARTNER');
+        try {
+            setVendors(prev => prev.filter(v => v.id !== vendorId));
+            await API.saveToSheet('DELETE', 'Vendors', { id: vendorId });
+        } finally {
+            setProcessingMessage(null);
+        }
     };
 
     const handleAddProperty = () => {
@@ -434,20 +451,25 @@ export default function App() {
     };
 
     const savePropertyDetails = async (propData) => {
-        const isNew = !propData.id;
-        const finalProp = isNew ? { ...propData, id: generateId('PRP') } : propData;
-        
-        if (isNew) {
-            setProperties(prev => [...prev, finalProp]);
-        } else {
-            setProperties(prev => prev.map(p => p.id === finalProp.id ? finalProp : p));
+        setProcessingMessage(propData.id ? 'UPDATING_PROPERTY_DETAILS' : 'REGISTERING_NEW_PROPERTY');
+        try {
+            const isNew = !propData.id;
+            const finalProp = isNew ? { ...propData, id: generateId('PRP') } : propData;
+            
+            if (isNew) {
+                setProperties(prev => [...prev, finalProp]);
+            } else {
+                setProperties(prev => prev.map(p => p.id === finalProp.id ? finalProp : p));
+            }
+            
+            setActiveProperty(finalProp.name);
+            await API.saveToSheet(isNew ? 'ADD' : 'UPDATE', 'Properties', finalProp);
+            setShowPropertyModal(false);
+            setGlobalMessage({ type: 'success', text: `Property "${finalProp.name}" ${isNew ? 'Registered' : 'Updated'}` });
+            setTimeout(() => setGlobalMessage(null), 3000);
+        } finally {
+            setProcessingMessage(null);
         }
-        
-        setActiveProperty(finalProp.name);
-        await API.saveToSheet(isNew ? 'ADD' : 'UPDATE', 'Properties', finalProp);
-        setShowPropertyModal(false);
-        setGlobalMessage({ type: 'success', text: `Property "${finalProp.name}" ${isNew ? 'Registered' : 'Updated'}` });
-        setTimeout(() => setGlobalMessage(null), 3000);
     };
 
     const syncWithCloud = async (isBackground = false) => {
@@ -470,6 +492,7 @@ export default function App() {
         if (!isBackground) setIsLoading(true);
         else setIsRefreshing(true);
         setSyncStatus('connecting');
+        setProcessingMessage('SYNCHRONIZING_CLOUD_DATA');
         
         try {
             const data = await API.getAllData();
@@ -537,6 +560,7 @@ export default function App() {
         } finally {
             setIsLoading(false);
             setIsRefreshing(false);
+            setProcessingMessage(null);
         }
     };
 
@@ -577,7 +601,7 @@ export default function App() {
 
         // Main login logic continues...
         
-        const tenant = tenants.find(t => cleanMobile(t.mobile) === inputMobileCleaned && t.password === password);
+        const tenant = tenants.find(t => cleanMobile(t.mobile) === inputMobile && t.password === inputPass);
         if (tenant) {
             setActiveTenantId(tenant.id);
             setActiveProperty(tenant.propertyName);
@@ -596,266 +620,321 @@ export default function App() {
     };
 
     const updateUnitFittings = async (unitId, newFittings) => {
-        const unit = propertyUnits.find(u => u.id === unitId);
-        if (unit) {
-            const updatedUnit = { ...unit, fittings: newFittings };
-            setPropertyUnits(prev => prev.map(u => u.id === unitId ? updatedUnit : u));
-            setGlobalMessage({ type: 'info', text: "Synchronizing inventory with cloud..." });
-            const res = await API.saveToSheet('UPDATE', 'Units', updatedUnit);
-            if (res.success) {
-                setGlobalMessage({ type: 'success', text: "Inventory Verified & Cloud Synced" });
-                syncWithCloud(true);
-            } else {
-                setGlobalMessage({ type: 'error', text: `Sync Failed: ${res.message}` });
+        setProcessingMessage('VERIFYING_INVENTORY');
+        try {
+            const unit = propertyUnits.find(u => u.id === unitId);
+            if (unit) {
+                const updatedUnit = { ...unit, fittings: newFittings };
+                setPropertyUnits(prev => prev.map(u => u.id === unitId ? updatedUnit : u));
+                setGlobalMessage({ type: 'info', text: "Synchronizing inventory with cloud..." });
+                const res = await API.saveToSheet('UPDATE', 'Units', updatedUnit);
+                if (res.success) {
+                    setGlobalMessage({ type: 'success', text: "Inventory Verified & Cloud Synced" });
+                    syncWithCloud(true);
+                } else {
+                    setGlobalMessage({ type: 'error', text: `Sync Failed: ${res.message}` });
+                }
             }
+            setTimeout(() => setGlobalMessage(null), 3000);
+        } finally {
+            setProcessingMessage(null);
         }
-        setTimeout(() => setGlobalMessage(null), 3000);
     };
 
     const handleAddBill = async (newBillData, updatedTenants) => {
-        const newBill = { ...newBillData, id: generateId('BIL'), propertyName: activeProperty };
-        setUtilityBills([...utilityBills, newBill]);
-        setTenants(updatedTenants);
-        
-        // Save bill
-        await API.saveToSheet('ADD', 'Bills', newBill);
-        // Update all affected tenants
-        for (const t of updatedTenants) {
-            await API.saveToSheet('UPDATE', 'Tenants', t);
-        }
+        setProcessingMessage('ALLOCATING_UTILITY_BILL');
+        try {
+            const newBill = { ...newBillData, id: generateId('BIL'), propertyName: activeProperty };
+            setUtilityBills([...utilityBills, newBill]);
+            setTenants(updatedTenants);
+            
+            // Save bill
+            await API.saveToSheet('ADD', 'Bills', newBill);
+            // Update all affected tenants
+            for (const t of updatedTenants) {
+                await API.saveToSheet('UPDATE', 'Tenants', t);
+            }
 
-        setGlobalMessage({ type: 'success', text: `Bill recorded and allocated for ${activeProperty}!` });
-        setTimeout(() => setGlobalMessage(null), 3000);
+            setGlobalMessage({ type: 'success', text: `Bill recorded and allocated for ${activeProperty}!` });
+            setTimeout(() => setGlobalMessage(null), 3000);
+        } finally {
+            setProcessingMessage(null);
+        }
     };
 
     const handleMarkPaid = async (tenantId, amount) => {
-        const tenant = tenants.find(t => t.id === tenantId);
-        if (tenant) {
-            const updatedTenant = { 
-                ...tenant, 
-                lastPaymentDate: new Date().toISOString() 
-            };
-            const newPayment = {
-                id: generateId('PAY'),
-                tenantId: tenant.id,
-                amount: amount,
-                date: new Date().toISOString(),
-                propertyName: activeProperty
-            };
+        setProcessingMessage('PROCESSING_RENT_PAYMENT');
+        try {
+            const tenant = tenants.find(t => t.id === tenantId);
+            if (tenant) {
+                const updatedTenant = { 
+                    ...tenant, 
+                    lastPaymentDate: new Date().toISOString() 
+                };
+                const newPayment = {
+                    id: generateId('PAY'),
+                    tenantId: tenant.id,
+                    amount: amount,
+                    date: new Date().toISOString(),
+                    propertyName: activeProperty
+                };
 
-            setTenants(prev => prev.map(t => t.id === tenantId ? updatedTenant : t));
-            setPayments(prev => [newPayment, ...prev]);
-            setGlobalMessage({ type: 'success', text: `Payment for ${tenant.unit} Verified!` });
-            
-            await API.saveToSheet('UPDATE', 'Tenants', updatedTenant);
-            await API.saveToSheet('ADD', 'Payments', newPayment);
-            
-            setTimeout(() => setGlobalMessage(null), 3000);
-            
-            // Generate receipt link
-            const msg = encodeURIComponent(`Hi ${tenant.name.split(' ')[0]},\n\nWe have successfully received and verified your rent payment of ${activeCurrency} ${amount}. \n\nThank you for the prompt payment! \n\nBest regards,\nProperty Management`);
-            const waLink = `https://wa.me/${String(tenant.mobile || '').replace(/\D/g, '')}?text=${msg}`;
-            window.open(waLink, '_blank');
+                setTenants(prev => prev.map(t => t.id === tenantId ? updatedTenant : t));
+                setPayments(prev => [newPayment, ...prev]);
+                setGlobalMessage({ type: 'success', text: `Payment for ${tenant.unit} Verified!` });
+                
+                await API.saveToSheet('UPDATE', 'Tenants', updatedTenant);
+                await API.saveToSheet('ADD', 'Payments', newPayment);
+                
+                setTimeout(() => setGlobalMessage(null), 3000);
+                
+                // Generate receipt link
+                const msg = encodeURIComponent(`Hi ${tenant.name.split(' ')[0]},\n\nWe have successfully received and verified your rent payment of ${activeCurrency} ${amount}. \n\nThank you for the prompt payment! \n\nBest regards,\nProperty Management`);
+                const waLink = `https://wa.me/${String(tenant.mobile || '').replace(/\D/g, '')}?text=${msg}`;
+                window.open(waLink, '_blank');
+            }
+        } finally {
+            setProcessingMessage(null);
         }
     };
 
     const handleAddTask = async (newTask) => {
-        const taskData = { ...newTask, id: generateId('MTN'), propertyName: activeProperty };
-        setTasks([...tasks, taskData]);
-        await API.saveToSheet('ADD', 'Tasks', taskData);
-        setGlobalMessage({ type: 'success', text: `Maintenance task created for ${activeProperty}!` });
-        setTimeout(() => setGlobalMessage(null), 3000);
+        setProcessingMessage('DISPATCHING_WORK_ORDER');
+        try {
+            const taskData = { ...newTask, id: generateId('MTN'), propertyName: activeProperty };
+            setTasks([...tasks, taskData]);
+            await API.saveToSheet('ADD', 'Tasks', taskData);
+            setGlobalMessage({ type: 'success', text: `Maintenance task created for ${activeProperty}!` });
+            setTimeout(() => setGlobalMessage(null), 3000);
+        } finally {
+            setProcessingMessage(null);
+        }
     };
 
     const addUnitToCatalog = async (unitData) => {
-        let imageUrl = unitData.image;
-        if (unitData.newImageFile) {
-            setGlobalMessage({ type: 'info', text: "Uploading unit photo..." });
-            const uploadRes = await API.uploadToDrive(unitData.newImageFile, `unit_${unitData.unitNumber}_${Date.now()}.png`);
-            if (uploadRes.success) imageUrl = uploadRes.url;
-        }
+        setProcessingMessage('CATALOGING_NEW_UNIT');
+        try {
+            let imageUrl = unitData.image;
+            if (unitData.newImageFile) {
+                setGlobalMessage({ type: 'info', text: "Uploading unit photo..." });
+                const uploadRes = await API.uploadToDrive(unitData.newImageFile, `unit_${unitData.unitNumber}_${Date.now()}.png`);
+                if (uploadRes.success) imageUrl = uploadRes.url;
+            }
 
-        const newUnit = { 
-            ...unitData, 
-            id: generateId('UNT'), 
-            fittings: [], 
-            propertyName: activeProperty,
-            image: imageUrl 
-        };
-        delete newUnit.newImageFile; // Clean up for state/sheet
+            const newUnit = { 
+                ...unitData, 
+                id: generateId('UNT'), 
+                fittings: [], 
+                propertyName: activeProperty,
+                image: imageUrl 
+            };
+            delete newUnit.newImageFile; // Clean up for state/sheet
 
-        setPropertyUnits([...propertyUnits, newUnit]);
-        const res = await API.saveToSheet('ADD', 'Units', newUnit);
-        if (res.success) {
-            setGlobalMessage({ type: 'success', text: `Unit ${unitData.unitNumber} added & Cloud Synced` });
-            syncWithCloud(true);
-        } else {
-            setGlobalMessage({ type: 'error', text: `Cloud Save Failed: ${res.message}` });
+            setPropertyUnits([...propertyUnits, newUnit]);
+            const res = await API.saveToSheet('ADD', 'Units', newUnit);
+            if (res.success) {
+                setGlobalMessage({ type: 'success', text: `Unit ${unitData.unitNumber} added & Cloud Synced` });
+                syncWithCloud(true);
+            } else {
+                setGlobalMessage({ type: 'error', text: `Cloud Save Failed: ${res.message}` });
+            }
+            setTimeout(() => setGlobalMessage(null), 3000);
+        } finally {
+            setProcessingMessage(null);
         }
-        setTimeout(() => setGlobalMessage(null), 3000);
     };
 
     const editUnitInCatalog = async (updatedUnit) => {
-        let imageUrl = updatedUnit.image;
-        if (updatedUnit.newImageFile) {
-            setGlobalMessage({ type: 'info', text: "Updating unit photo..." });
-            const uploadRes = await API.uploadToDrive(updatedUnit.newImageFile, `unit_${updatedUnit.unitNumber}_${Date.now()}.png`);
-            if (uploadRes.success) imageUrl = uploadRes.url;
+        setProcessingMessage('UPDATING_UNIT_DETAILS');
+        try {
+            let imageUrl = updatedUnit.image;
+            if (updatedUnit.newImageFile) {
+                setGlobalMessage({ type: 'info', text: "Updating unit photo..." });
+                const uploadRes = await API.uploadToDrive(updatedUnit.newImageFile, `unit_${updatedUnit.unitNumber}_${Date.now()}.png`);
+                if (uploadRes.success) imageUrl = uploadRes.url;
+            }
+
+            const finalUnit = { ...updatedUnit, image: imageUrl };
+            delete finalUnit.newImageFile; // Clean up
+
+            setPropertyUnits(prev => prev.map(u => u.id === finalUnit.id ? finalUnit : u));
+            await API.saveToSheet('UPDATE', 'Units', finalUnit);
+            setGlobalMessage({ type: 'success', text: `Unit ${finalUnit.unitNumber} updated successfully` });
+            setTimeout(() => setGlobalMessage(null), 3000);
+        } finally {
+            setProcessingMessage(null);
         }
-
-        const finalUnit = { ...updatedUnit, image: imageUrl };
-        delete finalUnit.newImageFile; // Clean up
-
-        setPropertyUnits(prev => prev.map(u => u.id === finalUnit.id ? finalUnit : u));
-        await API.saveToSheet('UPDATE', 'Units', finalUnit);
-        setGlobalMessage({ type: 'success', text: `Unit ${finalUnit.unitNumber} updated successfully` });
-        setTimeout(() => setGlobalMessage(null), 3000);
     };
 
     const deleteUnit = async (unitId) => {
         if (!window.confirm("Are you sure you want to PERMANENTLY delete this unit? This cannot be undone.")) return;
-        
-        const unit = propertyUnits.find(u => u.id === unitId);
-        setPropertyUnits(prev => prev.filter(u => u.id !== unitId));
-        setGlobalMessage({ type: 'info', text: "Removing unit from cloud..." });
-        await API.saveToSheet('DELETE', 'Units', { id: unitId });
-        setGlobalMessage({ type: 'success', text: `Unit deleted & synced successfully` });
-        setTimeout(() => setGlobalMessage(null), 3000);
+        setProcessingMessage('DECOMMISSIONING_UNIT');
+        try {
+            const unit = propertyUnits.find(u => u.id === unitId);
+            setPropertyUnits(prev => prev.filter(u => u.id !== unitId));
+            setGlobalMessage({ type: 'info', text: "Removing unit from cloud..." });
+            await API.saveToSheet('DELETE', 'Units', { id: unitId });
+            setGlobalMessage({ type: 'success', text: `Unit deleted & synced successfully` });
+            setTimeout(() => setGlobalMessage(null), 3000);
+        } finally {
+            setProcessingMessage(null);
+        }
     };
 
     const addTenant = async (newTenant) => {
-        setGlobalMessage({ type: 'info', text: "Initializing lease setup..." });
-        
-        let docUrl = null;
-        if (newTenant.leaseFile) {
-            setGlobalMessage({ type: 'info', text: "Uploading documentation to cloud..." });
-            const uploadedUrl = await API.uploadFile(newTenant.leaseFile);
-            if (uploadedUrl) docUrl = uploadedUrl;
-        }
+        setProcessingMessage('INITIALIZING_LEASE_SETUP');
+        try {
+            setGlobalMessage({ type: 'info', text: "Initializing lease setup..." });
+            
+            let docUrl = null;
+            if (newTenant.leaseFile) {
+                setGlobalMessage({ type: 'info', text: "Uploading documentation to cloud..." });
+                const uploadedUrl = await API.uploadFile(newTenant.leaseFile);
+                if (uploadedUrl) docUrl = uploadedUrl;
+            }
 
-        const tenantData = {
-            ...newTenant,
-            id: generateId('RES'),
-            maintenanceSelection: null,
-            utilityShare: 0,
-            notifications: [],
-            leaseDocument: docUrl,
-            propertyName: activeProperty
-        };
-        delete tenantData.leaseFile; // Clean up
+            const tenantData = {
+                ...newTenant,
+                id: generateId('RES'),
+                maintenanceSelection: null,
+                utilityShare: 0,
+                notifications: [],
+                leaseDocument: docUrl,
+                propertyName: activeProperty
+            };
+            delete tenantData.leaseFile; // Clean up
 
-        setTenants([...tenants, tenantData]);
-        setPropertyUnits(prev => prev.map(u => u.unitNumber === newTenant.unit ? { ...u, status: 'Occupied' } : u));
-        
-        setGlobalMessage({ type: 'info', text: "Syncing data to cloud..." });
-        const res = await API.saveToSheet('ADD', 'Tenants', tenantData);
-        
-        const unit = propertyUnits.find(u => u.unitNumber === newTenant.unit);
-        if (unit) {
-            await API.saveToSheet('UPDATE', 'Units', { ...unit, status: 'Occupied' });
-        }
+            setTenants([...tenants, tenantData]);
+            setPropertyUnits(prev => prev.map(u => u.unitNumber === newTenant.unit ? { ...u, status: 'Occupied' } : u));
+            
+            setGlobalMessage({ type: 'info', text: "Syncing data to cloud..." });
+            const res = await API.saveToSheet('ADD', 'Tenants', tenantData);
+            
+            const unit = propertyUnits.find(u => u.unitNumber === newTenant.unit);
+            if (unit) {
+                await API.saveToSheet('UPDATE', 'Units', { ...unit, status: 'Occupied' });
+            }
 
-        if (res.success) {
-            setGlobalMessage({ type: 'success', text: `Registration Complete & Cloud Synced` });
-            syncWithCloud(true);
-        } else {
-            setGlobalMessage({ type: 'error', text: `Sync Failure: ${res.message}` });
+            if (res.success) {
+                setGlobalMessage({ type: 'success', text: `Registration Complete & Cloud Synced` });
+                syncWithCloud(true);
+            } else {
+                setGlobalMessage({ type: 'error', text: `Sync Failure: ${res.message}` });
+            }
+            setTimeout(() => setGlobalMessage(null), 3000);
+        } finally {
+            setProcessingMessage(null);
         }
-        setTimeout(() => setGlobalMessage(null), 3000);
     };
 
     const editTenant = async (updatedTenant) => {
-        setGlobalMessage({ type: 'info', text: "Updating agreement details..." });
-        
-        let docUrl = updatedTenant.leaseDocument || null;
-        if (updatedTenant.leaseFile) {
-            setGlobalMessage({ type: 'info', text: "Uploading documentation to cloud..." });
-            const uploadedUrl = await API.uploadFile(updatedTenant.leaseFile);
-            if (uploadedUrl) docUrl = uploadedUrl;
-        }
-
-        const tenantData = { 
-            ...updatedTenant, 
-            leaseDocument: docUrl,
-            lastUpdated: new Date().toISOString() 
-        };
-        delete tenantData.leaseFile; // Don't send file object to sheet
-
-        setTenants(prev => prev.map(t => t.id === updatedTenant.id ? tenantData : t));
-        const oldTenant = tenants.find(t => t.id === updatedTenant.id);
-        
-        if (tenantData.unit) {
-            // Update local units state
-            setPropertyUnits(prev => prev.map(u => {
-                if (u.unitNumber === tenantData.unit) return { ...u, status: 'Occupied' };
-                if (oldTenant && oldTenant.unit === u.unitNumber && oldTenant.unit !== tenantData.unit) return { ...u, status: 'Available' };
-                return u;
-            }));
-
-            // Sync unit changes to cloud
-            const newUnit = propertyUnits.find(u => u.unitNumber === tenantData.unit);
-            if (newUnit) await API.saveToSheet('UPDATE', 'Units', { ...newUnit, status: 'Occupied' });
+        setProcessingMessage('UPDATING_AGREEMENT_DETAILS');
+        try {
+            setGlobalMessage({ type: 'info', text: "Updating agreement details..." });
             
-            if (oldTenant && oldTenant.unit !== tenantData.unit) {
-                const prevUnit = propertyUnits.find(u => u.unitNumber === oldTenant.unit);
-                if (prevUnit) await API.saveToSheet('UPDATE', 'Units', { ...prevUnit, status: 'Available' });
+            let docUrl = updatedTenant.leaseDocument || null;
+            if (updatedTenant.leaseFile) {
+                setGlobalMessage({ type: 'info', text: "Uploading documentation to cloud..." });
+                const uploadedUrl = await API.uploadFile(updatedTenant.leaseFile);
+                if (uploadedUrl) docUrl = uploadedUrl;
             }
+
+            const tenantData = { 
+                ...updatedTenant, 
+                leaseDocument: docUrl,
+                lastUpdated: new Date().toISOString() 
+            };
+            delete tenantData.leaseFile; // Don't send file object to sheet
+
+            setTenants(prev => prev.map(t => t.id === updatedTenant.id ? tenantData : t));
+            const oldTenant = tenants.find(t => t.id === updatedTenant.id);
+            
+            if (tenantData.unit) {
+                // Update local units state
+                setPropertyUnits(prev => prev.map(u => {
+                    if (u.unitNumber === tenantData.unit) return { ...u, status: 'Occupied' };
+                    if (oldTenant && oldTenant.unit === u.unitNumber && oldTenant.unit !== tenantData.unit) return { ...u, status: 'Available' };
+                    return u;
+                }));
+
+                // Sync unit changes to cloud
+                const newUnit = propertyUnits.find(u => u.unitNumber === tenantData.unit);
+                if (newUnit) await API.saveToSheet('UPDATE', 'Units', { ...newUnit, status: 'Occupied' });
+                
+                if (oldTenant && oldTenant.unit !== tenantData.unit) {
+                    const prevUnit = propertyUnits.find(u => u.unitNumber === oldTenant.unit);
+                    if (prevUnit) await API.saveToSheet('UPDATE', 'Units', { ...prevUnit, status: 'Available' });
+                }
+            }
+            
+            const res = await API.saveToSheet('UPDATE', 'Tenants', tenantData);
+            if (res.success) {
+                setGlobalMessage({ type: 'success', text: `Agreement Finalized & Synced` });
+                syncWithCloud(true);
+            } else {
+                setGlobalMessage({ type: 'error', text: `Cloud Save Failed: ${res.message}` });
+            }
+            setTimeout(() => setGlobalMessage(null), 3000);
+        } finally {
+            setProcessingMessage(null);
         }
-        
-        const res = await API.saveToSheet('UPDATE', 'Tenants', tenantData);
-        if (res.success) {
-            setGlobalMessage({ type: 'success', text: `Agreement Finalized & Synced` });
-            syncWithCloud(true);
-        } else {
-            setGlobalMessage({ type: 'error', text: `Cloud Save Failed: ${res.message}` });
-        }
-        setTimeout(() => setGlobalMessage(null), 3000);
     };
 
     const handleUpdateMessage = async (msgId, updates) => {
-        const msg = tenantMessages.find(m => m.id === msgId);
-        if (!msg) return;
-        const updatedMsg = { ...msg, ...updates };
-        setTenantMessages(prev => prev.map(m => m.id === msgId ? updatedMsg : m));
-        await API.saveToSheet('UPDATE', 'Messages', updatedMsg);
+        setProcessingMessage('UPDATING_MESSAGE_STATUS');
+        try {
+            const msg = tenantMessages.find(m => m.id === msgId);
+            if (!msg) return;
+            const updatedMsg = { ...msg, ...updates };
+            setTenantMessages(prev => prev.map(m => m.id === msgId ? updatedMsg : m));
+            await API.saveToSheet('UPDATE', 'Messages', updatedMsg);
+        } finally {
+            setProcessingMessage(null);
+        }
     };
 
     const handleSendMessage = async (msg, photoData = null) => {
-        let photoUrl = null;
-        
-        if (photoData) {
-            setGlobalMessage({ type: 'info', text: "Uploading attachment..." });
-            const uploadRes = await API.uploadToDrive(photoData, `msg_${Date.now()}.png`);
-            if (uploadRes.success) {
-                photoUrl = uploadRes.url;
-            } else {
-                setGlobalMessage({ type: 'error', text: "Photo upload failed! Please ensure UPLOAD_FOLDER_ID is set in your GAS Script." });
-                setTimeout(() => setGlobalMessage(null), 5000);
+        setProcessingMessage('TRANSMITTING_MESSAGE');
+        try {
+            let photoUrl = null;
+            
+            if (photoData) {
+                setGlobalMessage({ type: 'info', text: "Uploading attachment..." });
+                const uploadRes = await API.uploadToDrive(photoData, `msg_${Date.now()}.png`);
+                if (uploadRes.success) {
+                    photoUrl = uploadRes.url;
+                } else {
+                    setGlobalMessage({ type: 'error', text: "Photo upload failed! Please ensure UPLOAD_FOLDER_ID is set in your GAS Script." });
+                    setTimeout(() => setGlobalMessage(null), 5000);
+                }
             }
+
+            const newMessage = {
+                id: generateId('MSG'),
+                tenantId: activeTenantId,
+                content: msg,
+                photoUrl: photoUrl, // Remote URL
+                timestamp: new Date().toISOString(),
+                propertyName: activeProperty,
+                status: 'UNREAD',
+                handledBy: ''
+            };
+
+            // UI Persistence (Immediate)
+            setTenantMessages(prev => [newMessage, ...prev]);
+            
+            // Remote Persistence
+            await API.saveToSheet('ADD', 'Messages', newMessage);
+
+            setGlobalMessage({ type: 'success', text: `Message sent to ${activeProperty} management!` });
+            setTimeout(() => setGlobalMessage(null), 3000);
+        } finally {
+            setProcessingMessage(null);
         }
-
-        const newMessage = {
-            id: generateId('MSG'),
-            tenantId: activeTenantId,
-            content: msg,
-            photoUrl: photoUrl, // Remote URL
-            timestamp: new Date().toISOString(),
-            propertyName: activeProperty,
-            status: 'UNREAD',
-            handledBy: ''
-        };
-
-        // UI Persistence (Immediate)
-        setTenantMessages(prev => [newMessage, ...prev]);
-        
-        // Remote Persistence
-        await API.saveToSheet('ADD', 'Messages', newMessage);
-
-        setGlobalMessage({ type: 'success', text: `Message sent to ${activeProperty} management!` });
-        setTimeout(() => setGlobalMessage(null), 3000);
     };
 
     const handleMoveOut = async (unit, tenant, offboardingData) => {
+        setProcessingMessage('FINALIZING_OFFBOARDING');
         try {
             setGlobalMessage({ type: 'info', text: 'Finalizing Settlement & Offboarding...' });
             
@@ -902,10 +981,13 @@ export default function App() {
         } catch (err) {
             console.error('Move out failed:', err);
             setGlobalMessage({ type: 'error', text: 'Move-out failed. Connection issue?' });
+        } finally {
+            setProcessingMessage(null);
         }
     };
 
     const handleLeaseDocUpload = async (tenantId, file) => {
+        setProcessingMessage('UPLOADING_LEASE_AGREEMENT');
         try {
             setGlobalMessage({ type: 'info', text: 'Uploading Lease Agreement...' });
             const docUrl = await API.uploadFile(file);
@@ -920,12 +1002,18 @@ export default function App() {
             console.error('Lease upload failed:', err);
             setGlobalMessage({ type: 'error', text: 'Upload Failed - Check Cloud Connection' });
             setTimeout(() => setGlobalMessage(null), 3000);
+        } finally {
+            setProcessingMessage(null);
         }
     };
 
     if (isLoading && syncStatus === 'connecting') {
         return (
-            <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-6 relative overflow-hidden">
+            <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-6 relative overflow-hidden premium-gradient">
+                <AnimatePresence>
+                    {processingMessage && <CommandProcessingOverlay message={processingMessage} />}
+                </AnimatePresence>
+                
                 <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-indigo-600/10 blur-[120px] rounded-full animate-pulse" />
                 
                 <Motion.div 
@@ -952,7 +1040,7 @@ export default function App() {
                             <div className="w-1.5 h-1.5 bg-indigo-500 rounded-full animate-bounce" style={{ animationDelay: '200ms' }} />
                             <div className="w-1.5 h-1.5 bg-indigo-500 rounded-full animate-bounce" style={{ animationDelay: '400ms' }} />
                         </div>
-                        <p className="text-slate-500 text-[9px] uppercase font-black tracking-[0.4em] opacity-60">Command Your Day &bull; MyDay OS</p>
+                        <p className="text-slate-500 text-[9px] uppercase font-black tracking-[0.4em] opacity-60 font-mono-data">Command Your Day &bull; MyDay OS</p>
                     </div>
                     
                     <div className="mt-12 w-48 h-1 bg-white/5 rounded-full overflow-hidden relative">
@@ -996,8 +1084,9 @@ export default function App() {
                         </div>
                         <div className="flex flex-col leading-none">
                             <span className="text-white font-black text-base tracking-tight uppercase">
-                                My PropMan
+                                MyDay OS
                             </span>
+                            <span className="text-[7px] text-indigo-400/60 font-black uppercase tracking-[0.2em] mt-0.5">v1.3.1 • STATUS: OPTIMIZED</span>
                         </div>
                     </div>
 
@@ -1007,8 +1096,8 @@ export default function App() {
                             <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-2xl px-4 py-2.5 hover:bg-white/10 transition-all">
                                 <div className="flex flex-col items-end gap-0.5 pr-2 border-r border-white/10">
                                     <div className="flex items-center gap-1.5 leading-none">
-                                        <p className={`text-[7px] font-black uppercase tracking-tight ${syncStatus === 'connected' ? 'text-emerald-400' : syncStatus === 'error' ? 'text-red-400' : 'text-slate-500'}`}>
-                                            {syncStatus === 'connected' ? 'Cloud Live' : syncStatus === 'error' ? 'Sync Error' : syncStatus === 'connecting' ? 'Connecting' : 'Offline Mode'}
+                                        <p className={`text-[7px] font-black uppercase tracking-tight ${syncStatus === 'connected' ? 'text-emerald-400 drop-shadow-[0_0_5px_rgba(52,211,153,0.3)]' : syncStatus === 'error' ? 'text-red-400' : 'text-slate-500'}`}>
+                                            {syncStatus === 'connected' ? 'SYSTEM_COMMAND_LIVE' : syncStatus === 'error' ? 'SYNC_ERROR' : syncStatus === 'connecting' ? 'CONNECTING...' : 'OFFLINE_MODE'}
                                         </p>
                                         <button 
                                             onClick={() => syncWithCloud()} 
@@ -1018,7 +1107,7 @@ export default function App() {
                                             <RefreshCcw className="w-2.5 h-2.5" />
                                         </button>
                                     </div>
-                                    <p className="text-[7px] text-slate-600 font-black uppercase tracking-tight tabular-nums">
+                                    <p className="text-[7px] text-slate-600 font-black uppercase tracking-tight tabular-nums font-mono-data">
                                         {lastSyncTime ? `Last Updated: ${lastSyncTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : '— Local Cache Only'}
                                     </p>
                                 </div>
@@ -1059,7 +1148,7 @@ export default function App() {
                                                             onClick={() => { setActiveProperty(p?.name || p); setShowPropertyPicker(false); }}
                                                             className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl text-left transition-all group ${
                                                                 activeProperty === (p?.name || p)
-                                                                    ? 'bg-indigo-600/20 text-indigo-300 border border-indigo-500/20'
+                                                                    ? 'bg-indigo-600/20 text-indigo-300 border border-indigo-500/20 glow-indigo'
                                                                     : 'text-slate-300 hover:bg-white/5 border border-transparent'
                                                             }`}
                                                         >
@@ -1132,7 +1221,12 @@ export default function App() {
                 />
             )}
 
+            <AnimatePresence>
+                {processingMessage && <CommandProcessingOverlay message={processingMessage} />}
+            </AnimatePresence>
+
             <main className="w-full px-6 md:px-12 py-8">
+
                 {isLoading ? (
                     <div className="flex flex-col items-center justify-center py-20">
                         <div className="w-12 h-12 border-4 border-indigo-500/20 border-t-indigo-500 rounded-full animate-spin mb-4"></div>
@@ -1316,7 +1410,7 @@ function ManagerDashboard({ activeProperty, tenants, payments, propertyUnits, ut
                         {activeTab === tab.id && (
                             <Motion.div 
                                 layoutId="activeTab"
-                                className="absolute inset-0 bg-indigo-600 rounded-xl -z-10 shadow-lg shadow-indigo-600/40"
+                                className="absolute inset-0 bg-indigo-600 rounded-xl -z-10 shadow-lg shadow-indigo-600/40 glow-indigo"
                                 transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
                             />
                         )}
@@ -1459,7 +1553,7 @@ function PaymentConfirmModal({ tenant, currency, proofMessages, onConfirm, onClo
                 <div className="px-6 py-4 bg-white/[0.02] border-b border-white/5 flex flex-wrap gap-4 items-center justify-between">
                     <div>
                         <p className="text-[8px] font-black uppercase tracking-widest text-slate-600 mb-1">Billing Period</p>
-                        <p className="text-[11px] font-black text-slate-300 flex items-center gap-1.5">
+                        <p className="text-[11px] font-black text-slate-300 flex items-center gap-1.5 font-mono-data">
                             {bp.from ? fmtDate(bp.from.toISOString()) : '—'}
                             <span className="text-indigo-400">→</span>
                             {bp.to ? fmtDate(bp.to.toISOString()) : '—'}
@@ -1467,7 +1561,7 @@ function PaymentConfirmModal({ tenant, currency, proofMessages, onConfirm, onClo
                     </div>
                     <div className="text-right">
                         <p className="text-[8px] font-black uppercase tracking-widest text-slate-600 mb-1">Amount Due</p>
-                        <p className="text-xl font-black text-emerald-400 tracking-tighter">{currency} {totalDue.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+                        <p className="text-xl font-black text-emerald-400 tracking-tighter font-mono-data">{currency} {totalDue.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
                     </div>
                 </div>
 
@@ -1504,7 +1598,7 @@ function PaymentConfirmModal({ tenant, currency, proofMessages, onConfirm, onClo
                                     ))}
                                 </div>
                             )}
-                            <p className="text-[8px] text-slate-600 mt-2 font-medium">
+                            <p className="text-[8px] text-slate-600 mt-2 font-medium font-mono-data">
                                 Submitted: {selectedProof ? fmtDate(selectedProof.timestamp, true) : '—'}
                             </p>
                         </>
@@ -1523,7 +1617,7 @@ function PaymentConfirmModal({ tenant, currency, proofMessages, onConfirm, onClo
                         Cancel
                     </Motion.button>
                     <Motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} onClick={onConfirm}
-                        className="flex-[2] py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest text-white bg-emerald-600 hover:bg-emerald-500 shadow-xl shadow-emerald-600/20 transition-all flex items-center justify-center gap-2">
+                        className="flex-[2] py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest text-white bg-emerald-600 hover:bg-emerald-500 shadow-xl shadow-emerald-600/20 transition-all flex items-center justify-center gap-2 glow-emerald">
                         <CheckCircle2 className="w-4 h-4" /> Confirm & Mark Paid
                     </Motion.button>
                 </div>
@@ -1654,7 +1748,7 @@ function RentSummaryTab({ tenants, payments, currency = 'USD', onMarkPaid, prope
                                 animate={{ opacity: 1, x: 0 }}
                                 transition={{ delay: idx * 0.05 }}
                                 className={`rounded-3xl p-6 border flex flex-col md:flex-row items-start md:items-center justify-between gap-5 transition-all ${
-                                    isPaidThisMonth(rent.lastPaymentDate) ? 'bg-emerald-500/5 border-emerald-500/20 shadow-lg shadow-emerald-600/5' :
+                                    isPaidThisMonth(rent.lastPaymentDate) ? 'bg-emerald-500/5 border-emerald-500/20 shadow-lg shadow-emerald-600/5 glow-emerald' :
                                     isOverdue ? 'bg-red-500/5 border-red-500/20 hover:bg-red-500/10' :
                                     isUrgent ? 'bg-orange-500/5 border-orange-500/20 hover:bg-orange-500/10' :
                                     'bg-white/[0.03] border-white/5 hover:bg-white/[0.06]'
@@ -1684,14 +1778,14 @@ function RentSummaryTab({ tenants, payments, currency = 'USD', onMarkPaid, prope
                                         {(() => {
                                             const bp = getBillingPeriod(rent.leaseStart);
                                             return bp.from && bp.to ? (
-                                                <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest mt-0.5 flex items-center gap-1.5">
+                                                <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest mt-0.5 flex items-center gap-1.5 font-mono-data">
                                                     <CalendarRange className="w-3 h-3 text-indigo-400/60 shrink-0" />
                                                     {fmtDate(bp.from.toISOString())}
                                                     <span className="text-indigo-400/60">→</span>
                                                     {fmtDate(bp.to.toISOString())}
                                                 </p>
                                             ) : (
-                                                <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest mt-0.5">Lease Start: {fmtDate(rent.leaseStart)}</p>
+                                                <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest mt-0.5 font-mono-data">Lease Start: {fmtDate(rent.leaseStart)}</p>
                                             );
                                         })()}
                                     </div>
@@ -1701,7 +1795,7 @@ function RentSummaryTab({ tenants, payments, currency = 'USD', onMarkPaid, prope
                                 <div className="flex flex-wrap items-center gap-4 md:gap-6 w-full md:w-auto">
                                     <div className="text-left md:text-right">
                                         <p className="text-[9px] font-black text-slate-600 uppercase tracking-widest mb-1">Due</p>
-                                        <p className={`text-sm font-black tracking-tight ${
+                                        <p className={`text-sm font-black tracking-tight font-mono-data ${
                                             isOverdue ? 'text-red-400' : isUrgent ? 'text-orange-400' : 'text-slate-300'
                                         }`}>{dueDateStr}</p>
                                         <p className={`text-[9px] font-black uppercase mt-0.5 ${
@@ -1714,7 +1808,7 @@ function RentSummaryTab({ tenants, payments, currency = 'USD', onMarkPaid, prope
 
                                     <div className="bg-white/5 px-5 py-3 rounded-2xl border border-white/5">
                                         <p className="text-[9px] font-black text-slate-600 uppercase tracking-widest mb-1">Monthly Rent</p>
-                                        <p className="text-xl font-black text-emerald-400 tracking-tighter">{currency} {Number(rent.baseRent).toLocaleString()}</p>
+                                        <p className="text-xl font-black text-emerald-400 tracking-tighter font-mono-data">{currency} {Number(rent.baseRent).toLocaleString()}</p>
                                     </div>
 
                                     {isPaidThisMonth(rent.lastPaymentDate) ? (
@@ -1727,7 +1821,7 @@ function RentSummaryTab({ tenants, payments, currency = 'USD', onMarkPaid, prope
                                             className={`flex items-center gap-2 px-5 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${
                                                 tenantMessages.some(m => m.tenantId === rent.id && m.photoUrl)
                                                     ? 'bg-amber-500 hover:bg-amber-400 text-slate-900 shadow-lg shadow-amber-500/30'
-                                                    : 'bg-emerald-600/20 hover:bg-emerald-600 text-emerald-400 hover:text-white border border-emerald-500/30'
+                                                    : 'bg-emerald-600/20 hover:bg-emerald-600 text-emerald-400 hover:text-white border border-emerald-500/30 glow-emerald'
                                             }`}
                                         >
                                             <CheckCircle2 className="w-4 h-4" />
@@ -1789,9 +1883,9 @@ function RentSummaryTab({ tenants, payments, currency = 'USD', onMarkPaid, prope
                                             <td className="px-8 py-6">
                                                 <p className="text-sm font-bold text-white tracking-tight">{t?.name || 'Archived Tenant'}</p>
                                             </td>
-                                            <td className="px-8 py-6 text-xs text-slate-400 font-bold">{fmtDate(pay.date)}</td>
+                                            <td className="px-8 py-6 text-xs text-slate-400 font-bold font-mono-data">{fmtDate(pay.date)}</td>
                                             <td className="px-8 py-6 text-right">
-                                                <span className="text-sm font-black text-emerald-400 tabular-nums">{currency} {Number(pay.amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                                <span className="text-sm font-black text-emerald-400 tabular-nums font-mono-data">{currency} {Number(pay.amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                                             </td>
                                         </tr>
                                     );
@@ -1860,7 +1954,7 @@ function VendorModal({ isOpen, onClose, onSubmit, editingVendor }) {
                 </div>
 
                 <div className="p-10 pt-0">
-                    <button onClick={() => onSubmit(vendorForm)} className="w-full py-6 bg-indigo-600 hover:bg-indigo-500 text-white font-black rounded-3xl shadow-xl shadow-indigo-600/30 uppercase tracking-[0.2em] text-xs flex items-center justify-center gap-3 transition-all transform active:scale-95">
+                    <button onClick={() => onSubmit(vendorForm)} className="w-full py-6 bg-indigo-600 hover:bg-indigo-500 text-white font-black rounded-3xl shadow-xl shadow-indigo-600/30 uppercase tracking-[0.2em] text-xs flex items-center justify-center gap-3 transition-all transform active:scale-95 glow-indigo">
                         {editingVendor ? <RefreshCcw className="w-5 h-5" /> : <PlusCircle className="w-5 h-5" />}
                         {editingVendor ? 'Process my Modifications' : 'Enlist a New Partner'}
                     </button>
@@ -1903,10 +1997,10 @@ function MessagesManager({ tenants, messages, onUpdateMessage, activeManager }) 
                     </div>
                     
                     <div className="flex bg-slate-900/50 p-1.5 rounded-2xl border border-white/5">
-                        <button onClick={() => setFilter('ACTIVE')} className={`px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${filter === 'ACTIVE' ? 'bg-indigo-600 shadow-lg text-white' : 'text-slate-500 hover:text-white'}`}>
+                        <button onClick={() => setFilter('ACTIVE')} className={`px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${filter === 'ACTIVE' ? 'bg-indigo-600 shadow-lg text-white glow-indigo' : 'text-slate-500 hover:text-white'}`}>
                             Action Required <span className="ml-2 bg-white/20 px-1.5 py-0.5 rounded-md">{activeMessages.length}</span>
                         </button>
-                        <button onClick={() => setFilter('RESOLVED')} className={`px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${filter === 'RESOLVED' ? 'bg-emerald-600 shadow-lg text-white' : 'text-slate-500 hover:text-white'}`}>
+                        <button onClick={() => setFilter('RESOLVED')} className={`px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${filter === 'RESOLVED' ? 'bg-emerald-600 shadow-lg text-white glow-emerald' : 'text-slate-500 hover:text-white'}`}>
                             Resolved <span className="ml-2 bg-white/20 px-1.5 py-0.5 rounded-md">{resolvedMessages.length}</span>
                         </button>
                     </div>
@@ -1953,7 +2047,7 @@ function MessagesManager({ tenants, messages, onUpdateMessage, activeManager }) 
                                                         <span className="text-[9px] text-indigo-400 font-black uppercase bg-indigo-500/10 px-2 py-0.5 rounded-md border border-indigo-500/10">Unit {tenant?.unit}</span>
                                                     </div>
                                                     <div className="flex items-center gap-3 mt-1.5 flex-wrap">
-                                                        <p className="text-[9px] text-slate-600 font-black uppercase tracking-widest">{formatDate(msg.timestamp, true)}</p>
+                                                        <p className="text-[9px] text-slate-600 font-black uppercase tracking-widest font-mono-data">{formatDate(msg.timestamp, true)}</p>
                                                         <span className="flex items-center gap-1.5 text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full border bg-opacity-10 border-opacity 30">
                                                             {status === 'UNREAD' && <span className="text-red-400 border-red-500 bg-red-500 px-2 rounded-full">🔴 UNREAD</span>}
                                                             {status === 'IN PROGRESS' && <span className="text-amber-400 border-amber-500 bg-amber-500 px-2 rounded-full">🟡 IN PROGRESS</span>}
@@ -1993,7 +2087,7 @@ function MessagesManager({ tenants, messages, onUpdateMessage, activeManager }) 
                                                         whileHover={{ scale: 1.04 }}
                                                         whileTap={{ scale: 0.96 }}
                                                         onClick={() => handleResolve(msg.id)}
-                                                        className="bg-emerald-600/10 hover:bg-emerald-600/20 text-emerald-500 border border-emerald-500/20 px-6 py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-all"
+                                                        className="bg-emerald-600/10 hover:bg-emerald-600/20 text-emerald-500 border border-emerald-500/20 px-6 py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-all glow-emerald"
                                                     >
                                                         <CheckCircle2 className="w-4 h-4" /> Mark as Resolved
                                                     </Motion.button>
@@ -2160,9 +2254,9 @@ function UtilityManager({ tenants, utilityBills, onAddBill, currency = 'USD' }) 
     return (
         <div className="space-y-6">
             <div className="flex bg-slate-900/50 p-1 rounded-2xl border border-white/5 w-fit">
-                <button onClick={() => setActiveTab('new')} className={`px-6 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-2 ${activeTab === 'new' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20' : 'text-slate-500 hover:text-slate-300'}`}><PlusCircle className="w-4 h-4" /> Process a New Bill</button>
-                <button onClick={() => setActiveTab('monthly')} className={`px-6 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-2 ${activeTab === 'monthly' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20' : 'text-slate-500 hover:text-slate-300'}`}><Calendar className="w-4 h-4" /> My Monthly Summary</button>
-                <button onClick={() => setActiveTab('history')} className={`px-6 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-2 ${activeTab === 'history' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20' : 'text-slate-500 hover:text-slate-300'}`}><Clock className="w-4 h-4" /> My Bill History</button>
+                <button onClick={() => setActiveTab('new')} className={`px-6 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-2 ${activeTab === 'new' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20 glow-indigo' : 'text-slate-500 hover:text-slate-300'}`}><PlusCircle className="w-4 h-4" /> Process a New Bill</button>
+                <button onClick={() => setActiveTab('monthly')} className={`px-6 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-2 ${activeTab === 'monthly' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20 glow-indigo' : 'text-slate-500 hover:text-slate-300'}`}><Calendar className="w-4 h-4" /> My Monthly Summary</button>
+                <button onClick={() => setActiveTab('history')} className={`px-6 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-2 ${activeTab === 'history' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20 glow-indigo' : 'text-slate-500 hover:text-slate-300'}`}><Clock className="w-4 h-4" /> My Bill History</button>
             </div>
 
             {activeTab === 'new' && (
@@ -2186,11 +2280,11 @@ function UtilityManager({ tenants, utilityBills, onAddBill, currency = 'USD' }) 
                                 </div>
                                 <div className="space-y-1">
                                     <label className="text-[10px] text-slate-500 font-bold uppercase tracking-widest pl-1">Date</label>
-                                    <input type="date" style={{ colorScheme: 'dark' }} className="w-full bg-slate-800 border-none rounded-xl p-3 text-white text-sm outline-none" value={billDate} onChange={e => setBillDate(e.target.value)} />
+                                    <input type="date" style={{ colorScheme: 'dark' }} className="w-full bg-slate-800 border-none rounded-xl p-3 text-white text-sm outline-none font-mono-data" value={billDate} onChange={e => setBillDate(e.target.value)} />
                                 </div>
                                 <div className="space-y-1">
                                     <label className="text-[10px] text-slate-500 font-bold uppercase tracking-widest pl-1">Amount ($)</label>
-                                    <input type="number" className="w-full bg-slate-800 border-none rounded-xl p-3 text-white text-sm outline-none" placeholder="0.00" value={billAmount} onChange={e => setBillAmount(e.target.value)} />
+                                    <input type="number" className="w-full bg-slate-800 border-none rounded-xl p-3 text-white text-sm outline-none font-mono-data" placeholder="0.00" value={billAmount} onChange={e => setBillAmount(e.target.value)} />
                                 </div>
                                 <div className="space-y-1">
                                     <label className="text-[10px] text-slate-500 font-bold uppercase tracking-widest pl-1">Document (Optional)</label>
@@ -2210,14 +2304,14 @@ function UtilityManager({ tenants, utilityBills, onAddBill, currency = 'USD' }) 
                                 <PieChart className="w-4 h-4 text-indigo-400" /> Distribution Logic
                             </h3>
                             <div className="space-y-3">
-                                <button onClick={() => setMode('equal')} className={`w-full p-4 rounded-2xl border transition-all text-left flex justify-between items-center ${mode === 'equal' ? 'bg-indigo-600/10 border-indigo-500/40' : 'bg-white/5 border-transparent opacity-60'}`}>
+                                <button onClick={() => setMode('equal')} className={`w-full p-4 rounded-2xl border transition-all text-left flex justify-between items-center ${mode === 'equal' ? 'bg-indigo-600/10 border-indigo-500/40 glow-indigo' : 'bg-white/5 border-transparent opacity-60'}`}>
                                     <div>
                                         <p className="text-xs font-black text-white uppercase tracking-widest">Standard Share</p>
                                         <p className="text-[10px] text-slate-400 font-bold mt-1">Split equally by active tenants</p>
                                     </div>
                                     {mode === 'equal' && <CheckCircle2 className="w-5 h-5 text-indigo-400" />}
                                 </button>
-                                <button onClick={() => setMode('designated')} className={`w-full p-4 rounded-2xl border transition-all text-left flex justify-between items-center ${mode === 'designated' ? 'bg-indigo-600/10 border-indigo-500/40' : 'bg-white/5 border-transparent opacity-60'}`}>
+                                <button onClick={() => setMode('designated')} className={`w-full p-4 rounded-2xl border transition-all text-left flex justify-between items-center ${mode === 'designated' ? 'bg-indigo-600/10 border-indigo-500/40 glow-indigo' : 'bg-white/5 border-transparent opacity-60'}`}>
                                     <div>
                                         <p className="text-xs font-black text-white uppercase tracking-widest">Designated Share</p>
                                         <p className="text-[10px] text-slate-400 font-bold mt-1">Split by occupancy period</p>
@@ -2236,7 +2330,7 @@ function UtilityManager({ tenants, utilityBills, onAddBill, currency = 'USD' }) 
                             <div className="flex gap-4 items-center">
                                 <div className="text-right">
                                     <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Total Bill</p>
-                                    <p className="text-xl font-black text-white tracking-tighter">{currency} {totalBill.toFixed(2)}</p>
+                                    <p className="text-xl font-black text-white tracking-tighter font-mono-data">{currency} {totalBill.toFixed(2)}</p>
                                 </div>
                                 {mode === 'designated' && (
                                     <div className="bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest">
@@ -2262,9 +2356,9 @@ function UtilityManager({ tenants, utilityBills, onAddBill, currency = 'USD' }) 
                                             {mode === 'designated' && (
                                                 <div className="flex flex-col gap-2">
                                                     <div className="flex items-center gap-2">
-                                                        <input type="date" style={{ colorScheme: 'dark' }} className="w-[110px] bg-slate-800 border-none rounded-lg p-1.5 text-[10px] font-black text-white outline-none focus:ring-1 ring-indigo-500 uppercase tracking-widest" value={tenantDates[t.id].start} onChange={e => setTenantDates(prev => ({ ...prev, [t.id]: { ...prev[t.id], start: e.target.value } }))} />
+                                                        <input type="date" style={{ colorScheme: 'dark' }} className="w-[110px] bg-slate-800 border-none rounded-lg p-1.5 text-[10px] font-black text-white outline-none focus:ring-1 ring-indigo-500 uppercase tracking-widest font-mono-data" value={tenantDates[t.id].start} onChange={e => setTenantDates(prev => ({ ...prev, [t.id]: { ...prev[t.id], start: e.target.value } }))} />
                                                         <span className="text-slate-500 text-xs">to</span>
-                                                        <input type="date" style={{ colorScheme: 'dark' }} className="w-[110px] bg-slate-800 border-none rounded-lg p-1.5 text-[10px] font-black text-white outline-none focus:ring-1 ring-indigo-500 uppercase tracking-widest" value={tenantDates[t.id].end} onChange={e => setTenantDates(prev => ({ ...prev, [t.id]: { ...prev[t.id], end: e.target.value } }))} />
+                                                        <input type="date" style={{ colorScheme: 'dark' }} className="w-[110px] bg-slate-800 border-none rounded-lg p-1.5 text-[10px] font-black text-white outline-none focus:ring-1 ring-indigo-500 uppercase tracking-widest font-mono-data" value={tenantDates[t.id].end} onChange={e => setTenantDates(prev => ({ ...prev, [t.id]: { ...prev[t.id], end: e.target.value } }))} />
                                                     </div>
                                                     <div className="text-right">
                                                         <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest bg-indigo-500/10 px-2 py-1 rounded-md border border-indigo-500/20">{tenantDays[t.id]} Days</span>
@@ -2273,7 +2367,7 @@ function UtilityManager({ tenants, utilityBills, onAddBill, currency = 'USD' }) 
                                             )}
                                             <div className="text-right min-w-[80px]">
                                                 <p className="text-[9px] font-black text-slate-600 uppercase tracking-widest mb-0.5">Share Amount</p>
-                                                <p className="text-lg font-black text-indigo-400 tracking-tighter">{currency} {calculatedAmt.toFixed(2)}</p>
+                                                <p className="text-lg font-black text-indigo-400 tracking-tighter font-mono-data">{currency} {calculatedAmt.toFixed(2)}</p>
                                             </div>
                                         </div>
                                     </div>
@@ -2281,7 +2375,7 @@ function UtilityManager({ tenants, utilityBills, onAddBill, currency = 'USD' }) 
                             })}
                         </div>
 
-                        <button disabled={totalBill <= 0 || (mode === 'designated' && totalDays <= 0)} onClick={handleApply} className="w-full mt-10 py-4 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-30 disabled:cursor-not-allowed text-white font-black rounded-2xl shadow-xl shadow-indigo-600/20 transition-all uppercase tracking-widest text-[10px] flex items-center justify-center gap-2">
+                        <button disabled={totalBill <= 0 || (mode === 'designated' && totalDays <= 0)} onClick={handleApply} className="w-full mt-10 py-4 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-30 disabled:cursor-not-allowed text-white font-black rounded-2xl shadow-xl shadow-indigo-600/20 transition-all uppercase tracking-widest text-[10px] flex items-center justify-center gap-2 glow-indigo">
                             Record & Allocate Bill <ArrowUpRight className="w-4 h-4" />
                         </button>
                     </div>
@@ -2299,7 +2393,7 @@ function UtilityManager({ tenants, utilityBills, onAddBill, currency = 'USD' }) 
                         </div>
                         <div className="flex items-center gap-3">
                             <span className="text-[10px] font-black text-slate-600 uppercase tracking-widest hidden md:inline">Period</span>
-                            <select className="bg-slate-950/60 border border-white/10 hover:border-indigo-500/40 rounded-2xl px-5 py-3 text-white text-xs font-black outline-none cursor-pointer transition-all" value={effectiveMonth} onChange={e => setSelectedMonth(e.target.value)}>
+                            <select className="bg-slate-950/60 border border-white/10 hover:border-indigo-500/40 rounded-2xl px-5 py-3 text-white text-xs font-black outline-none cursor-pointer transition-all font-mono-data" value={effectiveMonth} onChange={e => setSelectedMonth(e.target.value)}>
                                 {uniqueMonths.map(m => <option key={m} value={m}>{new Date(m + '-01').toLocaleString('default', { month: 'long', year: 'numeric' })}</option>)}
                             </select>
                         </div>
@@ -2340,7 +2434,7 @@ function UtilityManager({ tenants, utilityBills, onAddBill, currency = 'USD' }) 
                                                             {b.type === 'Electricity' ? <Zap className="w-3 h-3 text-amber-400" /> : b.type === 'Water' ? <Droplets className="w-3 h-3 text-blue-400" /> : b.type === 'Gas' ? <Flame className="w-3 h-3 text-orange-400" /> : null}
                                                             {b.type}
                                                         </span>
-                                                        <span className="text-white font-black text-sm">{currency} {b.amount.toFixed(2)}</span>
+                                                        <span className="text-white font-black text-sm font-mono-data">{currency} {b.amount.toFixed(2)}</span>
                                                     </div>
                                                 ))}
                                             </div>
@@ -2354,7 +2448,7 @@ function UtilityManager({ tenants, utilityBills, onAddBill, currency = 'USD' }) 
                                     <div className="pt-5 mt-5 border-t border-white/5">
                                         <div className="flex justify-between items-center mb-4">
                                             <span className="text-[10px] text-slate-500 font-black uppercase tracking-widest">Utility Total</span>
-                                            <span className={`text-2xl font-black tracking-tighter ${totalOwed > 0 ? 'text-emerald-400' : 'text-slate-600'}`}>{currency} {totalOwed.toFixed(2)}</span>
+                                            <span className={`text-2xl font-black tracking-tighter font-mono-data ${totalOwed > 0 ? 'text-emerald-400' : 'text-slate-600'}`}>{currency} {totalOwed.toFixed(2)}</span>
                                         </div>
                                         {t.mobile && totalOwed > 0 && (
                                             <Motion.a
@@ -2363,7 +2457,7 @@ function UtilityManager({ tenants, utilityBills, onAddBill, currency = 'USD' }) 
                                                 href={`https://wa.me/${String(t.mobile || '').replace(/\D/g, '')}?text=${encodeURIComponent(`Hi ${String(t.name || 'Tenant').split(' ')[0]},\n\nYour utility bill summary for ${new Date(effectiveMonth + '-01').toLocaleString('default', { month: 'long', year: 'numeric' })} is:\n${breakdowns.map(b => `- ${b.type}: ${currency} ${b.amount.toFixed(2)}`).join('\n')}\n\n*Total Due: ${currency} ${totalOwed.toFixed(2)}*`)}`}
                                                 target="_blank"
                                                 rel="noopener noreferrer"
-                                                className="w-full bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-widest flex justify-center items-center gap-2 transition-all shadow-lg shadow-emerald-600/5"
+                                                className="w-full bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-widest flex justify-center items-center gap-2 transition-all shadow-lg shadow-emerald-600/5 glow-emerald"
                                             >
                                                 <MessageSquare className="w-3.5 h-3.5" /> Send Utility Alert
                                             </Motion.a>
@@ -2402,12 +2496,12 @@ function UtilityManager({ tenants, utilityBills, onAddBill, currency = 'USD' }) 
                                                         </span>
                                                     )}
                                                 </h4>
-                                                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1"><span className="text-indigo-400">{fmtDate(bill.date)}</span> • {bill.mode === 'equal' ? 'Standard Split' : 'Designated Split'}</p>
+                                                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1 font-mono-data"><span className="text-indigo-400">{fmtDate(bill.date)}</span> • {bill.mode === 'equal' ? 'Standard Split' : 'Designated Split'}</p>
                                             </div>
                                         </div>
                                         <div className="text-right">
                                             <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Total Amount</p>
-                                            <p className="text-3xl font-black text-white tracking-tighter">{currency} {bill.amount.toFixed(2)}</p>
+                                            <p className="text-3xl font-black text-white tracking-tighter font-mono-data">{currency} {bill.amount.toFixed(2)}</p>
                                         </div>
                                     </div>
                                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -2418,7 +2512,7 @@ function UtilityManager({ tenants, utilityBills, onAddBill, currency = 'USD' }) 
                                                     <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3 flex items-center gap-2">Unit <span className="text-white">{t.unit}</span></p>
                                                     <div className="flex justify-between items-end">
                                                         <span className="text-xs font-bold text-slate-300">{t.name.split(' ')[0]}</span>
-                                                        <span className="text-lg font-black text-indigo-400 tracking-tighter">{currency} {alloc.amount.toFixed(2)}</span>
+                                                        <span className="text-lg font-black text-indigo-400 tracking-tighter font-mono-data">{currency} {alloc.amount.toFixed(2)}</span>
                                                     </div>
                                                 </div>
                                             ) : null;
@@ -2467,7 +2561,7 @@ function TasksManager({ tenants, tasks, vendors, onAddTask, onAddVendor, onEditV
                     { id: 'active', icon: <Hammer className="w-3.5 h-3.5" />, label: 'My Work Orders' },
                     { id: 'vendors', icon: <Briefcase className="w-3.5 h-3.5" />, label: 'My Service Network' }
                 ].map(t => (
-                    <button key={t.id} onClick={() => setSubTab(t.id)} className={`px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 ${subTab === t.id ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}>
+                    <button key={t.id} onClick={() => setSubTab(t.id)} className={`px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 ${subTab === t.id ? 'bg-indigo-600 text-white shadow-lg glow-indigo' : 'text-slate-500 hover:text-slate-300'}`}>
                         {t.icon} {t.label}
                     </button>
                 ))}
@@ -2511,13 +2605,13 @@ function TasksManager({ tenants, tasks, vendors, onAddTask, onAddVendor, onEditV
                                     <label className="text-[10px] text-slate-500 font-bold uppercase tracking-widest pl-1">Inspection Slots</label>
                                     {dateOptions.map((opt, i) => (
                                         <div key={i} className="flex gap-2">
-                                            <input type="date" style={{ colorScheme: 'dark' }} className="flex-1 bg-slate-800 border-none rounded-xl p-3 text-white text-xs outline-none focus:ring-1 ring-indigo-500" value={opt.date} onChange={e => { const n = [...dateOptions]; n[i].date = e.target.value; setDateOptions(n); }} />
-                                            <input type="time" style={{ colorScheme: 'dark' }} className="flex-1 bg-slate-800 border-none rounded-xl p-3 text-white text-xs outline-none focus:ring-1 ring-indigo-500" value={opt.time} onChange={e => { const n = [...dateOptions]; n[i].time = e.target.value; setDateOptions(n); }} />
+                                            <input type="date" style={{ colorScheme: 'dark' }} className="flex-1 bg-slate-800 border-none rounded-xl p-3 text-white text-xs outline-none focus:ring-1 ring-indigo-500 font-mono-data" value={opt.date} onChange={e => { const n = [...dateOptions]; n[i].date = e.target.value; setDateOptions(n); }} />
+                                            <input type="time" style={{ colorScheme: 'dark' }} className="flex-1 bg-slate-800 border-none rounded-xl p-3 text-white text-xs outline-none focus:ring-1 ring-indigo-500 font-mono-data" value={opt.time} onChange={e => { const n = [...dateOptions]; n[i].time = e.target.value; setDateOptions(n); }} />
                                         </div>
                                     ))}
                                     <button onClick={() => setDateOptions([...dateOptions, { date: '', time: '' }])} className="text-[9px] text-indigo-400 font-black uppercase tracking-[0.2em] px-2 py-1 hover:text-white transition-all">+ Add Option</button>
                                 </div>
-                                <button onClick={handleAdd} className="w-full mt-4 py-4 bg-indigo-600 hover:bg-indigo-500 text-white font-black rounded-2xl shadow-xl shadow-indigo-600/20 transition-all uppercase tracking-widest text-[10px]">Generate Work Order</button>
+                                <button onClick={handleAdd} className="w-full mt-4 py-4 bg-indigo-600 hover:bg-indigo-500 text-white font-black rounded-2xl shadow-xl shadow-indigo-600/20 transition-all uppercase tracking-widest text-[10px] glow-indigo">Generate Work Order</button>
                             </div>
                         </div>
                     </div>
@@ -2535,7 +2629,7 @@ function TasksManager({ tenants, tasks, vendors, onAddTask, onAddVendor, onEditV
                                         <h4 className="text-xl font-black text-white tracking-tight">{task.title}</h4>
                                         <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Unit {tenant.unit} • {tenant.name}</p>
                                         <div className="flex flex-wrap gap-2 pt-2">
-                                            {task.dateOptions?.map((d, idx) => <span key={idx} className="bg-slate-950/40 text-slate-400 text-[9px] font-bold px-3 py-1.5 rounded-lg border border-white/5">{d}</span>)}
+                                            {task.dateOptions?.map((d, idx) => <span key={idx} className="bg-slate-950/40 text-slate-400 text-[9px] font-bold px-3 py-1.5 rounded-lg border border-white/5 font-mono-data">{d}</span>)}
                                         </div>
                                     </div>
                                     <div className="flex flex-col gap-2 min-w-[160px]">
@@ -2543,7 +2637,7 @@ function TasksManager({ tenants, tasks, vendors, onAddTask, onAddVendor, onEditV
                                             <p className="text-[8px] font-black text-slate-600 uppercase mb-1">Status</p>
                                             <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">{task.status}</p>
                                         </div>
-                                        <a href={`https://wa.me/${String(tenant.mobile || '').replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" className="bg-emerald-600/10 hover:bg-emerald-600/20 border border-emerald-500/20 text-emerald-500 p-3 rounded-xl text-[9px] font-black uppercase tracking-widest text-center transition-all">Notify Tenant</a>
+                                        <a href={`https://wa.me/${String(tenant.mobile || '').replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" className="bg-emerald-600/10 hover:bg-emerald-600/20 border border-emerald-500/20 text-emerald-500 p-3 rounded-xl text-[9px] font-black uppercase tracking-widest text-center transition-all glow-emerald">Notify Tenant</a>
                                         <button className="bg-white/5 hover:bg-white/10 text-slate-400 p-3 rounded-xl text-[9px] font-black uppercase tracking-widest text-center transition-all">Close Order</button>
                                     </div>
                                 </div>
@@ -2576,7 +2670,7 @@ function TasksManager({ tenants, tasks, vendors, onAddTask, onAddVendor, onEditV
                                 {[...Array(5)].map((_, idx) => <span key={idx} className={`w-1.5 h-1.5 rounded-full ${idx < Math.floor(v.rating || 5) ? 'bg-amber-500' : 'bg-slate-700'}`}></span>)}
                                 <span className="text-[10px] text-slate-500 font-black ml-2">{v.rating || 5} Verified</span>
                             </div>
-                            <a href={`https://wa.me/${String(v.mobile || '').replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" className="w-full bg-emerald-600/10 hover:bg-emerald-600/20 text-emerald-500 border border-emerald-500/20 py-4 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] flex items-center justify-center gap-3 transition-all">
+                            <a href={`https://wa.me/${String(v.mobile || '').replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" className="w-full bg-emerald-600/10 hover:bg-emerald-600/20 text-emerald-500 border border-emerald-500/20 py-4 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] flex items-center justify-center gap-3 transition-all glow-emerald">
                                 <Phone className="w-4 h-4" /> DISPATCH VENDOR
                             </a>
                         </div>
@@ -2599,7 +2693,7 @@ function TenantDashboard({ tenant, unit, tenantMessages = [], onSendMessage, cur
         return (
             <div className="flex flex-col items-center justify-center py-40">
                 <div className="w-12 h-12 border-4 border-indigo-500/20 border-t-indigo-500 rounded-full animate-spin mb-4"></div>
-                <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest animate-pulse">Accessing MDO Resident Portal...</p>
+                <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest animate-pulse">Accessing MyDay OS Resident Portal...</p>
             </div>
         );
     }
@@ -2641,7 +2735,7 @@ function TenantDashboard({ tenant, unit, tenantMessages = [], onSendMessage, cur
                         <div>
                             <p className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-500 mb-2">Total Outstanding</p>
                             <div className="flex items-baseline gap-2">
-                                <span className="text-4xl md:text-5xl font-black text-white tracking-tighter italic">{currency} {totalDue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                <span className="text-4xl md:text-5xl font-black text-white tracking-tighter italic font-mono-data">{currency} {totalDue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                                 <span className="text-[10px] text-slate-500 font-black uppercase tracking-widest opacity-60">Balanced Due</span>
                             </div>
                         </div>
@@ -2667,19 +2761,19 @@ function TenantDashboard({ tenant, unit, tenantMessages = [], onSendMessage, cur
                     <div className="space-y-4 pt-6 border-t border-white/5">
                         <div className="flex justify-between text-[11px] font-bold">
                             <span className="text-slate-500 uppercase tracking-widest">Base Monthly Rent</span>
-                            <span className="text-white">{currency} {(Number(tenant.baseRent) || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                            <span className="text-white font-mono-data">{currency} {(Number(tenant.baseRent) || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                         </div>
                         <div className="flex justify-between text-[11px] font-bold">
                             <span className="text-slate-500 uppercase tracking-widest flex items-center gap-2">
                                 Utility Share <Droplets className="w-3 h-3 text-blue-400" />
                             </span>
-                            <span className="text-white">{currency} {(Number(tenant.utilityShare) || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                            <span className="text-white font-mono-data">{currency} {(Number(tenant.utilityShare) || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                         </div>
                     </div>
 
                     <button 
                         onClick={() => setShowMsgModal(true)}
-                        className="w-full bg-indigo-600 text-white font-black py-4 md:py-5 rounded-2xl hover:bg-indigo-500 transition-all shadow-xl shadow-indigo-600/20 text-[11px] md:text-xs uppercase tracking-widest mt-8 flex items-center justify-center gap-2 active:scale-95"
+                        className="w-full bg-indigo-600 text-white font-black py-4 md:py-5 rounded-2xl hover:bg-indigo-500 transition-all shadow-xl shadow-indigo-600/20 text-[11px] md:text-xs uppercase tracking-widest mt-8 flex items-center justify-center gap-2 active:scale-95 glow-indigo"
                     >
                         Verify my Rent Payment <ArrowUpRight className="w-5 h-5" />
                     </button>
@@ -2697,21 +2791,21 @@ function TenantDashboard({ tenant, unit, tenantMessages = [], onSendMessage, cur
                                 <p className="text-[9px] font-black text-slate-600 uppercase tracking-widest mb-1">Lease Start</p>
                                 <div className="flex items-center gap-2">
                                     <Calendar className="w-3.5 h-3.5 text-slate-500" />
-                                    <p className="text-sm font-bold text-white tracking-tight">{fmtDate(tenant.leaseStart)}</p>
+                                    <p className="text-sm font-bold text-white tracking-tight font-mono-data">{fmtDate(tenant.leaseStart)}</p>
                                 </div>
                             </div>
                             <div>
                                 <p className="text-[9px] font-black text-slate-600 uppercase tracking-widest mb-1">Lease End</p>
                                 <div className="flex items-center gap-2">
                                     <Clock className="w-3.5 h-3.5 text-amber-400" />
-                                    <p className="text-sm font-bold text-white tracking-tight">{fmtDate(tenant.leaseEnd)}</p>
+                                    <p className="text-sm font-bold text-white tracking-tight font-mono-data">{fmtDate(tenant.leaseEnd)}</p>
                                 </div>
                             </div>
                             <div>
                                 <p className="text-[10px] font-black text-slate-600 uppercase tracking-widest mb-1">Security Deposit</p>
                                 <div className="flex items-center gap-2">
                                     <ShieldCheck className="w-4 h-4 text-emerald-400" />
-                                    <p className="text-sm font-black text-white tracking-tight">{currency} {Number(tenant.deposit || 0).toLocaleString()}</p>
+                                    <p className="text-sm font-black text-white tracking-tight font-mono-data">{currency} {Number(tenant.deposit || 0).toLocaleString()}</p>
                                 </div>
                             </div>
                             <div className="col-span-2 mt-2">
@@ -2722,7 +2816,7 @@ function TenantDashboard({ tenant, unit, tenantMessages = [], onSendMessage, cur
                                             <span className="text-[10px] font-black text-emerald-400 uppercase flex items-center gap-1.5">
                                                 <FileCheck className="w-4 h-4" /> Verified Contract
                                             </span>
-                                            <a href={tenant.leaseDocument} target="_blank" rel="noopener noreferrer" className="bg-indigo-600 hover:bg-indigo-500 text-white text-[9px] font-black uppercase tracking-widest px-4 py-2 rounded-xl flex items-center gap-2 transition-all shadow-lg shadow-indigo-600/20">
+                                            <a href={tenant.leaseDocument} target="_blank" rel="noopener noreferrer" className="bg-indigo-600 hover:bg-indigo-500 text-white text-[9px] font-black uppercase tracking-widest px-4 py-2 rounded-xl flex items-center gap-2 transition-all shadow-lg shadow-indigo-600/20 glow-indigo">
                                                 ☁️ Download Access
                                             </a>
                                         </>
@@ -2757,7 +2851,7 @@ function TenantDashboard({ tenant, unit, tenantMessages = [], onSendMessage, cur
                     </div>
                     <button
                         onClick={() => setShowMsgModal(true)}
-                        className="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 transition-all shadow-xl shadow-indigo-500/20"
+                        className="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 transition-all shadow-xl shadow-indigo-500/20 glow-indigo"
                     >
                         <PlusCircle className="w-3.5 h-3.5" />
                         New Assistance Request
@@ -2782,7 +2876,7 @@ function TenantDashboard({ tenant, unit, tenantMessages = [], onSendMessage, cur
                                         }`}>
                                             {msg.status === 'RESOLVED' ? '✅ Resolved' : msg.status === 'IN PROGRESS' ? '🟡 In Progress' : '🔴 Unread'}
                                         </span>
-                                        <span className="text-[10px] text-slate-500 font-black uppercase tracking-widest">
+                                        <span className="text-[10px] text-slate-500 font-black uppercase tracking-widest font-mono-data">
                                             {new Date(msg.timestamp).toLocaleDateString()}
                                         </span>
                                     </div>
@@ -2882,7 +2976,7 @@ function MessageModal({ onClose, onSubmit }) {
                         </div>
                     </div>
 
-                    <button type="submit" className="w-full py-4 bg-indigo-600 hover:bg-indigo-500 text-white font-black rounded-2xl shadow-xl shadow-indigo-600/20 transition-all uppercase tracking-widest text-[10px] flex items-center justify-center gap-2">
+                    <button type="submit" className="w-full py-4 bg-indigo-600 hover:bg-indigo-500 text-white font-black rounded-2xl shadow-xl shadow-indigo-600/20 transition-all uppercase tracking-widest text-[10px] flex items-center justify-center gap-2 glow-indigo">
                         <Send className="w-3.5 h-3.5" /> Send Message
                     </button>
                 </form>
@@ -2899,7 +2993,11 @@ function InventoryModal({ unit, onClose, onSave }) {
 
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-md">
-            <div className="bg-slate-900 border border-white/10 w-full max-w-md rounded-[2.5rem] p-8 shadow-2xl">
+            <Motion.div 
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="bg-slate-900 border border-white/10 w-full max-w-md rounded-[2.5rem] p-8 shadow-2xl"
+            >
                 <div className="flex justify-between items-center mb-6">
                     <h2 className="text-xl font-black text-white italic flex items-center gap-3">
                         <Box className="w-6 h-6 text-indigo-500" /> My Inventory & Fittings
@@ -2909,7 +3007,7 @@ function InventoryModal({ unit, onClose, onSave }) {
                 <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
                     <div className="flex gap-2 mb-4">
                         <input type="text" className="flex-1 bg-slate-800 border-none rounded-xl px-4 py-3 text-sm text-white outline-none focus:ring-1 ring-indigo-500" placeholder="E.g. Smart TV..." value={newItem} onChange={(e) => setNewItem(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && addItem()} />
-                        <button onClick={addItem} className="bg-indigo-600 p-3 rounded-xl hover:bg-indigo-500 transition-all"><Plus className="w-5 h-5 text-white" /></button>
+                        <button onClick={addItem} className="bg-indigo-600 p-3 rounded-xl hover:bg-indigo-500 transition-all glow-indigo"><Plus className="w-5 h-5 text-white" /></button>
                     </div>
                     <div className="space-y-2">
                         {localFittings.map((item, idx) => (
@@ -2920,8 +3018,8 @@ function InventoryModal({ unit, onClose, onSave }) {
                         ))}
                     </div>
                 </div>
-                <button onClick={() => onSave(localFittings)} className="w-full mt-8 py-4 bg-emerald-600 hover:bg-emerald-500 text-white font-black rounded-2xl shadow-xl uppercase tracking-widest text-[10px]">Save Changes</button>
-            </div>
+                <button onClick={() => onSave(localFittings)} className="w-full mt-8 py-4 bg-emerald-600 hover:bg-emerald-500 text-white font-black rounded-2xl shadow-xl uppercase tracking-widest text-[10px] glow-emerald">Save Changes</button>
+            </Motion.div>
         </div>
     );
 }
@@ -3014,8 +3112,8 @@ function UnitCard({ unit, tenant, currency = 'USD', history, onUpdateFittings, o
                 <div className="absolute top-6 right-6 flex flex-col items-end gap-2 z-20">
                     <div className={`px-4 py-2 rounded-2xl text-[10px] font-black uppercase tracking-widest border backdrop-blur-xl shadow-2xl ${
                         !isOccupied 
-                        ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' 
-                        : 'bg-indigo-600/30 text-indigo-400 border-indigo-500/30'
+                        ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30 glow-emerald' 
+                        : 'bg-indigo-600/30 text-indigo-400 border-indigo-500/30 glow-indigo'
                     }`}>
                         {isOccupied ? 'Occupied' : 'Available'}
                     </div>
@@ -3048,7 +3146,7 @@ function UnitCard({ unit, tenant, currency = 'USD', history, onUpdateFittings, o
                             key={tab.id}
                             onClick={() => setActiveSubTab(tab.id)}
                             className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${
-                                activeSubTab === tab.id ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20' : 'text-slate-500 hover:text-slate-300'
+                                activeSubTab === tab.id ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20 glow-indigo' : 'text-slate-500 hover:text-slate-300'
                             }`}
                         >
                             {tab.icon} {tab.label}
@@ -3074,9 +3172,9 @@ function UnitCard({ unit, tenant, currency = 'USD', history, onUpdateFittings, o
                                                 <p className="text-[8px] font-black text-slate-600 uppercase tracking-widest">Resident</p>
                                                 <p className="text-white font-black text-sm truncate uppercase tracking-tight">{tenantName}</p>
                                             </div>
-                                            <div className="bg-indigo-600/10 p-4 rounded-2xl border border-indigo-500/20 space-y-1.5">
+                                            <div className="bg-indigo-600/10 p-4 rounded-2xl border border-indigo-500/20 space-y-1.5 glow-indigo">
                                                 <p className="text-[8px] font-black text-indigo-400 uppercase tracking-widest">Base Rent</p>
-                                                <p className="text-white font-black text-lg tracking-tighter">
+                                                <p className="text-white font-black text-lg tracking-tighter font-mono-data">
                                                     <span className="text-xs text-indigo-500 mr-0.5">{currency}</span>{Number(actualRent).toLocaleString()}
                                                 </p>
                                             </div>
@@ -3086,14 +3184,14 @@ function UnitCard({ unit, tenant, currency = 'USD', history, onUpdateFittings, o
                                             <div className="bg-slate-950/20 p-4 rounded-2xl border border-white/5 flex items-center justify-between">
                                                 <div>
                                                     <p className="text-[8px] font-black text-slate-600 uppercase tracking-widest">Security Deposit</p>
-                                                    <p className="text-white font-bold text-xs mt-0.5">{currency} {Number(tenant.deposit || 0).toLocaleString()}</p>
+                                                    <p className="text-white font-bold text-xs mt-0.5 font-mono-data">{currency} {Number(tenant.deposit || 0).toLocaleString()}</p>
                                                 </div>
                                                 <Lock className="w-3.5 h-3.5 text-slate-700" />
                                             </div>
                                             <div className="bg-slate-950/20 p-4 rounded-2xl border border-white/5 flex items-center justify-between">
                                                 <div>
                                                     <p className="text-[8px] font-black text-slate-600 uppercase tracking-widest">Utilities Allocation</p>
-                                                    <p className="text-white font-bold text-xs mt-0.5">{currency} {Number(tenant.utilityShare || 0).toLocaleString()}</p>
+                                                    <p className="text-white font-bold text-xs mt-0.5 font-mono-data">{currency} {Number(tenant.utilityShare || 0).toLocaleString()}</p>
                                                 </div>
                                                 <Droplets className="w-3.5 h-3.5 text-blue-500/50" />
                                             </div>
@@ -3101,8 +3199,8 @@ function UnitCard({ unit, tenant, currency = 'USD', history, onUpdateFittings, o
 
                                         <div className="bg-slate-950/20 rounded-2xl border border-white/5 p-4 space-y-4">
                                             <div className="flex items-center justify-between text-[9px] font-bold uppercase text-slate-500 border-b border-white/5 pb-3">
-                                                <span className="flex items-center gap-2"><Calendar className="w-3 h-3" /> Tenure</span>
-                                                <span className="text-indigo-400">{fmtDate(tenant.leaseStart)} — {fmtDate(tenant.leaseEnd)}</span>
+                                                <span className="flex items-center gap-2 font-mono-data"><Calendar className="w-3 h-3" /> Tenure</span>
+                                                <span className="text-indigo-400 font-mono-data">{fmtDate(tenant.leaseStart)} — {fmtDate(tenant.leaseEnd)}</span>
                                             </div>
                                             <div className="flex items-center justify-between gap-3">
                                                 <div className="flex-1">
@@ -3122,7 +3220,7 @@ function UnitCard({ unit, tenant, currency = 'USD', history, onUpdateFittings, o
                                         </div>
 
                                         <div className="flex gap-2.5 mt-2">
-                                            <a href={`https://wa.me/${String(tenant.mobile || '').replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" className="flex-1 bg-emerald-600/10 hover:bg-emerald-600/20 border border-emerald-500/20 text-emerald-500 font-black rounded-2xl py-3.5 flex items-center justify-center gap-2.5 text-[10px] uppercase tracking-widest transition-all">
+                                            <a href={`https://wa.me/${String(tenant.mobile || '').replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" className="flex-1 bg-emerald-600/10 hover:bg-emerald-600/20 border border-emerald-500/20 text-emerald-500 font-black rounded-2xl py-3.5 flex items-center justify-center gap-2.5 text-[10px] uppercase tracking-widest transition-all glow-emerald">
                                                 <MessageCircle className="w-4 h-4" /> CONTACT RESIDENT
                                             </a>
                                             <button onClick={onMoveOut} className="bg-slate-900 border border-white/5 text-slate-500 hover:text-red-400 font-black rounded-2xl px-6 py-3.5 flex items-center justify-center gap-2.5 text-[10px] uppercase tracking-widest transition-all">
@@ -3135,14 +3233,14 @@ function UnitCard({ unit, tenant, currency = 'USD', history, onUpdateFittings, o
                                         <div className="bg-slate-950/20 rounded-[2rem] border border-white/5 p-6 mb-6">
                                             <div className="flex justify-between items-start mb-6">
                                                 <div className="space-y-4">
-                                                    <div className="flex items-center gap-2.5 text-emerald-500 font-black bg-emerald-500/5 px-4 py-2 rounded-2xl border border-emerald-500/10">
+                                                    <div className="flex items-center gap-2.5 text-emerald-500 font-black bg-emerald-500/5 px-4 py-2 rounded-2xl border border-emerald-500/10 glow-emerald">
                                                         <LayoutGrid className="w-4 h-4" />
                                                         <span className="text-[9px] uppercase tracking-widest">Market Ready Status</span>
                                                     </div>
                                                 </div>
                                                 <div className="text-right">
-                                                    <p className="text-[8px] font-black text-slate-600 uppercase tracking-widest mb-1">Target Revenue</p>
-                                                    <p className="text-3xl font-black text-white tracking-tighter">
+                                                    <p className="text-[8px] font-black text-slate-600 uppercase tracking-widest">Target Revenue</p>
+                                                    <p className="text-3xl font-black text-white tracking-tighter font-mono-data">
                                                         <span className="text-sm mr-0.5">$</span>{Number(unit.expectedRent).toLocaleString()}
                                                     </p>
                                                 </div>
@@ -3743,7 +3841,7 @@ function PropertySelectView({ properties, onSelect }) {
 
 
 // --- Global Support ---
-class ErrorBoundary extends React.Component {
+export class ErrorBoundary extends React.Component {
     constructor(props) { super(props); this.state = { hasError: false, error: null }; }
     static getDerivedStateFromError(error) { return { hasError: true, error }; }
     render() {
@@ -4124,3 +4222,29 @@ function OffboardingModal({ tenant, unit, utilityBills, currency, onClose, onSub
         </div>
     );
 }
+
+export function CommandProcessingOverlay({ message }) {
+    return (
+        <Motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[1000] flex items-center justify-center bg-slate-950/80 backdrop-blur-sm"
+        >
+            <div className="flex flex-col items-center gap-6">
+                <div className="relative">
+                    <div className="w-16 h-16 border-2 border-indigo-500/20 rounded-full animate-ping" />
+                    <div className="absolute inset-0 w-16 h-16 border-2 border-indigo-500 rounded-full animate-spin border-t-transparent flex items-center justify-center">
+                        <Terminal className="w-6 h-6 text-indigo-400" />
+                    </div>
+                </div>
+                <div className="text-center space-y-2">
+                    <p className="text-[10px] font-black uppercase tracking-[0.4em] text-indigo-400 animate-pulse font-heading">COMMAND_IN_PROGRESS</p>
+                    <p className="text-sm font-black text-white italic tracking-tighter uppercase font-mono-data opacity-80">{message}...</p>
+                </div>
+            </div>
+        </Motion.div>
+    );
+}
+
+export default App;

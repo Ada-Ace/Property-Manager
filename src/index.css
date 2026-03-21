@@ -22,6 +22,11 @@
     @apply tracking-tight;
   }
 
+  .font-mono-data {
+    font-family: 'ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'Liberation Mono', 'Courier New', monospace;
+    @apply tracking-tighter;
+  }
+
   /* Premium Grid Overlay */
   body::before {
     content: "";
@@ -79,6 +84,22 @@
 .premium-gradient {
   background: radial-gradient(circle at top left, rgba(99, 102, 241, 0.08), transparent 40%),
               radial-gradient(circle at bottom right, rgba(16, 185, 129, 0.03), transparent 40%);
+}
+
+.glow-indigo {
+  box-shadow: 0 0 25px -5px rgba(79, 70, 229, 0.3), 0 0 15px -5px rgba(79, 70, 229, 0.1);
+}
+
+.glow-emerald {
+  box-shadow: 0 0 25px -5px rgba(16, 185, 129, 0.3), 0 0 15px -5px rgba(16, 185, 129, 0.1);
+}
+
+.glow-text {
+  text-shadow: 0 0 15px rgba(255, 255, 255, 0.2);
+}
+
+.neon-border {
+  @apply border border-indigo-500/30 glow-indigo;
 }
 
 .animate-float {
