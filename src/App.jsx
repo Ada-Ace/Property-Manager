@@ -1226,7 +1226,7 @@ function App() {
                 {processingMessage && <CommandProcessingOverlay message={processingMessage} />}
             </AnimatePresence>
 
-            <main className="w-full px-6 md:px-12 py-8">
+            <main className="w-full px-6 md:px-12 py-8 pb-32 md:pb-8">
 
                 {isLoading ? (
                     <div className="flex flex-col items-center justify-center py-20">
@@ -1287,9 +1287,6 @@ function App() {
             </main>
 
             {/* Mobile Bottom Navigation */}
-            {view !== 'login' && !isLoading && (
-                <div className="md:hidden h-24" /> // Spacer for bottom nav
-            )}
             {view === 'manager' && !isLoading && (
                 <MobileBottomNav 
                     activeTab={activeTabForNav} 
@@ -1311,7 +1308,7 @@ function MobileBottomNav({ activeTab, setActiveTab, tenantMessages }) {
     ];
 
     return (
-        <div className="fixed bottom-0 left-0 right-0 z-[100] md:hidden bg-slate-950/80 backdrop-blur-2xl border-t border-white/10 px-4 py-3 pb-8 flex justify-around items-center">
+        <div className="fixed bottom-0 left-0 right-0 z-[100] md:hidden bg-slate-950/90 backdrop-blur-2xl border-t border-white/10 px-4 pt-3 flex justify-around items-center" style={{ paddingBottom: 'max(1.25rem, env(safe-area-inset-bottom))' }}>
             {tabs.map((tab) => (
                 <button
                     key={tab.id}
