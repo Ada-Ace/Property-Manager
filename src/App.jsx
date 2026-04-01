@@ -731,7 +731,7 @@ function App() {
             };
             delete newUnit.newImageFile; // Clean up for state/sheet
 
-            setPropertyUnits([...propertyUnits, newUnit]);
+            setPropertyUnits(prev => [...prev, newUnit]);
             const res = await API.saveToSheet('ADD', 'Units', newUnit);
             if (res.success) {
                 setGlobalMessage({ type: 'success', text: `Unit ${unitData.unitNumber} added & Cloud Synced` });
