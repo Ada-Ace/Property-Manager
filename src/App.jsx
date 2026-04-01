@@ -536,10 +536,16 @@ function App() {
 
                 if (actualProperties.length > 0) {
                     setProperties(actualProperties);
-                    if (!activeProperty) setActiveProperty(actualProperties[0].name);
+                    if (!activeProperty) {
+                        const defaultProp = actualProperties.find(p => p.name.toUpperCase() === 'UPTOWN@FARRER') || actualProperties[0];
+                        setActiveProperty(defaultProp.name);
+                    }
                 } else {
                     setProperties(INITIAL_PROPERTIES);
-                    if (!activeProperty) setActiveProperty(INITIAL_PROPERTIES[0].name);
+                    if (!activeProperty) {
+                        const defaultProp = INITIAL_PROPERTIES.find(p => p.name.toUpperCase() === 'UPTOWN@FARRER') || INITIAL_PROPERTIES[0];
+                        setActiveProperty(defaultProp.name);
+                    }
                 }
             } else {
                 // API returned invalid format
@@ -558,7 +564,10 @@ function App() {
                 setGlobalMessage({ type: 'error', text: `Connection Failed: ${errMsg}` });
                 setProperties(INITIAL_PROPERTIES);
                 setTenants(INITIAL_TENANTS);
-                if (!activeProperty) setActiveProperty(INITIAL_PROPERTIES[0].name);
+                if (!activeProperty) {
+                    const defaultProp = INITIAL_PROPERTIES.find(p => p.name.toUpperCase() === 'UPTOWN@FARRER') || INITIAL_PROPERTIES[0];
+                    setActiveProperty(defaultProp.name);
+                }
             }
         } finally {
             setIsLoading(false);
@@ -570,7 +579,7 @@ function App() {
     // Auto-Sync Heartbeat (Every 60s)
     useEffect(() => {
         syncWithCloud(); // Initial
-        const interval = setInterval(() => syncWithCloud(true), 60000);
+        const interval = setInterval(() => syncWithCloud(true), 300000);
         return () => clearInterval(interval);
     }, []);
 
@@ -586,6 +595,7 @@ function App() {
         if (inputMobile === rootMobile && inputPass === rootPass && rootMobile.length > 5) {
             setView('manager');
             setActiveManager({ name: 'Root Administrator' });
+            setActiveProperty('UPTOWN@FARRER');
             return { success: true };
         }
 
@@ -598,6 +608,7 @@ function App() {
 
         if (cloudManager) {
             setActiveManager({ name: cloudManager.name });
+            setActiveProperty('UPTOWN@FARRER');
             setView('manager');
             return { success: true };
         }
