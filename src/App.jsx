@@ -515,13 +515,15 @@ function App() {
                 });
 
                 // Robustly Extract Collections (Keys are now lowercased & trimmed from GAS)
-                const rawUnits = findCollection(data, 'units');
-                const rawTenants = findCollection(data, 'tenants');
-                const rawBills = findCollection(data, 'bills');
-                const rawTasks = findCollection(data, 'tasks');
-                const rawMessages = findCollection(data, 'messages');
-                const rawPayments = findCollection(data, 'payments');
-                const rawManagers = findCollection(data, 'managers');
+                const keyMap={'unitnumber':'unitNumber','expectedrent':'expectedRent','propertyname':'propertyName','baserent':'baseRent','leasestart':'leaseStart','leaseend':'leaseEnd','leasedocument':'leaseDocument','utilityshare':'utilityShare','depositrefunded':'depositRefunded','depositdeducted':'depositDeducted','moveoutdate':'moveOutDate','lastpaymentdate':'lastPaymentDate','scheduledate':'scheduleDate','tenantid':'tenantId','photourl':'photoUrl','handledby':'handledBy','duedate':'dueDate','maintenanceselection':'maintenanceSelection','vacantsince':'vacantSince','lastupdated':'lastUpdated'};
+                const normalize=(arr)=>arr.map(item=>{const obj={...item};for(const key of Object.keys(obj)){const lk=key.toLowerCase();if(keyMap[lk]&&key!==keyMap[lk])obj[keyMap[lk]]=obj[key];}if(obj.propertyname&&!obj.propertyName)obj.propertyName=String(obj.propertyname);return obj;});
+                const rawUnits = normalize(findCollection(data, 'units'));
+                const rawTenants = normalize(findCollection(data, 'tenants'));
+                const rawBills = normalize(findCollection(data, 'bills'));
+                const rawTasks = normalize(findCollection(data, 'tasks'));
+                const rawMessages = normalize(findCollection(data, 'messages'));
+                const rawPayments = normalize(findCollection(data, 'payments'));
+                const rawManagers = normalize(findCollection(data, 'managers'));
 
                 // Update Local UI States
                 setTenants(rawTenants);
