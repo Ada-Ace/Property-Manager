@@ -509,8 +509,7 @@ function App() {
         }
 
         if (!isBackground) {
-            setIsLoading(true);
-            setProcessingMessage('SYNCHRONIZING_CLOUD_DATA');
+            setIsRefreshing(true); // Always show refreshing indicator
         } else {
             setIsRefreshing(true);
         }
@@ -1056,7 +1055,8 @@ function App() {
         }
     };
 
-    if (isLoading && syncStatus === 'connecting') {
+    // Initial Splash Screen (Only on cold start before data is ready)
+    if (isLoading && tenants.length === 0) {
         return (
             <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-6 relative overflow-hidden premium-gradient">
                 <AnimatePresence>
