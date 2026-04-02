@@ -263,7 +263,7 @@ const API = {
         if (!this.isValid()) return { success: false, message: 'Invalid API URL (Must end in /exec)' };
         try {
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 90000); // 90s for large PDF uploads on mobile networks
+            const timeoutId = setTimeout(() => controller.abort(), 120000); // 120s for extra large PDFs on slow networks
             
             const resp = await fetch(API_URL, {
                 signal: controller.signal,
@@ -272,8 +272,8 @@ const API = {
                 headers: { 'Content-Type': 'text/plain' },
                 body: JSON.stringify({ 
                     action: 'UPLOAD', 
-                    fileData, // Restore full Data URI (GAS script uses this to extract contentType)
-                    fileName 
+                    fileData, 
+                    fileName: fileName.replace(/[^a-z0-9_\-\.]/gi, '_') // Sanitize file name for cloud safety
                 })
             });
             clearTimeout(timeoutId);
@@ -1025,21 +1025,21 @@ function App() {
     };
 
     const handleLeaseDocUpload = async (tenantId, file) => {
-        // Suppress intrusive overlay for background uploads
         try {
-            setGlobalMessage({ type: 'info', text: 'Uploading Lease Agreement...' });
+            setGlobalMessage({ type: 'info', text: 'Step 1/3: Reading Agreement File...' });
             const docUrl = await API.uploadFile(file);
+            setGlobalMessage({ type: 'info', text: 'Step 2/3: Transmitting to Secure Cloud...' });
+            
             if (docUrl) {
-                const tenant = tenants.find(t => String(t.id) === String(tenantId));
-                if (!tenant) throw new Error('Tenant record moved or missing');
+                const tenant = tenants.find(t => String(t.id).toLowerCase().trim() === String(tenantId).toLowerCase().trim());
+                if (!tenant) throw new Error('Tenant record lookup failed');
                 
                 const updatedTenant = { ...tenant, leaseDocument: docUrl, lastUpdated: new Date().toISOString() };
                 
-                // OPTIMISTIC: Update local state immediately before cloud sync
-                setTenants(prev => prev.map(t => String(t.id) === String(tenantId) ? updatedTenant : t));
+                setTenants(prev => prev.map(t => String(t.id).toLowerCase().trim() === String(tenantId).toLowerCase().trim() ? updatedTenant : t));
                 
-                setGlobalMessage({ type: 'info', text: 'Syncing uploaded metadata to cloud...' });
-                await editTenant(updatedTenant, true); // Silent background cloud sync
+                setGlobalMessage({ type: 'info', text: 'Step 3/3: Finalizing Cloud Handshake...' });
+                await editTenant(updatedTenant, true);
                 
                 setGlobalMessage({ type: 'success', text: 'Lease Agreement Uploaded Successfully' });
                 setTimeout(() => setGlobalMessage(null), 3500);
