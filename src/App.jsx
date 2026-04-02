@@ -3387,9 +3387,9 @@ function UnitModal({ initialData, onSubmit, onClose }) {
                 animate={{ y: 0 }}
                 exit={{ y: "100%" }}
                 transition={{ type: "spring", damping: 25, stiffness: 200 }}
-                className="bg-slate-900 border-t md:border border-white/10 w-full max-w-lg rounded-t-[2.5rem] md:rounded-[2.5rem] p-8 md:p-10 shadow-2xl relative max-h-[92vh] overflow-y-auto no-scrollbar"
+                className="bg-slate-900 border-t md:border border-white/10 w-full max-w-lg rounded-t-[2rem] md:rounded-[2.5rem] p-6 md:p-10 shadow-2xl relative max-h-[92vh] overflow-y-auto no-scrollbar"
             >
-                <div className="w-12 h-1.5 bg-white/10 rounded-full mx-auto mb-8 md:hidden" />
+                <div className="w-12 h-1 bg-white/10 rounded-full mx-auto mb-6 md:hidden" />
                 <div className="flex justify-between items-center mb-10">
                     <h2 className="text-2xl md:text-3xl font-black text-white italic flex items-center gap-4 tracking-tighter">
                         {initialData ? <Settings className="w-8 h-8 text-indigo-500" /> : <PlusCircle className="w-8 h-8 text-indigo-500" />}
@@ -3401,7 +3401,7 @@ function UnitModal({ initialData, onSubmit, onClose }) {
                 <form onSubmit={(e) => { e.preventDefault(); onSubmit(form); }} className="space-y-8">
                     {/* Hero Image Upload */}
                     <div className="relative group">
-                        <div className="w-full h-48 md:h-56 rounded-[2rem] bg-slate-800 flex flex-col items-center justify-center overflow-hidden border-2 border-dashed border-white/5 hover:border-indigo-500/30 transition-all cursor-pointer">
+                        <div className="w-full h-32 md:h-56 rounded-[1.5rem] md:rounded-[2rem] bg-slate-800 flex flex-col items-center justify-center overflow-hidden border-2 border-dashed border-white/5 hover:border-indigo-500/30 transition-all cursor-pointer">
                             {imagePreview ? (
                                 <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
                             ) : (
@@ -3422,11 +3422,11 @@ function UnitModal({ initialData, onSubmit, onClose }) {
                     </div>
 
                     <div className="space-y-6">
-                        <div className="space-y-2">
+                        <div className="space-y-1">
                             <label className="text-[10px] text-slate-500 font-black uppercase tracking-[0.2em] ml-1">Reference Label</label>
                             <input 
                                 required 
-                                className="w-full bg-slate-800/50 border border-white/5 focus:border-indigo-500/50 rounded-2xl p-4 text-white text-base font-bold outline-none transition-all placeholder:text-slate-600" 
+                                className="w-full bg-slate-800/50 border border-white/5 focus:border-indigo-500/50 rounded-2xl p-3.5 md:p-4 text-white text-sm md:text-base font-bold outline-none transition-all placeholder:text-slate-600" 
                                 placeholder="e.g. Unit 402 or Penthouse A" 
                                 value={form.unitNumber} 
                                 onChange={e => setForm({ ...form, unitNumber: e.target.value })} 
@@ -3434,25 +3434,25 @@ function UnitModal({ initialData, onSubmit, onClose }) {
                         </div>
 
                         <div className="grid grid-cols-2 gap-4 md:gap-6">
-                            <div className="space-y-2">
+                            <div className="space-y-1">
                                 <label className="text-[10px] text-slate-500 font-black uppercase tracking-[0.2em] ml-1">Total Space (FT²)</label>
                                 <input 
                                     required 
                                     type="number" 
-                                    className="w-full bg-slate-800/50 border border-white/5 focus:border-indigo-500/50 rounded-2xl p-4 text-white text-base font-bold outline-none transition-all" 
+                                    className="w-full bg-slate-800/50 border border-white/5 focus:border-indigo-500/50 rounded-2xl p-3.5 md:p-4 text-white text-sm md:text-base font-bold outline-none transition-all" 
                                     placeholder="1200" 
                                     value={form.size} 
                                     onChange={e => setForm({ ...form, size: e.target.value })} 
                                 />
                             </div>
-                            <div className="space-y-2">
+                            <div className="space-y-1">
                                 <label className="text-[10px] text-slate-500 font-black uppercase tracking-[0.2em] ml-1">Target Rent</label>
                                 <div className="relative">
                                     <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 font-black text-sm">$</span>
                                     <input 
                                         required 
                                         type="number" 
-                                        className="w-full bg-slate-800/50 border border-white/5 focus:border-indigo-500/50 rounded-2xl p-4 pl-8 text-white text-base font-bold outline-none transition-all" 
+                                        className="w-full bg-slate-800/50 border border-white/5 focus:border-indigo-500/50 rounded-2xl p-3.5 md:p-4 pl-8 text-white text-sm md:text-base font-bold outline-none transition-all" 
                                         placeholder="2500" 
                                         value={form.expectedRent} 
                                         onChange={e => setForm({ ...form, expectedRent: e.target.value })} 
