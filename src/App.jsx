@@ -263,7 +263,7 @@ const API = {
         if (!this.isValid()) return { success: false, message: 'Invalid API URL (Must end in /exec)' };
         try {
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 300000); // 30s for photo upload
+            const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s for photo upload
             
             const resp = await fetch(API_URL, {
                 signal: controller.signal,
@@ -3235,7 +3235,7 @@ function UnitCard({ unit, tenant, currency = 'USD', history, onUpdateFittings, o
                                         <div className="bg-slate-950/20 rounded-2xl border border-white/5 p-4 space-y-4">
                                             <div className="flex items-center justify-between text-[9px] font-bold uppercase text-slate-500 border-b border-white/5 pb-3">
                                                 <span className="flex items-center gap-2 font-mono-data"><Calendar className="w-3 h-3" /> Tenure</span>
-                                                <span className="text-indigo-400 font-mono-data">{fmtDate(tenant.leaseStart)} -?{fmtDate(tenant.leaseEnd)}</span>
+                                                <span className="text-indigo-400 font-mono-data">{fmtDate(tenant.leaseStart)} - {fmtDate(tenant.leaseEnd)}</span>
                                             </div>
                                             <div className="flex items-center justify-between gap-3">
                                                 <div className="flex-1">
