@@ -531,21 +531,23 @@ function App() {
                 setUtilityBills(rawBills);
                 setTasks(rawTasks);
                 setTenantMessages(rawMessages);
-                setPayments(rawPayments.length > 0 ? rawPayments : payments);
-                setManagers(rawManagers.length > 0 ? rawManagers : managers);
+                setPayments(prev => rawPayments.length > 0 ? rawPayments : prev);
+                setManagers(prev => rawManagers.length > 0 ? rawManagers : prev);
 
                 if (actualProperties.length > 0) {
                     setProperties(actualProperties);
-                    if (!activeProperty) {
+                    setActiveProperty(prev => {
+                        if (prev) return prev;
                         const defaultProp = actualProperties.find(p => p.name.toUpperCase() === 'UPTOWN@FARRER') || actualProperties[0];
-                        setActiveProperty(defaultProp.name);
-                    }
+                        return defaultProp.name;
+                    });
                 } else {
                     setProperties(INITIAL_PROPERTIES);
-                    if (!activeProperty) {
+                    setActiveProperty(prev => {
+                        if (prev) return prev;
                         const defaultProp = INITIAL_PROPERTIES.find(p => p.name.toUpperCase() === 'UPTOWN@FARRER') || INITIAL_PROPERTIES[0];
-                        setActiveProperty(defaultProp.name);
-                    }
+                        return defaultProp.name;
+                    });
                 }
             } else {
                 // API returned invalid format
@@ -564,17 +566,18 @@ function App() {
                 setGlobalMessage({ type: 'error', text: `Connection Failed: ${errMsg}` });
                 setProperties(INITIAL_PROPERTIES);
                 setTenants(INITIAL_TENANTS);
-                if (!activeProperty) {
+                setActiveProperty(prev => {
+                    if (prev) return prev;
                     const defaultProp = INITIAL_PROPERTIES.find(p => p.name.toUpperCase() === 'UPTOWN@FARRER') || INITIAL_PROPERTIES[0];
-                    setActiveProperty(defaultProp.name);
-                }
+                    return defaultProp.name;
+                });
             }
         } finally {
             setIsLoading(false);
             setIsRefreshing(false);
             setProcessingMessage(null);
         }
-    }, [activeProperty, managers, payments]);
+    }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
     // Auto-Sync Heartbeat (Every 60s)
     useEffect(() => {
