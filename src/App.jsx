@@ -263,7 +263,7 @@ const API = {
         if (!this.isValid()) return { success: false, message: 'Invalid API URL (Must end in /exec)' };
         try {
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s for photo upload
+            const timeoutId = setTimeout(() => controller.abort(), 60000); // 60s for photo and PDF upload
             
             const resp = await fetch(API_URL, {
                 signal: controller.signal,
@@ -272,7 +272,7 @@ const API = {
                 headers: { 'Content-Type': 'text/plain' },
                 body: JSON.stringify({ 
                     action: 'UPLOAD', 
-                    fileData: fileData.includes(',') ? fileData.split(',')[1] : fileData, 
+                    fileData, // Restore full Data URI (GAS script uses this to extract contentType)
                     fileName 
                 })
             });
@@ -1035,6 +1035,9 @@ function App() {
                 await editTenant(updatedTenant, true); // Silent background update
                 setGlobalMessage({ type: 'success', text: 'Lease Agreement Uploaded Successfully' });
                 setTimeout(() => setGlobalMessage(null), 3000);
+            } else {
+                setGlobalMessage({ type: 'error', text: 'Cloud storage rejected the document. Please check Drive permissions.' });
+                setTimeout(() => setGlobalMessage(null), 4000);
             }
         } catch (err) {
             console.error('Lease upload failed:', err);
