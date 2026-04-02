@@ -1952,7 +1952,7 @@ function VendorModal({ isOpen, onClose, onSubmit, editingVendor }) {
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-8 bg-slate-950/90 backdrop-blur-2xl animate-in fade-in transition-all">
+        <div className="fixed inset-0 z-[155] flex items-center justify-center p-4 md:p-8 bg-slate-950/90 backdrop-blur-2xl animate-in fade-in transition-all">
             <div className="w-full max-w-xl bg-slate-900 border border-white/10 rounded-[3rem] shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
                 <div className="p-10 pb-6 border-b border-white/5 bg-slate-900/50">
                     <div className="flex justify-between items-center mb-6">
@@ -1963,7 +1963,7 @@ function VendorModal({ isOpen, onClose, onSubmit, editingVendor }) {
                     <p className="text-[10px] text-slate-500 font-black uppercase tracking-[0.3em] mt-2 opacity-60">Service Network Registration</p>
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-10 space-y-8 custom-scrollbar">
+                <div className="flex-1 overflow-y-auto p-10 pb-32 md:pb-10 space-y-8 custom-scrollbar">
                     <div className="space-y-6">
                         <div className="space-y-2">
                             <label className="text-[10px] text-slate-500 font-bold uppercase tracking-widest pl-1">Contractor Name</label>
@@ -2967,11 +2967,11 @@ function MessageModal({ onClose, onSubmit }) {
     };
 
     return (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-md">
+        <div className="fixed inset-0 z-[155] flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-md">
             <Motion.div 
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
-                className="bg-slate-900 border border-white/10 w-full max-w-md rounded-[2.5rem] p-8 shadow-2xl"
+                className="bg-slate-900 border border-white/10 w-full max-w-md rounded-[2.5rem] p-8 pb-32 md:pb-8 shadow-2xl"
             >
                 <div className="flex justify-between items-center mb-6">
                     <h2 className="text-xl font-black text-white italic flex items-center gap-3">
@@ -3027,7 +3027,7 @@ function InventoryModal({ unit, onClose, onSave }) {
     const removeItem = (index) => { setLocalFittings(localFittings.filter((_, i) => i !== index)); };
 
     return (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-md">
+        <div className="fixed inset-0 z-[155] flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-md">
             <Motion.div 
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
@@ -3413,7 +3413,7 @@ function UnitModal({ initialData, onSubmit, onClose }) {
     };
 
     return (
-        <div className="fixed inset-0 z-[100] flex items-end md:items-center justify-center bg-slate-950/90 backdrop-blur-xl animate-in fade-in duration-500 overflow-hidden">
+        <div className="fixed inset-0 z-[155] flex items-end md:items-center justify-center bg-slate-950/90 backdrop-blur-xl animate-in fade-in duration-500 overflow-hidden">
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(79,70,229,0.1),transparent_70%)] pointer-events-none" />
             
             <Motion.div 
@@ -3421,7 +3421,7 @@ function UnitModal({ initialData, onSubmit, onClose }) {
                 animate={{ y: 0, opacity: 1 }}
                 exit={{ y: "100%", opacity: 0 }}
                 transition={{ type: "spring", damping: 28, stiffness: 220 }}
-                className="bg-slate-900 border-t md:border border-white/10 w-full max-w-lg rounded-t-[3rem] md:rounded-[3.5rem] p-8 md:p-12 shadow-2xl relative max-h-[92vh] overflow-y-auto no-scrollbar flex flex-col"
+                className="bg-slate-900 border-t md:border border-white/10 w-full max-w-lg rounded-t-[3rem] md:rounded-[3.5rem] p-8 pb-32 md:p-12 shadow-2xl relative max-h-[92vh] overflow-y-auto no-scrollbar flex flex-col"
             >
                 {/* Drag Handle for Mobile */}
                 <div className="w-16 h-1.5 bg-white/10 rounded-full mx-auto mb-10 md:hidden shrink-0" />
@@ -3558,13 +3558,13 @@ function LeaseModal({ initialData, availableUnits, onClose, onSubmit }) {
     });
 
     return (
-        <div className="fixed inset-0 z-[100] flex items-end md:items-center justify-center bg-slate-950/90 backdrop-blur-md overflow-hidden">
+        <div className="fixed inset-0 z-[155] flex items-end md:items-center justify-center bg-slate-950/90 backdrop-blur-md overflow-hidden">
             <Motion.div 
                 initial={{ y: "100%" }}
                 animate={{ y: 0 }}
                 exit={{ y: "100%" }}
                 transition={{ type: "spring", damping: 25, stiffness: 200 }}
-                className="bg-slate-900 border-t md:border border-white/10 w-full max-w-xl rounded-t-[2.5rem] md:rounded-[3rem] p-8 md:p-12 shadow-2xl relative max-h-[92vh] overflow-y-auto no-scrollbar"
+                className="bg-slate-900 border-t md:border border-white/10 w-full max-w-xl rounded-t-[2.5rem] md:rounded-[3rem] p-8 pb-32 md:p-12 shadow-2xl relative max-h-[92vh] overflow-y-auto no-scrollbar"
             >
                 <div className="w-12 h-1.5 bg-white/10 rounded-full mx-auto mb-8 md:hidden" />
                 
@@ -3953,7 +3953,7 @@ function PropertyModal({ initialData, apiStatus, onClose, onSave }) {
     const currentCurrencyInfo = ISO_CURRENCIES.find(c => c.code === form.currency);
 
     return (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center p-6 sm:p-8 bg-slate-950/80 backdrop-blur-md overflow-hidden">
+        <div className="fixed inset-0 z-[155] flex items-center justify-center p-6 sm:p-8 bg-slate-950/80 backdrop-blur-md overflow-hidden">
             {/* Background Polish */}
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_10%,rgba(79,70,229,0.1),transparent_50%)]" />
             
@@ -3990,7 +3990,7 @@ function PropertyModal({ initialData, apiStatus, onClose, onSave }) {
                 </div>
 
                 {/* Body */}
-                <div className="p-8 space-y-6 max-h-[70vh] overflow-y-auto no-scrollbar">
+                <div className="p-8 pb-32 md:pb-8 space-y-6 max-h-[70vh] overflow-y-auto no-scrollbar">
                     <div className="grid grid-cols-1 gap-6">
                         <div className="space-y-2">
                             <label className="text-[10px] text-slate-500 font-black uppercase tracking-[0.25em] ml-1">Commercial Name</label>
@@ -4217,7 +4217,7 @@ function OffboardingModal({ tenant, unit: _unit = null /* eslint-disable-line no
     const unpaidUtilities = utilityBills.reduce((acc, bill) => acc + Number(bill.amount || 0), 0);
 
     return (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 md:p-8 bg-slate-950/90 backdrop-blur-2xl animate-in fade-in transition-all">
+        <div className="fixed inset-0 z-[155] flex items-center justify-center p-4 md:p-8 bg-slate-950/90 backdrop-blur-2xl animate-in fade-in transition-all">
             <Motion.div 
                 initial={{ opacity: 0, scale: 0.95, y: 20 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -4232,7 +4232,7 @@ function OffboardingModal({ tenant, unit: _unit = null /* eslint-disable-line no
                     <p className="text-[10px] text-slate-500 font-black uppercase tracking-[0.3em] mt-2 opacity-60">Tenant Move-Out Checklist</p>
                 </div>
                 
-                <div className="flex-1 overflow-y-auto p-6 md:p-10 space-y-8 custom-scrollbar">
+                <div className="flex-1 overflow-y-auto p-6 pb-32 md:p-10 space-y-8 custom-scrollbar">
                     {unpaidUtilities > 0 && (
                         <div className="bg-red-500/10 border border-red-500/20 p-5 rounded-3xl flex items-start gap-4">
                             <AlertCircle className="w-6 h-6 text-red-400 shrink-0" />
