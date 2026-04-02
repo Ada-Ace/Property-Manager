@@ -263,7 +263,7 @@ const API = {
         if (!this.isValid()) return { success: false, message: 'Invalid API URL (Must end in /exec)' };
         try {
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 60000); // 60s for photo and PDF upload
+            const timeoutId = setTimeout(() => controller.abort(), 90000); // 90s for large PDF uploads on mobile networks
             
             const resp = await fetch(API_URL, {
                 signal: controller.signal,
@@ -1030,14 +1030,22 @@ function App() {
             setGlobalMessage({ type: 'info', text: 'Uploading Lease Agreement...' });
             const docUrl = await API.uploadFile(file);
             if (docUrl) {
-                const tenant = tenants.find(t => t.id === tenantId);
-                const updatedTenant = { ...tenant, leaseDocument: docUrl };
-                await editTenant(updatedTenant, true); // Silent background update
+                const tenant = tenants.find(t => String(t.id) === String(tenantId));
+                if (!tenant) throw new Error('Tenant record moved or missing');
+                
+                const updatedTenant = { ...tenant, leaseDocument: docUrl, lastUpdated: new Date().toISOString() };
+                
+                // OPTIMISTIC: Update local state immediately before cloud sync
+                setTenants(prev => prev.map(t => String(t.id) === String(tenantId) ? updatedTenant : t));
+                
+                setGlobalMessage({ type: 'info', text: 'Syncing uploaded metadata to cloud...' });
+                await editTenant(updatedTenant, true); // Silent background cloud sync
+                
                 setGlobalMessage({ type: 'success', text: 'Lease Agreement Uploaded Successfully' });
-                setTimeout(() => setGlobalMessage(null), 3000);
+                setTimeout(() => setGlobalMessage(null), 3500);
             } else {
-                setGlobalMessage({ type: 'error', text: 'Cloud storage rejected the document. Please check Drive permissions.' });
-                setTimeout(() => setGlobalMessage(null), 4000);
+                setGlobalMessage({ type: 'error', text: 'Cloud storage rejected the document. Please ensure the file is under 10MB.' });
+                setTimeout(() => setGlobalMessage(null), 5000);
             }
         } catch (err) {
             console.error('Lease upload failed:', err);
