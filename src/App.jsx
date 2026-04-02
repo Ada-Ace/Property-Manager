@@ -215,12 +215,26 @@ const generateId = (prefix) => {
 
 const calculateNextRentDue = (leaseStart) => {
     const today = getLocalDate();
-    const lStart = new Date(leaseStart);
     
-    // Safety check: If lease date is invalid, use today as a safe bail-out
-    if (isNaN(lStart.getTime())) return new Date(today);
+    // Robust parsing for YYYY-MM-DD to avoid timezone shifting
+    let day = 1;
+    let lStart = new Date(leaseStart);
     
-    const day = lStart.getDate();
+    if (typeof leaseStart === 'string' && leaseStart.includes('-')) {
+        const parts = leaseStart.split('T')[0].split('-');
+        if (parts.length === 3) {
+            day = parseInt(parts[2], 10);
+        } else {
+            day = lStart.getDate();
+        }
+    } else {
+        day = lStart.getDate();
+    }
+    
+    // Fallback if NaN
+    if (isNaN(day)) day = 1;
+    
+    // Current billing cycle ends on (Day - 1) of the month
     let dueDate = new Date(today.getFullYear(), today.getMonth(), day - 1);
     
     if (dueDate < today) {
@@ -242,10 +256,9 @@ const getDaysUntilDue = (leaseStart) => {
 const getBillingPeriod = (leaseStart) => {
     const to = calculateNextRentDue(leaseStart);
     if (isNaN(to.getTime())) return { from: null, to: null };
-    // 'from' is one month before 'to', +1 day
-    const from = new Date(to);
-    from.setMonth(from.getMonth() - 1);
-    from.setDate(from.getDate() + 1);
+    
+    // Robust 'from' calculation (one month before 'to', +1 day)
+    const from = new Date(to.getFullYear(), to.getMonth() - 1, to.getDate() + 1);
     return { from, to };
 };
 
