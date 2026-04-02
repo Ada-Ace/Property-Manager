@@ -285,8 +285,17 @@ const API = {
         return new Promise((resolve) => {
             const reader = new FileReader();
             reader.onloadend = async () => {
-                const res = await this.uploadToDrive(reader.result, file.name);
-                resolve(res.success ? res.url : null);
+                try {
+                    const res = await this.uploadToDrive(reader.result, file.name);
+                    resolve(res.success ? res.url : null);
+                } catch (err) {
+                    console.error('Upload flow failed:', err);
+                    resolve(null);
+                }
+            };
+            reader.onerror = () => {
+                console.error('FileReader error');
+                resolve(null);
             };
             reader.readAsDataURL(file);
         });
@@ -806,8 +815,8 @@ function App() {
         }
     };
 
-    const addTenant = async (newTenant) => {
-        setProcessingMessage('INITIALIZING_LEASE_SETUP');
+    const addTenant = async (newTenant, isSilent = false) => {
+        if (!isSilent) setProcessingMessage('INITIALIZING_LEASE_SETUP');
         try {
             setGlobalMessage({ type: 'info', text: "Initializing lease setup..." });
             
@@ -852,8 +861,8 @@ function App() {
         }
     };
 
-    const editTenant = async (updatedTenant) => {
-        setProcessingMessage('UPDATING_AGREEMENT_DETAILS');
+    const editTenant = async (updatedTenant, isSilent = false) => {
+        if (!isSilent) setProcessingMessage('UPDATING_AGREEMENT_DETAILS');
         try {
             setGlobalMessage({ type: 'info', text: "Updating agreement details..." });
             
@@ -901,7 +910,7 @@ function App() {
             }
             setTimeout(() => setGlobalMessage(null), 3000);
         } finally {
-            setProcessingMessage(null);
+            if (!isSilent) setProcessingMessage(null);
         }
     };
 
@@ -1012,14 +1021,14 @@ function App() {
     };
 
     const handleLeaseDocUpload = async (tenantId, file) => {
-        setProcessingMessage('UPLOADING_LEASE_AGREEMENT');
+        // Suppress intrusive overlay for background uploads
         try {
             setGlobalMessage({ type: 'info', text: 'Uploading Lease Agreement...' });
             const docUrl = await API.uploadFile(file);
             if (docUrl) {
                 const tenant = tenants.find(t => t.id === tenantId);
                 const updatedTenant = { ...tenant, leaseDocument: docUrl };
-                await editTenant(updatedTenant);
+                await editTenant(updatedTenant, true); // Silent background update
                 setGlobalMessage({ type: 'success', text: 'Lease Agreement Uploaded Successfully' });
                 setTimeout(() => setGlobalMessage(null), 3000);
             }
