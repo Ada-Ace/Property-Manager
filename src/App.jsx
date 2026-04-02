@@ -252,7 +252,7 @@ const getBillingPeriod = (leaseStart) => {
 
 
 // --- API Service Management ---
-const API_URL = import.meta.env.VITE_API_URL;
+const API_URL = String(import.meta.env.VITE_API_URL || '').trim();
 
 const API = {
     isValid() {
@@ -263,7 +263,7 @@ const API = {
         if (!this.isValid()) return { success: false, message: 'Invalid API URL (Must end in /exec)' };
         try {
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 120000); // 120s for extra large PDFs on slow networks
+            const timeoutId = setTimeout(() => controller.abort(), 180000); // 3 minutes for large PDFs on slow networks
             
             const resp = await fetch(API_URL, {
                 signal: controller.signal,
@@ -288,19 +288,16 @@ const API = {
         if (!file || !this.isValid()) return null;
         return new Promise((resolve) => {
             const reader = new FileReader();
-            reader.onloadend = async () => {
+            reader.onload = async () => {
                 try {
                     const res = await this.uploadToDrive(reader.result, file.name);
-                    resolve(res.success ? res.url : null);
+                    resolve(res);
                 } catch (err) {
-                    console.error('Upload flow failed:', err);
-                    resolve(null);
+                    console.error('Upload stream failed:', err);
+                    resolve({ success: false, message: 'Stream interrupted' });
                 }
             };
-            reader.onerror = () => {
-                console.error('FileReader error');
-                resolve(null);
-            };
+            reader.onerror = () => resolve({ success: false, message: 'File read failed locally' });
             reader.readAsDataURL(file);
         });
     },
@@ -1026,10 +1023,12 @@ function App() {
     const handleLeaseDocUpload = async (tenantId, file) => {
         try {
             setGlobalMessage({ type: 'info', text: 'Step 1/3: Reading Agreement File...' });
-            const docUrl = await API.uploadFile(file);
             setGlobalMessage({ type: 'info', text: 'Step 2/3: Transmitting to Secure Cloud...' });
             
-            if (docUrl) {
+            const uploadRes = await API.uploadFile(file);
+            
+            if (uploadRes && uploadRes.success) {
+                const docUrl = uploadRes.url;
                 const tenant = tenants.find(t => String(t.id).toLowerCase().trim() === String(tenantId).toLowerCase().trim());
                 if (!tenant) throw new Error('Tenant record lookup failed');
                 
@@ -1043,8 +1042,9 @@ function App() {
                 setGlobalMessage({ type: 'success', text: 'Lease Agreement Uploaded Successfully' });
                 setTimeout(() => setGlobalMessage(null), 3500);
             } else {
-                setGlobalMessage({ type: 'error', text: 'Cloud storage rejected the document. Please ensure the file is under 10MB.' });
-                setTimeout(() => setGlobalMessage(null), 5000);
+                const failMsg = uploadRes?.message || 'Cloud storage rejected the document';
+                setGlobalMessage({ type: 'error', text: `${failMsg}. Ensure file is <10MB and Drive Folder is set.` });
+                setTimeout(() => setGlobalMessage(null), 6000);
             }
         } catch (err) {
             console.error('Lease upload failed:', err);
