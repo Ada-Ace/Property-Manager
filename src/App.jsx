@@ -1100,7 +1100,7 @@ function App() {
                             <span className="text-white font-black text-base tracking-tight uppercase">
                                 MyDay OS
                             </span>
-                            <span className="text-[7px] text-indigo-400/60 font-black uppercase tracking-[0.2em] mt-0.5">v1.3.1 • STATUS: OPTIMIZED</span>
+                            <span className="hidden sm:inline text-[7px] text-indigo-400/60 font-black uppercase tracking-[0.2em] mt-0.5">v1.3.1 • STATUS: OPTIMIZED</span>
                         </div>
                     </div>
 
@@ -1111,7 +1111,8 @@ function App() {
                                 <div className="flex flex-col items-end gap-0.5 pr-2 border-r border-white/10">
                                     <div className="flex items-center gap-1.5 leading-none">
                                         <p className={`text-[7px] font-black uppercase tracking-tight ${syncStatus === 'connected' ? 'text-emerald-400 drop-shadow-[0_0_5px_rgba(52,211,153,0.3)]' : syncStatus === 'error' ? 'text-red-400' : 'text-slate-500'}`}>
-                                            {syncStatus === 'connected' ? 'SYSTEM_COMMAND_LIVE' : syncStatus === 'error' ? 'SYNC_ERROR' : syncStatus === 'connecting' ? 'CONNECTING...' : 'OFFLINE_MODE'}
+                                            <span className="hidden xs:inline">{syncStatus === 'connected' ? 'SYSTEM_COMMAND_LIVE' : syncStatus === 'error' ? 'SYNC_ERROR' : syncStatus === 'connecting' ? 'CONNECTING...' : 'OFFLINE_MODE'}</span>
+                                            <span className="xs:hidden">{syncStatus === 'connected' ? 'LIVE' : syncStatus === 'error' ? 'ERR' : 'OFF'}</span>
                                         </p>
                                         <button 
                                             onClick={() => syncWithCloud()} 
@@ -1132,7 +1133,7 @@ function App() {
                                         className="flex items-center gap-2 text-indigo-400 hover:text-white transition-all"
                                     >
                                         <Building2 className="w-3.5 h-3.5 shrink-0" />
-                                        <span className="text-[10px] font-black uppercase tracking-widest max-w-[120px] md:max-w-[200px] truncate">{activeProperty}</span>
+                                        <span className="text-[10px] font-black uppercase tracking-widest max-w-[80px] md:max-w-[200px] truncate">{activeProperty}</span>
                                         <ChevronDown className={`w-3 h-3 transition-transform duration-300 ${showPropertyPicker ? 'rotate-180' : ''}`} />
                                     </button>
 
@@ -1204,7 +1205,7 @@ function App() {
                                     setPropertyToEdit(current);
                                     setShowPropertyModal(true);
                                 }}
-                                className="p-2.5 text-slate-500 hover:text-indigo-400 bg-white/5 hover:bg-indigo-500/10 rounded-2xl border border-white/5 hover:border-indigo-500/20 transition-all"
+                                className="hidden md:flex p-2.5 text-slate-500 hover:text-indigo-400 bg-white/5 hover:bg-indigo-500/10 rounded-2xl border border-white/5 hover:border-indigo-500/20 transition-all font-black"
                             >
                                 <Settings className="w-4 h-4" />
                             </Motion.button>
@@ -1213,7 +1214,7 @@ function App() {
                             whileHover={{ scale: 1.05 }}
                             whileTap={{ scale: 0.95 }}
                             onClick={logout} 
-                            className="flex items-center gap-2 text-[10px] uppercase tracking-widest text-red-400 hover:text-white hover:bg-red-600 transition-all bg-red-500/10 px-5 py-2.5 rounded-2xl border border-red-500/20 font-black"
+                            className="hidden md:flex items-center gap-2 text-[10px] uppercase tracking-widest text-red-400 hover:text-white hover:bg-red-600 transition-all bg-red-500/10 px-5 py-2.5 rounded-2xl border border-red-500/20 font-black"
                         >
                             <Power className="w-3.5 h-3.5" />
                             <span className="hidden md:inline">Sign Out</span>
@@ -1305,28 +1306,30 @@ function App() {
                     activeTab={activeTabForNav} 
                     setActiveTab={setActiveTabForNav} 
                     tenantMessages={filteredMessages}
+                    onLogout={logout}
                 />
             )}
         </div>
     );
 }
 
-function MobileBottomNav({ activeTab, setActiveTab, tenantMessages }) {
+function MobileBottomNav({ activeTab, setActiveTab, tenantMessages, onLogout }) {
     const tabs = [
         { id: 'rents', icon: <Receipt className="w-5 h-5" />, label: 'Rents' },
         { id: 'inventory', icon: <LayoutGrid className="w-5 h-5" />, label: 'Units' },
         { id: 'tasks', icon: <Wrench className="w-5 h-5" />, label: 'Tasks' },
         { id: 'messages', icon: <MessageSquare className="w-5 h-5" />, label: 'Chat', badge: tenantMessages?.length > 0 },
-        { id: 'utilities', icon: <Droplets className="w-5 h-5" />, label: 'Utils' }
+        { id: 'utilities', icon: <Droplets className="w-5 h-5" />, label: 'Utils' },
+        { id: 'logout', icon: <LogOut className="w-5 h-5 text-red-500" />, label: 'Exit', action: onLogout }
     ];
 
     return (
-        <div className="fixed bottom-0 left-0 right-0 z-[100] md:hidden bg-slate-950/90 backdrop-blur-2xl border-t border-white/10 px-4 pt-3 flex justify-around items-center" style={{ paddingBottom: 'max(1.25rem, env(safe-area-inset-bottom))' }}>
+        <div className="fixed bottom-0 left-0 right-0 z-[100] md:hidden bg-slate-950/95 backdrop-blur-2xl border-t border-white/10 px-2 pt-3 flex justify-around items-center shadow-[0_-20px_40px_rgba(0,0,0,0.5)]" style={{ paddingBottom: 'max(1.25rem, env(safe-area-inset-bottom))' }}>
             {tabs.map((tab) => (
                 <button
                     key={tab.id}
-                    onClick={() => setActiveTab(tab.id)}
-                    className={`relative flex flex-col items-center gap-1 transition-all ${
+                    onClick={() => tab.action ? tab.action() : setActiveTab(tab.id)}
+                    className={`relative flex flex-col items-center gap-1 transition-all flex-1 min-w-0 ${
                         activeTab === tab.id ? 'text-indigo-400' : 'text-slate-500 hover:text-slate-300'
                     }`}
                 >
@@ -1334,7 +1337,7 @@ function MobileBottomNav({ activeTab, setActiveTab, tenantMessages }) {
                         {tab.icon}
                         {tab.badge && <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full border-2 border-slate-950"></span>}
                     </div>
-                    <span className="text-[9px] font-black uppercase tracking-widest">{tab.label}</span>
+                    <span className="text-[8px] font-black uppercase tracking-tighter truncate w-full text-center">{tab.label}</span>
                     {activeTab === tab.id && (
                         <Motion.div 
                             layoutId="activeTabUnderline"
@@ -3068,11 +3071,11 @@ function UnitCard({ unit, tenant, currency = 'USD', history, onUpdateFittings, o
             layout
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className={`premium-card rounded-[2.5rem] overflow-hidden group flex flex-col h-full bg-slate-900 shadow-2xl shadow-black/50 border transition-colors duration-500 ${
+            className={`premium-card rounded-[2rem] md:rounded-[2.5rem] overflow-hidden group flex flex-col h-full bg-slate-900 shadow-2xl shadow-black/50 border transition-colors duration-500 ${
                 leaseStatus?.pulse ? 'border-red-500/30' : 'border-white/5'
             }`}
         >
-            <div className={`h-48 relative flex items-center justify-center overflow-hidden bg-slate-800/50`}>
+            <div className={`h-40 md:h-48 relative flex items-center justify-center overflow-hidden bg-slate-800/50`}>
                 <div className="absolute inset-0 bg-gradient-to-b from-transparent to-slate-900/80 z-10" />
                 
                 {unit.image ? (
@@ -3137,10 +3140,10 @@ function UnitCard({ unit, tenant, currency = 'USD', history, onUpdateFittings, o
                 </div>
             </div>
 
-            <div className="p-8 flex-1 flex flex-col relative">
+            <div className="p-6 md:p-8 flex-1 flex flex-col relative">
                 <div className="flex justify-between items-start mb-8">
                     <div>
-                        <h4 className="text-2xl font-black text-white tracking-tighter italic">Unit {unit.unitNumber}</h4>
+                        <h4 className="text-xl md:text-2xl font-black text-white tracking-tighter italic">Unit {unit.unitNumber}</h4>
                         <p className="text-xs text-slate-500 font-black uppercase tracking-widest flex items-center gap-2 mt-2 opacity-60">
                             <Maximize className="w-4 h-4" /> {unit.size} SQFT Space
                         </p>
@@ -3656,14 +3659,14 @@ function LeaseModal({ initialData, availableUnits, onClose, onSubmit }) {
 function CompactStatsBar({ stats }) {
     return (
         <div className="sticky top-[72px] z-30 -mx-4 md:-mx-12 px-4 md:px-12 py-3 bg-slate-950/40 backdrop-blur-xl border-b border-white/5 shadow-2xl shadow-black/20 overflow-x-auto no-scrollbar snap-x">
-            <div className="flex items-center gap-6 md:gap-12 min-w-max">
+            <div className="flex items-center gap-5 md:gap-12 min-w-max">
                 {stats.map((stat, idx) => (
                     <div key={idx} className="flex items-center gap-3 snap-start group">
                         <div className="p-2 bg-white/5 rounded-lg border border-white/5 group-hover:bg-indigo-500/10 group-hover:border-indigo-500/20 transition-all">
                             {React.cloneElement(stat.icon, { className: "w-3.5 h-3.5" })}
                         </div>
                         <div className="flex flex-col">
-                            <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest leading-none mb-1 group-hover:text-slate-400 transition-colors">{stat.title}</span>
+                            <span className="text-[7px] md:text-[8px] font-black text-slate-500 uppercase tracking-widest leading-none mb-1 group-hover:text-slate-400 transition-colors">{stat.title}</span>
                             <span className="text-sm font-black text-white italic tracking-tighter leading-none group-hover:text-indigo-400 transition-colors">{stat.value}</span>
                         </div>
                     </div>
