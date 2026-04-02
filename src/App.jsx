@@ -144,12 +144,12 @@ const getLocalDate = () => {
     try {
         const d = new Date();
         return new Date(d.toLocaleString("en-US", { timeZone: APP_TIMEZONE }));
-    } catch (e) {
+    } catch (_ /* eslint-disable-line no-unused-vars */) {
         return new Date();
     }
 };
 
-// Standardised date formatter ‚Ü?dd-MMM-yyyy (e.g. 19-Mar-2026)
+// Standardised date formatter -?dd-MMM-yyyy (e.g. 19-Mar-2026)
 const MONTHS_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
 const isPaidThisMonth = (lastPaymentDate) => {
@@ -160,7 +160,7 @@ const isPaidThisMonth = (lastPaymentDate) => {
 };
 
 const formatDate = (date, includeTime = false) => {
-    if (!date) return '‚Ä?;
+    if (!date) return 'N/A';
     try {
         const d = typeof date === 'string' ? new Date(date) : date;
         if (isNaN(d.getTime())) return 'N/A';
@@ -172,13 +172,13 @@ const formatDate = (date, includeTime = false) => {
         const hh = String(d.getHours()).padStart(2, '0');
         const mi = String(d.getMinutes()).padStart(2, '0');
         return `${base} ${hh}:${mi}`;
-    } catch (e) {
+    } catch (_) { // eslint-disable-line no-unused-vars
         return 'N/A';
     }
 };
 
 const fmtDate = (str) => {
-    if (!str) return '‚Ä?;
+    if (!str) return 'N/A';
     try {
         const strVal = String(str).trim();
         const clean = strVal.split('T')[0];
@@ -197,9 +197,9 @@ const fmtDate = (str) => {
         if (!isNaN(d.getTime())) {
             return formatDate(d, false);
         }
-        return '‚Ä?;
-    } catch (e) {
-        return '‚Ä?;
+        return 'N/A';
+    } catch (_) { // eslint-disable-line no-unused-vars
+        return 'N/A';
     }
 };
 
@@ -362,7 +362,7 @@ function App() {
         return prop?.currency || 'USD';
     }, [properties, activeProperty]);
 
-    const updatePropertyCurrency = (currency) => {
+    const updatePropertyCurrency = (currency) => { // eslint-disable-line no-unused-vars
         const prop = Array.isArray(properties) ? properties.find(p => p.name === activeProperty) : null;
         if (!prop) {
             // Backup for local/unsynced properties
@@ -473,7 +473,7 @@ function App() {
         }
     };
 
-    const syncWithCloud = async (isBackground = false) => {
+    const syncWithCloud = React.useCallback(async (isBackground = false) => {
         if (!API.isValid()) {
             setSyncStatus('offline');
             if (!isBackground) {
@@ -574,14 +574,14 @@ function App() {
             setIsRefreshing(false);
             setProcessingMessage(null);
         }
-    };
+    }, [activeProperty, managers, payments]);
 
     // Auto-Sync Heartbeat (Every 60s)
     useEffect(() => {
         syncWithCloud(); // Initial
         const interval = setInterval(() => syncWithCloud(true), 300000);
         return () => clearInterval(interval);
-    }, []);
+    }, [syncWithCloud]);
 
     const handleLogin = (mobileInput, passwordInput) => {
         // Deep stringification and trimming for robust matching
@@ -784,7 +784,7 @@ function App() {
         if (!window.confirm("Are you sure you want to PERMANENTLY delete this unit? This cannot be undone.")) return;
         setProcessingMessage('DECOMMISSIONING_UNIT');
         try {
-            const unit = propertyUnits.find(u => u.id === unitId);
+            const unit = propertyUnits.find(u => u.id === unitId); // eslint-disable-line no-unused-vars
             setPropertyUnits(prev => prev.filter(u => u.id !== unitId));
             setGlobalMessage({ type: 'info', text: "Removing unit from cloud..." });
             await API.saveToSheet('DELETE', 'Units', { id: unitId });
@@ -973,7 +973,7 @@ function App() {
             await editTenant(updatedTenant);
 
             // 3. Create Turnover Task with damages/notes attached
-            let taskDesc = `üßπ Turnover Cleaning & Inspection for Unit ${unit.unitNumber}`;
+            let taskDesc = `-- Turnover Cleaning & Inspection for Unit ${unit.unitNumber}`;
             if (offboardingData.hasDamages) taskDesc += ` | Notes: Check for reported damages.`;
             
             const newTask = {
@@ -1100,7 +1100,7 @@ function App() {
                             <span className="text-white font-black text-base tracking-tight uppercase">
                                 MyDay OS
                             </span>
-                            <span className="hidden sm:inline text-[7px] text-indigo-400/60 font-black uppercase tracking-[0.2em] mt-0.5">v1.3.1 ‚Ä?STATUS: OPTIMIZED</span>
+                            <span className="hidden sm:inline text-[7px] text-indigo-400/60 font-black uppercase tracking-[0.2em] mt-0.5">v1.3.1 -?STATUS: OPTIMIZED</span>
                         </div>
                     </div>
 
@@ -1123,7 +1123,7 @@ function App() {
                                         </button>
                                     </div>
                                     <p className="text-[7px] text-slate-600 font-black uppercase tracking-tight tabular-nums font-mono-data">
-                                        {lastSyncTime ? `Last Updated: ${lastSyncTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : '‚Ä?Local Cache Only'}
+                                        {lastSyncTime ? `Last Updated: ${lastSyncTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : '-?Local Cache Only'}
                                     </p>
                                 </div>
                                 <div className="relative">
@@ -1383,7 +1383,7 @@ function ManagerDashboard({ activeProperty, tenants, payments, propertyUnits, ut
     const vacantUnits = totalUnits - occupiedUnits;
     const tasksCount = Array.isArray(tasks) ? tasks.length : 0;
 
-    // Currency tag helper ‚Ä?prepends ISO code as a label
+    // Currency tag helper -?prepends ISO code as a label
     const cur = (amount) => `${currency} ${Number(amount || 0).toLocaleString()}`;
 
     return (
@@ -1563,7 +1563,7 @@ function PaymentConfirmModal({ tenant, currency, proofMessages, onConfirm, onClo
                         </div>
                         <div>
                             <h2 className="text-base font-black text-white tracking-tight">Payment Review</h2>
-                            <p className="text-[9px] text-slate-500 font-black uppercase tracking-[0.2em] mt-0.5">{tenant?.unit} ¬∑ {tenant?.name}</p>
+                            <p className="text-[9px] text-slate-500 font-black uppercase tracking-[0.2em] mt-0.5">{tenant?.unit} - {tenant?.name}</p>
                         </div>
                     </div>
                     <Motion.button whileHover={{ scale: 1.1, rotate: 90 }} whileTap={{ scale: 0.9 }} onClick={onClose}
@@ -1577,9 +1577,9 @@ function PaymentConfirmModal({ tenant, currency, proofMessages, onConfirm, onClo
                     <div>
                         <p className="text-[8px] font-black uppercase tracking-widest text-slate-600 mb-1">Billing Period</p>
                         <p className="text-[11px] font-black text-slate-300 flex items-center gap-1.5 font-mono-data">
-                            {bp.from ? fmtDate(bp.from.toISOString()) : '‚Ä?}
-                            <span className="text-indigo-400">‚Ü?/span>
-                            {bp.to ? fmtDate(bp.to.toISOString()) : '‚Ä?}
+                            {bp.from ? fmtDate(bp.from.toISOString()) : 'N/A'}
+                            <span className="text-indigo-400">/</span>
+                            {bp.to ? fmtDate(bp.to.toISOString()) : 'N/A'}
                         </p>
                     </div>
                     <div className="text-right">
@@ -1622,7 +1622,7 @@ function PaymentConfirmModal({ tenant, currency, proofMessages, onConfirm, onClo
                                 </div>
                             )}
                             <p className="text-[8px] text-slate-600 mt-2 font-medium font-mono-data">
-                                Submitted: {selectedProof ? fmtDate(selectedProof.timestamp, true) : '‚Ä?}
+                                Submitted: {selectedProof ? fmtDate(selectedProof.timestamp, true) : 'N/A'}
                             </p>
                         </>
                     ) : (
@@ -1703,7 +1703,7 @@ function RentSummaryTab({ tenants, payments, currency = 'USD', onMarkPaid, prope
                 const dueDate = calculateNextRentDue(t.leaseStart);
                 const daysUntil = getDaysUntilDue(t.leaseStart);
                 return { ...t, dueDate, daysUntil };
-            } catch (e) {
+            } catch (_ /* eslint-disable-line no-unused-vars */) {
                 return { ...t, dueDate: new Date(), daysUntil: 0 };
             }
         }).sort((a, b) => {
@@ -1748,7 +1748,7 @@ function RentSummaryTab({ tenants, payments, currency = 'USD', onMarkPaid, prope
                             Rent Collection
                         </h3>
                         <p className="text-[10px] text-slate-500 font-black uppercase tracking-[0.2em] mt-2">
-                            {currentMonthLabel} ¬∑ Sorted by urgency
+                            {currentMonthLabel} - Sorted by urgency
                         </p>
                     </div>
                     {soonDueCount > 0 && (
@@ -1804,7 +1804,7 @@ function RentSummaryTab({ tenants, payments, currency = 'USD', onMarkPaid, prope
                                                 <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest mt-0.5 flex items-center gap-1.5 font-mono-data">
                                                     <CalendarRange className="w-3 h-3 text-indigo-400/60 shrink-0" />
                                                     {fmtDate(bp.from.toISOString())}
-                                                    <span className="text-indigo-400/60">‚Ü?/span>
+                                                    <span className="text-indigo-400/60">/</span>
                                                     {fmtDate(bp.to.toISOString())}
                                                 </p>
                                             ) : (
@@ -1825,7 +1825,7 @@ function RentSummaryTab({ tenants, payments, currency = 'USD', onMarkPaid, prope
                                             isPaidThisMonth(rent.lastPaymentDate) ? 'text-emerald-500' :
                                             isOverdue ? 'text-red-500' : isUrgent ? 'text-orange-500' : 'text-slate-600'
                                         }`}>
-                                            {isPaidThisMonth(rent.lastPaymentDate) ? '‚ú?Paid & Verified' : rent.daysUntil === 0 ? 'üî¥ Due Today' : isOverdue ? `${Math.abs(rent.daysUntil)}d overdue` : `${rent.daysUntil}d left`}
+                                            {isPaidThisMonth(rent.lastPaymentDate) ? '-?Paid & Verified' : rent.daysUntil === 0 ? '-- Due Today' : isOverdue ? `${Math.abs(rent.daysUntil)}d overdue` : `${rent.daysUntil}d left`}
                                         </p>
                                     </div>
 
@@ -1924,7 +1924,7 @@ function RentSummaryTab({ tenants, payments, currency = 'USD', onMarkPaid, prope
 
 function VendorModal({ isOpen, onClose, onSubmit, editingVendor }) {
     const [vendorForm, setVendorForm] = useState({
-        id: `VEN${Date.now()}`,
+        id: '',
         name: '',
         mobile: '',
         type: '',
@@ -1933,8 +1933,9 @@ function VendorModal({ isOpen, onClose, onSubmit, editingVendor }) {
     });
 
     useEffect(() => {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         if (editingVendor) setVendorForm(editingVendor);
-        else setVendorForm({ id: `VEN${Date.now()}`, name: '', mobile: '', type: '', rating: 5, email: '' });
+        else setVendorForm({ id: '', name: '', mobile: '', type: '', rating: 5, email: '' });
     }, [editingVendor, isOpen]);
 
     if (!isOpen) return null;
@@ -2072,9 +2073,9 @@ function MessagesManager({ tenants, messages, onUpdateMessage, activeManager }) 
                                                     <div className="flex items-center gap-3 mt-1.5 flex-wrap">
                                                         <p className="text-[9px] text-slate-600 font-black uppercase tracking-widest font-mono-data">{formatDate(msg.timestamp, true)}</p>
                                                         <span className="flex items-center gap-1.5 text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full border bg-opacity-10 border-opacity 30">
-                                                            {status === 'UNREAD' && <span className="text-red-400 border-red-500 bg-red-500 px-2 rounded-full">üî¥ UNREAD</span>}
-                                                            {status === 'IN PROGRESS' && <span className="text-amber-400 border-amber-500 bg-amber-500 px-2 rounded-full">üü° IN PROGRESS</span>}
-                                                            {status === 'RESOLVED' && <span className="text-emerald-400 border-emerald-500 bg-emerald-500 px-2 rounded-full">‚ú?RESOLVED</span>}
+                                                            {status === 'UNREAD' && <span className="text-red-400 border-red-500 bg-red-500 px-2 rounded-full">-- UNREAD</span>}
+                                                            {status === 'IN PROGRESS' && <span className="text-amber-400 border-amber-500 bg-amber-500 px-2 rounded-full">-- IN PROGRESS</span>}
+                                                            {status === 'RESOLVED' && <span className="text-emerald-400 border-emerald-500 bg-emerald-500 px-2 rounded-full">-?RESOLVED</span>}
                                                         </span>
                                                         {msg.handledBy && (
                                                             <p className="text-[9px] font-black uppercase tracking-widest text-indigo-300 bg-indigo-500/10 px-2 py-0.5 rounded-md">
@@ -2152,7 +2153,7 @@ function WhatsAppRentButton({ tenant, mode = 'rent', currency = 'USD', fullWidth
                 const diff = end - new Date();
                 isUrgent = diff > 0 && diff < (90 * 24 * 60 * 60 * 1000);
             }
-        } catch(e) {}
+        } catch(_ /* eslint-disable-line no-unused-vars */) {} // eslint-disable-line no-empty
 
         return (
             <a 
@@ -2412,7 +2413,7 @@ function UtilityManager({ tenants, utilityBills, onAddBill, currency = 'USD' }) 
                             <h3 className="font-black text-2xl text-white italic tracking-tight flex items-center gap-3">
                                 <Calendar className="w-6 h-6 text-indigo-400" /> My Monthly Utility Breakdown
                             </h3>
-                            <p className="text-[10px] text-slate-500 font-black uppercase tracking-[0.2em] mt-2">Bills per tenant ¬∑ {new Date(effectiveMonth + '-01').toLocaleString('default', { month: 'long', year: 'numeric' })}</p>
+                            <p className="text-[10px] text-slate-500 font-black uppercase tracking-[0.2em] mt-2">Bills per tenant - {new Date(effectiveMonth + '-01').toLocaleString('default', { month: 'long', year: 'numeric' })}</p>
                         </div>
                         <div className="flex items-center gap-3">
                             <span className="text-[10px] font-black text-slate-600 uppercase tracking-widest hidden md:inline">Period</span>
@@ -2519,7 +2520,7 @@ function UtilityManager({ tenants, utilityBills, onAddBill, currency = 'USD' }) 
                                                         </span>
                                                     )}
                                                 </h4>
-                                                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1 font-mono-data"><span className="text-indigo-400">{fmtDate(bill.date)}</span> ‚Ä?{bill.mode === 'equal' ? 'Standard Split' : 'Designated Split'}</p>
+                                                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1 font-mono-data"><span className="text-indigo-400">{fmtDate(bill.date)}</span> -?{bill.mode === 'equal' ? 'Standard Split' : 'Designated Split'}</p>
                                             </div>
                                         </div>
                                         <div className="text-right">
@@ -2551,7 +2552,7 @@ function UtilityManager({ tenants, utilityBills, onAddBill, currency = 'USD' }) 
     );
 }
 
-function TasksManager({ tenants, tasks, vendors, onAddTask, onAddVendor, onEditVendor, onDeleteVendor, currency = 'USD' }) {
+function TasksManager({ tenants, tasks, vendors, onAddTask, onAddVendor, onEditVendor, onDeleteVendor, currency: _currency = 'USD' /* eslint-disable-line no-unused-vars */ }) {
     const [subTab, setSubTab] = useState('active'); // 'active', 'vendors'
     const [title, setTitle] = useState('');
     const [tenantId, setTenantId] = useState('');
@@ -2650,7 +2651,7 @@ function TasksManager({ tenants, tasks, vendors, onAddTask, onAddVendor, onEditV
                                             <span className="text-[9px] font-black text-indigo-400 uppercase tracking-widest">{task.category || 'Maintenance'}</span>
                                         </div>
                                         <h4 className="text-xl font-black text-white tracking-tight">{task.title}</h4>
-                                        <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Unit {tenant.unit} ‚Ä?{tenant.name}</p>
+                                        <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Unit {tenant.unit} -?{tenant.name}</p>
                                         <div className="flex flex-wrap gap-2 pt-2">
                                             {task.dateOptions?.map((d, idx) => <span key={idx} className="bg-slate-950/40 text-slate-400 text-[9px] font-bold px-3 py-1.5 rounded-lg border border-white/5 font-mono-data">{d}</span>)}
                                         </div>
@@ -2840,7 +2841,7 @@ function TenantDashboard({ tenant, unit, tenantMessages = [], onSendMessage, cur
                                                 <FileCheck className="w-4 h-4" /> Verified Contract
                                             </span>
                                             <a href={tenant.leaseDocument} target="_blank" rel="noopener noreferrer" className="bg-indigo-600 hover:bg-indigo-500 text-white text-[9px] font-black uppercase tracking-widest px-4 py-2 rounded-xl flex items-center gap-2 transition-all shadow-lg shadow-indigo-600/20 glow-indigo">
-                                                ‚òÅÔ∏è Download Access
+                                                -- Download Access
                                             </a>
                                         </>
                                     ) : (
@@ -2897,7 +2898,7 @@ function TenantDashboard({ tenant, unit, tenantMessages = [], onSendMessage, cur
                                             msg.status === 'IN PROGRESS' ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' :
                                             'bg-red-500/10 text-red-400 border-red-500/20'
                                         }`}>
-                                            {msg.status === 'RESOLVED' ? '‚ú?Resolved' : msg.status === 'IN PROGRESS' ? 'üü° In Progress' : 'üî¥ Unread'}
+                                            {msg.status === 'RESOLVED' ? '-?Resolved' : msg.status === 'IN PROGRESS' ? '-- In Progress' : '-- Unread'}
                                         </span>
                                         <span className="text-[10px] text-slate-500 font-black uppercase tracking-widest font-mono-data">
                                             {new Date(msg.timestamp).toLocaleDateString()}
@@ -2966,7 +2967,7 @@ function MessageModal({ onClose, onSubmit }) {
                         <MessageSquare className="w-6 h-6 text-indigo-500" />
                         My Message Manager
                     </h2>
-                    <button onClick={onClose} className="text-slate-500 hover:text-white transition-colors">‚ú?/button>
+                    <button onClick={onClose} className="text-slate-500 hover:text-white transition-colors"></button>
                 </div>
                 <form onSubmit={(e) => { e.preventDefault(); onSubmit(msg, photo); }} className="space-y-4">
                     <textarea
@@ -3025,7 +3026,7 @@ function InventoryModal({ unit, onClose, onSave }) {
                     <h2 className="text-xl font-black text-white italic flex items-center gap-3">
                         <Box className="w-6 h-6 text-indigo-500" /> My Inventory & Fittings
                     </h2>
-                    <button onClick={onClose} className="text-slate-500 hover:text-white transition-colors">‚ú?/button>
+                    <button onClick={onClose} className="text-slate-500 hover:text-white transition-colors"></button>
                 </div>
                 <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
                     <div className="flex gap-2 mb-4">
@@ -3223,7 +3224,7 @@ function UnitCard({ unit, tenant, currency = 'USD', history, onUpdateFittings, o
                                         <div className="bg-slate-950/20 rounded-2xl border border-white/5 p-4 space-y-4">
                                             <div className="flex items-center justify-between text-[9px] font-bold uppercase text-slate-500 border-b border-white/5 pb-3">
                                                 <span className="flex items-center gap-2 font-mono-data"><Calendar className="w-3 h-3" /> Tenure</span>
-                                                <span className="text-indigo-400 font-mono-data">{fmtDate(tenant.leaseStart)} ‚Ä?{fmtDate(tenant.leaseEnd)}</span>
+                                                <span className="text-indigo-400 font-mono-data">{fmtDate(tenant.leaseStart)} -?{fmtDate(tenant.leaseEnd)}</span>
                                             </div>
                                             <div className="flex items-center justify-between gap-3">
                                                 <div className="flex-1">
@@ -3829,7 +3830,7 @@ function LoginPage({ onLogin }) {
                                 type="password" 
                                 required 
                                 className="w-full bg-slate-950/50 border border-white/5 rounded-2xl py-5 px-6 text-white outline-none focus:ring-2 ring-indigo-500/40 transition-all placeholder:text-slate-700 text-sm" 
-                                placeholder="‚Ä¢‚Ä¢‚Ä¢‚Ä¢‚Ä¢‚Ä¢‚Ä¢‚Ä? 
+                                placeholder="‚Ä¢‚Ä¢‚Ä¢‚Ä¢‚Ä¢‚Ä¢‚Ä¢‚Ä¢" 
                                 value={password} 
                                 onChange={(e) => setPassword(e.target.value)} 
                             />
@@ -4193,7 +4194,7 @@ function PropertySettingsModal({ property, apiStatus, onClose, onSave }) {
     );
 }
 
-function OffboardingModal({ tenant, unit, utilityBills, currency, onClose, onSubmit }) {
+function OffboardingModal({ tenant, unit: _unit = null /* eslint-disable-line no-unused-vars */, utilityBills, currency, onClose, onSubmit }) {
     const [data, setData] = useState({
         refundAmount: tenant?.deposit || 0,
         deductionAmount: 0,

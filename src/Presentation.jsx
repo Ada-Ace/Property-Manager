@@ -28,7 +28,7 @@ export default function PresentationDemo() {
     const MOCK_MESSAGES = [
         {
             id: 'M-1',
-            timestamp: new Date(Date.now() - 86400000 * 3).toISOString(),
+            timestamp: '2026-03-30T10:00:00Z',
             content: "The balcony door sensor is acting up.",
             status: 'RESOLVED',
             handledBy: 'Tech Support',
@@ -36,7 +36,7 @@ export default function PresentationDemo() {
         },
         {
             id: 'M-2',
-            timestamp: new Date().toISOString(),
+            timestamp: '2026-04-02T15:00:00Z',
             content: "Requesting a parking pass for my guest next week.",
             status: 'IN PROGRESS',
             handledBy: 'Concierge'
@@ -87,7 +87,7 @@ export default function PresentationDemo() {
                     unit={MOCK_UNIT}
                     tenantMessages={MOCK_MESSAGES}
                     currency="$"
-                    onSendMessage={(msg, photo) => alert('Demo: Support Request Sent!')}
+                    onSendMessage={() => alert('Demo: Support Request Sent!')}
                 />
             </div>
         </div>
