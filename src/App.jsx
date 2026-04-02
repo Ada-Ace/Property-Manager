@@ -270,7 +270,11 @@ const API = {
                 method: 'POST',
                 mode: 'cors',
                 headers: { 'Content-Type': 'text/plain' },
-                body: JSON.stringify({ action: 'UPLOAD', fileData, fileName })
+                body: JSON.stringify({ 
+                    action: 'UPLOAD', 
+                    fileData: fileData.includes(',') ? fileData.split(',')[1] : fileData, 
+                    fileName 
+                })
             });
             clearTimeout(timeoutId);
             return await resp.json();
