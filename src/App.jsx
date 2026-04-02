@@ -262,12 +262,17 @@ const API = {
     async uploadToDrive(fileData, fileName) {
         if (!this.isValid()) return { success: false, message: 'Invalid API URL (Must end in /exec)' };
         try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 300000); // 30s for photo upload
+            
             const resp = await fetch(API_URL, {
+                signal: controller.signal,
                 method: 'POST',
                 mode: 'cors',
                 headers: { 'Content-Type': 'text/plain' },
                 body: JSON.stringify({ action: 'UPLOAD', fileData, fileName })
             });
+            clearTimeout(timeoutId);
             return await resp.json();
         } catch (err) {
             console.error('Drive Upload Error:', err);
@@ -290,19 +295,19 @@ const API = {
     async saveToSheet(action, sheetName, data) {
         if (!this.isValid()) return { success: false, message: 'Invalid API URL' };
         try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s timeout
+
             // Using text/plain to avoid preflight (CORS-safe for Google Scripts)
             const resp = await fetch(API_URL, {
+                signal: controller.signal,
                 method: 'POST',
                 mode: 'cors',
                 headers: { 'Content-Type': 'text/plain' },
                 body: JSON.stringify({ action, sheetName, data })
             });
-            const result = await resp.json();
-            if (result.success) {
-                // If it's a mutation, we want the app to stay in sync
-                // But we don't want a heavy reload, we trust the result
-            }
-            return result;
+            clearTimeout(timeoutId);
+            return await resp.json();
         } catch (err) {
             console.error('Sheet Save Error:', err);
             return { success: false, message: 'Connection Error - Check Internet' };
@@ -490,10 +495,13 @@ function App() {
             return;
         }
 
-        if (!isBackground) setIsLoading(true);
-        else setIsRefreshing(true);
+        if (!isBackground) {
+            setIsLoading(true);
+            setProcessingMessage('SYNCHRONIZING_CLOUD_DATA');
+        } else {
+            setIsRefreshing(true);
+        }
         setSyncStatus('connecting');
-        setProcessingMessage('SYNCHRONIZING_CLOUD_DATA');
         
         try {
             const data = await API.getAllData();
