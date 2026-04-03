@@ -836,8 +836,8 @@ function App() {
             let docUrl = null;
             if (newTenant.leaseFile) {
                 setGlobalMessage({ type: 'info', text: "Uploading documentation to cloud..." });
-                const uploadedUrl = await API.uploadFile(newTenant.leaseFile);
-                if (uploadedUrl) docUrl = uploadedUrl;
+                const uploadRes = await API.uploadFile(newTenant.leaseFile);
+                if (uploadRes && uploadRes.success) docUrl = uploadRes.url;
             }
 
             const tenantData = {
@@ -879,11 +879,11 @@ function App() {
         try {
             setGlobalMessage({ type: 'info', text: "Updating agreement details..." });
             
-            let docUrl = updatedTenant.leaseDocument || null;
+            let docUrl = updatedTenant.leaseDocument && typeof updatedTenant.leaseDocument === 'string' && !updatedTenant.leaseDocument.includes('[object') ? updatedTenant.leaseDocument : null;
             if (updatedTenant.leaseFile) {
                 setGlobalMessage({ type: 'info', text: "Uploading documentation to cloud..." });
-                const uploadedUrl = await API.uploadFile(updatedTenant.leaseFile);
-                if (uploadedUrl) docUrl = uploadedUrl;
+                const uploadRes = await API.uploadFile(updatedTenant.leaseFile);
+                if (uploadRes && uploadRes.success) docUrl = uploadRes.url;
             }
 
             const tenantData = { 
@@ -2883,7 +2883,7 @@ function TenantDashboard({ tenant, unit, tenantMessages = [], onSendMessage, cur
                             <div className="col-span-2 mt-2">
                                 <p className="text-[9px] font-black text-slate-600 uppercase tracking-widest mb-2">Document Status</p>
                                 <div className="flex items-center justify-between bg-white/[0.02] border border-white/5 p-3 rounded-2xl">
-                                    {tenant.leaseDocument ? (
+                                    {tenant.leaseDocument && typeof tenant.leaseDocument === 'string' && !tenant.leaseDocument.includes('[object') ? (
                                         <>
                                             <span className="text-[10px] font-black text-emerald-400 uppercase flex items-center gap-1.5">
                                                 <FileCheck className="w-4 h-4" /> Verified Contract
@@ -3276,7 +3276,7 @@ function UnitCard({ unit, tenant, currency = 'USD', history, onUpdateFittings, o
                                             </div>
                                             <div className="flex items-center justify-between gap-3">
                                                 <div className="flex-1">
-                                                    {tenant.leaseDocument ? (
+                                                    {tenant.leaseDocument && typeof tenant.leaseDocument === 'string' && !tenant.leaseDocument.includes('[object') ? (
                                                         <a href={tenant.leaseDocument} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2.5 text-[10px] font-black uppercase text-emerald-400 bg-emerald-500/5 px-4 py-2.5 rounded-xl border border-emerald-500/10 hover:bg-emerald-500/10 transition-all">
                                                             <FileCheck className="w-4 h-4" /> Agreement Signed
                                                         </a>
@@ -3714,12 +3714,13 @@ function LeaseModal({ initialData, availableUnits, onClose, onSubmit }) {
                         </div>
                         <div className="relative group">
                             <div className="w-full bg-slate-800/30 border-2 border-dashed border-white/5 hover:border-sky-500/30 rounded-[2rem] p-8 transition-all flex flex-col items-center justify-center gap-4 cursor-pointer relative overflow-hidden">
-                                {leaseForm.leaseFile ? (
+                                {leaseForm.leaseFile || (leaseForm.leaseDocument && typeof leaseForm.leaseDocument === 'string' && !leaseForm.leaseDocument.includes('[object')) ? (
                                     <div className="flex flex-col items-center gap-2">
                                         <div className="p-4 bg-sky-600 rounded-2xl shadow-lg shadow-sky-600/30">
                                             <FileCheck className="w-8 h-8 text-white" />
                                         </div>
-                                        <p className="text-[10px] font-black text-sky-400 uppercase tracking-widest">Document Ready</p>
+                                        <p className="text-[10px] font-black text-sky-400 uppercase tracking-widest">{leaseForm.leaseFile ? "Document Ready" : "Document Attached"}</p>
+                                        {!leaseForm.leaseFile && <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest mt-1">Tap/Click to Replace</p>}
                                     </div>
                                 ) : (
                                     <div className="flex flex-col items-center gap-2">

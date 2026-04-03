@@ -61,13 +61,20 @@ function doPost(e) {
   const { action, sheetName, data, fileName, fileData } = body;
 
   // Handle File Upload to Google Drive (Action: UPLOAD)
+  // Handle File Upload to Google Drive (Action: UPLOAD)
   if (action === "UPLOAD") {
     try {
+      let folder;
       if (!UPLOAD_FOLDER_ID || UPLOAD_FOLDER_ID === 'REPLACE_WITH_YOUR_DRIVE_FOLDER_ID') {
-        return errorResponse("Missing UPLOAD_FOLDER_ID. Please update the GAS script.");
+        folder = DriveApp.getRootFolder();
+      } else {
+        try {
+          folder = DriveApp.getFolderById(UPLOAD_FOLDER_ID);
+        } catch (e) {
+          folder = DriveApp.getRootFolder();
+        }
       }
       
-      const folder = DriveApp.getFolderById(UPLOAD_FOLDER_ID);
       const contentType = fileData.substring(5, fileData.indexOf(';'));
       const bytes = Utilities.base64Decode(fileData.split(',')[1]);
       const blob = Utilities.newBlob(bytes, contentType, fileName);
