@@ -216,24 +216,21 @@ const generateId = (prefix) => {
 const calculateNextRentDue = (leaseStart) => {
     const today = getLocalDate();
     
-    // Robust parsing for YYYY-MM-DD to avoid timezone shifting
+    // Robust parsing using APP_TIMEZONE
     let day = 1;
-    let lStart = new Date(leaseStart);
-    
-    if (typeof leaseStart === 'string' && leaseStart.includes('-')) {
-        const parts = leaseStart.split('T')[0].split('-');
-        if (parts.length === 3) {
-            day = parseInt(parts[2], 10);
-        } else {
+    try {
+        const d = new Date(leaseStart);
+        if (!isNaN(d.getTime())) {
+            const lStart = new Date(d.toLocaleString("en-US", { timeZone: APP_TIMEZONE }));
             day = lStart.getDate();
         }
-    } else {
-        day = lStart.getDate();
+    } catch (e) {
+        day = 1;
     }
     
     // Fallback if NaN
     if (isNaN(day)) day = 1;
-    
+
     // Current billing cycle ends on (Day - 1) of the month
     let dueDate = new Date(today.getFullYear(), today.getMonth(), day - 1);
     
@@ -254,11 +251,12 @@ const getDaysUntilDue = (leaseStart) => {
 
 // Returns the current billing period { from, to } based on lease start day
 const getBillingPeriod = (leaseStart) => {
-    const to = calculateNextRentDue(leaseStart);
-    if (isNaN(to.getTime())) return { from: null, to: null };
+    const dueDate = calculateNextRentDue(leaseStart);
+    if (isNaN(dueDate.getTime())) return { from: null, to: null };
     
-    // Robust 'from' calculation (one month before 'to', +1 day)
-    const from = new Date(to.getFullYear(), to.getMonth() - 1, to.getDate() + 1);
+    // Rent is paid IN ADVANCE. A due date of e.g. 14 March pays for the period 15 March to 14 April.
+    const from = new Date(dueDate.getFullYear(), dueDate.getMonth(), dueDate.getDate() + 1);
+    const to = new Date(from.getFullYear(), from.getMonth() + 1, from.getDate() - 1);
     return { from, to };
 };
 
