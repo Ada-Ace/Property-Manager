@@ -2562,7 +2562,7 @@ function UtilityManager({ tenants, utilityBills, payments, onAddBill, onMarkUtil
 
     // New Bill State
     const [billType, setBillType] = useState('Electricity');
-    const [billDate, setBillDate] = useState('');
+    const [billDate, setBillDate] = useState(new Date().toISOString().split('T')[0]);
     const [billAmount, setBillAmount] = useState('');
     const [billFile, setBillFile] = useState(null);
     const [mode, setMode] = useState('equal');
@@ -2614,7 +2614,7 @@ function UtilityManager({ tenants, utilityBills, payments, onAddBill, onMarkUtil
         onAddBill(newBill, updatedTenants);
 
         setBillAmount('');
-        setBillDate('');
+        setBillDate(new Date().toISOString().split('T')[0]);
         setBillFile(null);
         setTenantDates(tenants.reduce((acc, t) => ({ ...acc, [t.id]: { start: '', end: '' } }), {}));
         setActiveTab('history');
@@ -3003,7 +3003,7 @@ function UtilityManager({ tenants, utilityBills, payments, onAddBill, onMarkUtil
                                                         </span>
                                                     )}
                                                 </h4>
-                                                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1 font-mono-data"><span className="text-indigo-400">{fmtDate(bill.date)}</span> -?{bill.mode === 'equal' ? 'Standard Split' : 'Designated Split'}</p>
+                                                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1 font-mono-data"><span className="text-indigo-400">{fmtDate(bill.date)}</span> - {bill.mode === 'equal' ? 'Standard Split' : 'Designated Split'}</p>
                                             </div>
                                         </div>
                                         <div className="text-right">
