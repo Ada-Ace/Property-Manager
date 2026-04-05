@@ -161,7 +161,8 @@ const resolvePhotoUrl = (url) => {
         } else if (cleanUrl.includes('/d/')) {
             id = cleanUrl.split('/d/')[1].split('/')[0];
         }
-        if (id) return `https://drive.google.com/thumbnail?id=${id}&sz=w1200`;
+        // Use lh3 endpoint: significantly more reliable for mobile browsers & ignores most auth cookies
+        if (id) return `https://lh3.googleusercontent.com/d/${id}=s1200`;
     }
     return cleanUrl;
 };
