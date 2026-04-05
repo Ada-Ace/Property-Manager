@@ -588,7 +588,7 @@ function App() {
                 });
 
                 // Robustly Extract Collections (Keys are now lowercased & trimmed from GAS)
-                const keyMap={'unitnumber':'unitNumber','expectedrent':'expectedRent','propertyname':'propertyName','baserent':'baseRent','leasestart':'leaseStart','leaseend':'leaseEnd','leasedocument':'leaseDocument','utilityshare':'utilityShare','depositrefunded':'depositRefunded','depositdeducted':'depositDeducted','moveoutdate':'moveOutDate','lastpaymentdate':'lastPaymentDate','scheduledate':'scheduleDate','tenantid':'tenantId','photourl':'photoUrl','handledby':'handledBy','duedate':'dueDate','maintenanceselection':'maintenanceSelection','vacantsince':'vacantSince','lastupdated':'lastUpdated','image':'image','status':'status','size':'size','fittings':'fittings'};
+                const keyMap={'unitnumber':'unitNumber','expectedrent':'expectedRent','propertyname':'propertyName','baserent':'baseRent','leasestart':'leaseStart','leaseend':'leaseEnd','leasedocument':'leaseDocument','leaseextensiondoc':'leaseExtensionDoc','utilityshare':'utilityShare','depositrefunded':'depositRefunded','depositdeducted':'depositDeducted','moveoutdate':'moveOutDate','lastpaymentdate':'lastPaymentDate','scheduledate':'scheduleDate','tenantid':'tenantId','photourl':'photoUrl','handledby':'handledBy','duedate':'dueDate','maintenanceselection':'maintenanceSelection','vacantsince':'vacantSince','lastupdated':'lastUpdated','image':'image','status':'status','size':'size','fittings':'fittings'};
                 const normalize = (arr) => {
                     if (arr.length > 0) console.log('SYNC_KEYS:', Object.keys(arr[0]).join(','));
                     return arr.map(item => {
@@ -901,6 +901,13 @@ function App() {
                 if (uploadRes && uploadRes.success) docUrl = uploadRes.url;
             }
 
+            let extDocUrl = null;
+            if (newTenant.leaseExtensionFile) {
+                setGlobalMessage({ type: 'info', text: "Uploading extension doc to cloud..." });
+                const extRes = await API.uploadFile(newTenant.leaseExtensionFile);
+                if (extRes && extRes.success) extDocUrl = extRes.url;
+            }
+
             const tenantData = {
                 ...newTenant,
                 id: generateId('RES'),
@@ -908,9 +915,11 @@ function App() {
                 utilityShare: 0,
                 notifications: [],
                 leaseDocument: docUrl,
+                leaseExtensionDoc: extDocUrl,
                 propertyName: activeProperty
             };
-            delete tenantData.leaseFile; // Clean up
+            delete tenantData.leaseFile; 
+            delete tenantData.leaseExtensionFile; 
 
             setTenants([...tenants, tenantData]);
             setPropertyUnits(prev => prev.map(u => u.unitNumber === newTenant.unit ? { ...u, status: 'Occupied' } : u));
@@ -947,12 +956,21 @@ function App() {
                 if (uploadRes && uploadRes.success) docUrl = uploadRes.url;
             }
 
+            let extDocUrl = updatedTenant.leaseExtensionDoc && typeof updatedTenant.leaseExtensionDoc === 'string' && !updatedTenant.leaseExtensionDoc.includes('[object') ? updatedTenant.leaseExtensionDoc : null;
+            if (updatedTenant.leaseExtensionFile) {
+                setGlobalMessage({ type: 'info', text: "Uploading extension doc to cloud..." });
+                const extRes = await API.uploadFile(updatedTenant.leaseExtensionFile);
+                if (extRes && extRes.success) extDocUrl = extRes.url;
+            }
+
             const tenantData = { 
                 ...updatedTenant, 
                 leaseDocument: docUrl,
+                leaseExtensionDoc: extDocUrl,
                 lastUpdated: new Date().toISOString() 
             };
-            delete tenantData.leaseFile; // Don't send file object to sheet
+            delete tenantData.leaseFile; 
+            delete tenantData.leaseExtensionFile; 
 
             setTenants(prev => prev.map(t => t.id === updatedTenant.id ? tenantData : t));
             const oldTenant = tenants.find(t => t.id === updatedTenant.id);
@@ -2917,14 +2935,26 @@ function TenantDashboard({ tenant, unit, tenantMessages = [], onSendMessage, cur
                                 <p className="text-[9px] font-black text-slate-600 uppercase tracking-widest mb-2">Document Status</p>
                                 <div className="flex items-center justify-between bg-white/[0.02] border border-white/5 p-3 rounded-2xl">
                                     {tenant.leaseDocument && typeof tenant.leaseDocument === 'string' && !tenant.leaseDocument.includes('[object') ? (
-                                        <>
-                                            <span className="text-[10px] font-black text-emerald-400 uppercase flex items-center gap-1.5">
-                                                <FileCheck className="w-4 h-4" /> Verified Contract
-                                            </span>
-                                            <a href={tenant.leaseDocument} target="_blank" rel="noopener noreferrer" className="bg-indigo-600 hover:bg-indigo-500 text-white text-[9px] font-black uppercase tracking-widest px-4 py-2 rounded-xl flex items-center gap-2 transition-all shadow-lg shadow-indigo-600/20 glow-indigo">
-                                                -- Download Access
-                                            </a>
-                                        </>
+                                        <div className="flex flex-col gap-2 w-full">
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-[10px] font-black text-emerald-400 uppercase flex items-center gap-1.5">
+                                                    <FileCheck className="w-4 h-4" /> Verified Contract
+                                                </span>
+                                                <a href={tenant.leaseDocument} target="_blank" rel="noopener noreferrer" className="bg-indigo-600 hover:bg-indigo-500 text-white text-[9px] font-black uppercase tracking-widest px-4 py-2 rounded-xl flex items-center gap-2 transition-all shadow-lg shadow-indigo-600/20 glow-indigo">
+                                                    -- Download Access
+                                                </a>
+                                            </div>
+                                            {tenant.leaseExtensionDoc && typeof tenant.leaseExtensionDoc === 'string' && !tenant.leaseExtensionDoc.includes('[object') && (
+                                                <div className="flex items-center justify-between border-t border-white/5 pt-2 mt-1">
+                                                    <span className="text-[10px] font-black text-amber-400 uppercase flex items-center gap-1.5">
+                                                        <RefreshCcw className="w-3.5 h-3.5" /> Extension Doc
+                                                    </span>
+                                                    <a href={tenant.leaseExtensionDoc} target="_blank" rel="noopener noreferrer" className="bg-amber-600 hover:bg-amber-500 text-white text-[9px] font-black uppercase tracking-widest px-4 py-2 rounded-xl flex items-center gap-2 transition-all shadow-lg shadow-amber-600/20 glow-amber">
+                                                        -- View Extension
+                                                    </a>
+                                                </div>
+                                            )}
+                                        </div>
                                     ) : (
                                         <span className="text-[10px] font-black text-amber-500 uppercase flex items-center gap-1.5">
                                             <AlertCircle className="w-4 h-4" /> Pending Execution
@@ -3277,9 +3307,16 @@ function UnitCard({ unit, tenant, currency = 'USD', history, onUpdateFittings, o
                                         <div className="flex items-center justify-between gap-3">
                                             <div className="flex-1">
                                                 {tenant.leaseDocument && typeof tenant.leaseDocument === 'string' && !tenant.leaseDocument.includes('[object') ? (
-                                                    <a href={tenant.leaseDocument} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2.5 text-[10px] font-black uppercase text-emerald-400 bg-emerald-500/5 px-4 py-2.5 rounded-xl border border-emerald-500/10 hover:bg-emerald-500/10 transition-all">
-                                                        <FileCheck className="w-4 h-4" /> Agreement Signed
-                                                    </a>
+                                                    <div className="flex flex-col gap-2">
+                                                        <a href={tenant.leaseDocument} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2.5 text-[10px] font-black uppercase text-emerald-400 bg-emerald-500/5 px-4 py-2.5 rounded-xl border border-emerald-500/10 hover:bg-emerald-500/10 transition-all">
+                                                            <FileCheck className="w-4 h-4" /> Agreement Signed
+                                                        </a>
+                                                        {tenant.leaseExtensionDoc && typeof tenant.leaseExtensionDoc === 'string' && !tenant.leaseExtensionDoc.includes('[object') && (
+                                                            <a href={tenant.leaseExtensionDoc} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2.5 text-[10px] font-black uppercase text-amber-400 bg-amber-500/5 px-4 py-2.5 rounded-xl border border-amber-500/10 hover:bg-amber-500/10 transition-all">
+                                                                <RefreshCcw className="w-4 h-4 text-amber-500" /> Extension Signed
+                                                            </a>
+                                                        )}
+                                                    </div>
                                                 ) : (
                                                     <label className="flex items-center gap-2.5 text-[10px] font-black text-slate-500 uppercase bg-white/5 px-4 py-2.5 rounded-xl border border-dashed border-white/10 cursor-pointer hover:text-indigo-400 hover:border-indigo-500/30 transition-all">
                                                         <Upload className="w-4 h-4" /> Pending Documentation
@@ -3488,6 +3525,7 @@ function LeaseModal({ initialData, availableUnits, onClose, onSubmit }) {
         deposit: '', 
         leaseStart: '', 
         leaseEnd: '', 
+        leaseExtensionDoc: '',
         ...initialData 
     });
 
@@ -3607,16 +3645,16 @@ function LeaseModal({ initialData, availableUnits, onClose, onSubmit }) {
                     {/* section: documentation */}
                     <div className="space-y-6">
                         <div className="flex items-center gap-3 text-[10px] font-black text-sky-400 uppercase tracking-widest bg-sky-500/5 py-2 px-4 rounded-full w-fit">
-                            <FileText className="w-3.5 h-3.5" /> Documentation
+                            <FileCheck className="w-3.5 h-3.5" /> Primary Agreement
                         </div>
                         <div className="relative group">
                             <div className="w-full bg-slate-800/30 border-2 border-dashed border-white/5 hover:border-sky-500/30 rounded-[2rem] p-8 transition-all flex flex-col items-center justify-center gap-4 cursor-pointer relative overflow-hidden">
                                 {leaseForm.leaseFile || (leaseForm.leaseDocument && typeof leaseForm.leaseDocument === 'string' && !leaseForm.leaseDocument.includes('[object')) ? (
                                     <div className="flex flex-col items-center gap-2">
                                         <div className="p-4 bg-sky-600 rounded-2xl shadow-lg shadow-sky-600/30">
-                                            <FileCheck className="w-8 h-8 text-white" />
+                                            <FileText className="w-8 h-8 text-white" />
                                         </div>
-                                        <p className="text-[10px] font-black text-sky-400 uppercase tracking-widest">{leaseForm.leaseFile ? "Document Ready" : "Document Attached"}</p>
+                                        <p className="text-[10px] font-black text-sky-400 uppercase tracking-widest">{leaseForm.leaseFile ? "New File Ready" : "Main Doc Connected"}</p>
                                         {!leaseForm.leaseFile && <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest mt-1">Tap/Click to Replace</p>}
                                     </div>
                                 ) : (
@@ -3633,6 +3671,41 @@ function LeaseModal({ initialData, availableUnits, onClose, onSubmit }) {
                                     onChange={(e) => {
                                         const file = e.target.files[0];
                                         if (file) setLeaseForm({ ...leaseForm, leaseFile: file });
+                                    }}
+                                />
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* section: extension documentation */}
+                    <div className="space-y-6">
+                        <div className="flex items-center gap-3 text-[10px] font-black text-amber-400 uppercase tracking-widest bg-amber-500/5 py-2 px-4 rounded-full w-fit">
+                            <RefreshCcw className="w-3.5 h-3.5" /> Lease Extension Doc
+                        </div>
+                        <div className="relative group">
+                            <div className="w-full bg-slate-800/30 border-2 border-dashed border-white/5 hover:border-amber-500/30 rounded-[2rem] p-8 transition-all flex flex-col items-center justify-center gap-4 cursor-pointer relative overflow-hidden">
+                                {leaseForm.leaseExtensionFile || (leaseForm.leaseExtensionDoc && typeof leaseForm.leaseExtensionDoc === 'string' && !leaseForm.leaseExtensionDoc.includes('[object')) ? (
+                                    <div className="flex flex-col items-center gap-2">
+                                        <div className="p-4 bg-amber-600 rounded-2xl shadow-lg shadow-amber-600/30">
+                                            <FileText className="w-8 h-8 text-white" />
+                                        </div>
+                                        <p className="text-[10px] font-black text-amber-400 uppercase tracking-widest">{leaseForm.leaseExtensionFile ? "Extension Ready" : "Extension Connected"}</p>
+                                        {!leaseForm.leaseExtensionFile && <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest mt-1">Tap/Click to Replace</p>}
+                                    </div>
+                                ) : (
+                                    <div className="flex flex-col items-center gap-2">
+                                        <div className="p-4 bg-slate-900 rounded-2xl">
+                                            <UploadCloud className="w-8 h-8 text-slate-500" />
+                                        </div>
+                                        <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Attach Extension Addendum (Optional)</p>
+                                    </div>
+                                )}
+                                <input 
+                                    type="file" 
+                                    className="absolute inset-0 opacity-0 cursor-pointer z-10" 
+                                    onChange={(e) => {
+                                        const file = e.target.files[0];
+                                        if (file) setLeaseForm({ ...leaseForm, leaseExtensionFile: file });
                                     }}
                                 />
                             </div>
