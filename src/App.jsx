@@ -760,33 +760,19 @@ function App() {
         }
     };
 
-    const addUnitToCatalog = async (unitData) => {
-        setProcessingMessage('CATALOGING_NEW_UNIT');
+    const addUnitToCatalog = async (newUnit) => {
+        setProcessingMessage('ENROLLING_ASSET');
         try {
-            let imageUrl = unitData.image;
-            if (unitData.newImageFile) {
-                setGlobalMessage({ type: 'info', text: "Uploading unit photo..." });
-                const uploadRes = await API.uploadToDrive(unitData.newImageFile, `unit_${unitData.unitNumber}_${Date.now()}.png`);
-                if (uploadRes.success) imageUrl = uploadRes.url;
-            }
-
-            const newUnit = { 
-                ...unitData, 
+            const finalUnit = { 
+                ...newUnit, 
                 id: generateId('UNT'), 
-                fittings: [], 
                 propertyName: activeProperty,
-                image: imageUrl 
+                fittings: []
             };
-            delete newUnit.newImageFile; // Clean up for state/sheet
 
-            setPropertyUnits(prev => [...prev, newUnit]);
-            const res = await API.saveToSheet('ADD', 'Units', newUnit);
-            if (res.success) {
-                setGlobalMessage({ type: 'success', text: `Unit ${unitData.unitNumber} added & Cloud Synced` });
-                syncWithCloud(true);
-            } else {
-                setGlobalMessage({ type: 'error', text: `Cloud Save Failed: ${res.message}` });
-            }
+            setPropertyUnits(prev => [...prev, finalUnit]);
+            await API.saveToSheet('ADD', 'Units', finalUnit);
+            setGlobalMessage({ type: 'success', text: `Unit ${newUnit.unitNumber} registered successfully!` });
             setTimeout(() => setGlobalMessage(null), 3000);
         } finally {
             setProcessingMessage(null);
@@ -794,21 +780,11 @@ function App() {
     };
 
     const editUnitInCatalog = async (updatedUnit) => {
-        setProcessingMessage('UPDATING_UNIT_DETAILS');
+        setProcessingMessage('UPDATING_RECORD');
         try {
-            let imageUrl = updatedUnit.image;
-            if (updatedUnit.newImageFile) {
-                setGlobalMessage({ type: 'info', text: "Updating unit photo..." });
-                const uploadRes = await API.uploadToDrive(updatedUnit.newImageFile, `unit_${updatedUnit.unitNumber}_${Date.now()}.png`);
-                if (uploadRes.success) imageUrl = uploadRes.url;
-            }
-
-            const finalUnit = { ...updatedUnit, image: imageUrl };
-            delete finalUnit.newImageFile; // Clean up
-
-            setPropertyUnits(prev => prev.map(u => u.id === finalUnit.id ? finalUnit : u));
-            await API.saveToSheet('UPDATE', 'Units', finalUnit);
-            setGlobalMessage({ type: 'success', text: `Unit ${finalUnit.unitNumber} updated successfully` });
+            setPropertyUnits(prev => prev.map(u => u.id === updatedUnit.id ? updatedUnit : u));
+            await API.saveToSheet('UPDATE', 'Units', updatedUnit);
+            setGlobalMessage({ type: 'success', text: `Unit ${updatedUnit.unitNumber} updated successfully` });
             setTimeout(() => setGlobalMessage(null), 3000);
         } finally {
             setProcessingMessage(null);
@@ -3084,12 +3060,17 @@ function InventoryModal({ unit, onClose, onSave }) {
 function UnitCard({ unit, tenant, currency = 'USD', history, onUpdateFittings, onEditUnit, onDeleteUnit, onAddLease, onEditLease, onUpdateLeaseDoc, onMoveOut, onViewImage }) {
     const images = useMemo(() => {
         if (!unit.image) return [];
-        try {
-            const parsed = JSON.parse(unit.image);
-            return Array.isArray(parsed) ? parsed : [String(unit.image)];
-        } catch (e) {
-            return [String(unit.image)];
+        const raw = String(unit.image).trim();
+        // Case 1: JSON array of URLs (new format)
+        if (raw.startsWith('[') && raw.endsWith(']')) {
+            try {
+                const parsed = JSON.parse(raw);
+                return Array.isArray(parsed) ? parsed : [raw];
+            } catch (e) { /* fall through */ }
         }
+        // Case 2: Direct URL or Base64 (legacy or single upload)
+        if (raw.startsWith('http') || raw.startsWith('data:image')) return [raw];
+        return [];
     }, [unit.image]);
     const [activeSubTab, setActiveSubTab] = useState('info');
     const tenantName = tenant?.name;
@@ -3443,15 +3424,19 @@ function UnitModal({ initialData, onSubmit, onClose }) {
     const [images, setImages] = useState(parseInitialImages());
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    const handleFileChange = (e) => {
+    const handleFileChange = async (e) => {
         const files = Array.from(e.target.files);
-        files.forEach(file => {
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                setImages(prev => [...prev, reader.result]);
-            };
-            reader.readAsDataURL(file);
-        });
+        setIsSubmitting(true);
+        try {
+            for (const file of files) {
+                const res = await API.uploadFile(file);
+                if (res && res.success) {
+                    setImages(prev => [...prev, res.url]);
+                }
+            }
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     const removeImage = (index) => {
