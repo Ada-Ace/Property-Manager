@@ -3823,9 +3823,9 @@ function UnitModal({ initialData, onSubmit, onClose }) {
                                 );
                             })}
                             
-                            <label className={`shrink-0 w-32 h-32 flex flex-col items-center justify-center bg-slate-950/20 border-2 border-dashed border-white/5 rounded-2xl cursor-pointer hover:border-indigo-500/50 hover:bg-slate-900/50 transition-all ${isSubmitting ? 'animate-pulse' : ''}`}>
-                                <Plus className={`w-8 h-8 ${isSubmitting ? 'text-indigo-400' : 'text-slate-500'}`} />
-                                <span className="text-[10px] font-black text-slate-600 mt-2 uppercase tracking-widest">{isSubmitting ? 'UP...' : 'ADD'}</span>
+                            <label className={`shrink-0 w-20 h-20 flex flex-col items-center justify-center bg-slate-950/20 border-2 border-dashed border-white/5 rounded-xl cursor-pointer hover:border-indigo-500/50 hover:bg-slate-900/50 transition-all ${isSubmitting ? 'animate-pulse' : ''}`}>
+                                <Plus className={`w-5 h-5 ${isSubmitting ? 'text-indigo-400' : 'text-slate-600'}`} />
+                                <span className="text-[8px] font-black text-slate-700 mt-1 uppercase tracking-widest">{isSubmitting ? '...' : 'ADD'}</span>
                                 <input 
                                     type="file" 
                                     multiple 
@@ -3838,20 +3838,20 @@ function UnitModal({ initialData, onSubmit, onClose }) {
                         </div>
                     </div>
 
-                    <div className="pt-8 pb-4 md:pb-0 section-animate" style={{ animationDelay: '0.5s' }}>
+                    <div className="pt-4 pb-4 md:pb-0 section-animate" style={{ animationDelay: '0.5s' }}>
                         <Motion.button 
                             type="submit" 
                             disabled={isSubmitting}
-                            whileHover={{ scale: 1.02, y: -2 }}
+                            whileHover={{ scale: 1.02, y: -1 }}
                             whileTap={{ scale: 0.98 }}
-                            className={`w-full py-6 bg-indigo-600 hover:bg-indigo-500 text-white font-black rounded-[2rem] uppercase tracking-[0.25em] text-xs shadow-2xl shadow-indigo-600/30 transition-all flex items-center justify-center gap-3 active:shadow-none ${isSubmitting ? 'opacity-70 cursor-not-allowed' : 'glow-indigo'}`}
+                            className={`w-full py-4 bg-indigo-600 hover:bg-indigo-500 text-white font-black rounded-2xl uppercase tracking-[0.2em] text-xs shadow-xl shadow-indigo-600/20 transition-all flex items-center justify-center gap-3 active:shadow-none ${isSubmitting ? 'opacity-70 cursor-not-allowed' : ''}`}
                         >
                             {isSubmitting ? (
-                                <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                                <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
                             ) : (
-                                <CheckCircle2 className="w-5 h-5" />
+                                <CheckCircle2 className="w-4 h-4" />
                             )}
-                            {isSubmitting ? 'Processing Asset...' : (initialData ? 'Apply Transformations' : 'Catalog Asset')}
+                            {isSubmitting ? 'Saving...' : (initialData ? 'Save Changes' : 'Catalog Asset')}
                         </Motion.button>
                     </div>
                 </form>
