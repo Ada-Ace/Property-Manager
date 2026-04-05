@@ -1426,7 +1426,8 @@ function ManagerDashboard({ activeProperty, tenants, payments, propertyUnits, ut
     const [editingUnit, setEditingUnit] = useState(null);
     const [selectedUnitForLease, setSelectedUnitForLease] = useState(null);
     const [offboardingSession, setOffboardingSession] = useState(null);
-    const [viewerImage, setViewerImage] = useState(null);
+    const [viewerGallery, setViewerGallery] = useState(null); // { images: [], index: 0 }
+    const [viewerIndex, setViewerIndex] = useState(0);
 
     const [showVendorModal, setShowVendorModal] = useState(false);
     const [editingVendor, setEditingVendor] = useState(null);
@@ -1459,13 +1460,72 @@ function ManagerDashboard({ activeProperty, tenants, payments, propertyUnits, ut
                 onSubmit={editingVendor ? handleUpdateVendor : handleAddVendor} 
                 editingVendor={editingVendor} 
             />
-            {viewerImage && (
-                <div className="fixed inset-0 z-[250] bg-slate-950/95 backdrop-blur-2xl flex flex-col items-center justify-center p-8 animate-in fade-in transition-all" onClick={() => setViewerImage(null)}>
-                    <button className="absolute top-8 right-8 p-3 text-slate-500 hover:text-white bg-white/5 rounded-2xl border border-white/5 transition-all"><X className="w-8 h-8" /></button>
-                    <div className="relative w-full h-full flex items-center justify-center">
-                        <img src={resolvePhotoUrl(viewerImage)} alt="Fullscreen View" className="max-w-full max-h-full object-contain rounded-[2rem] shadow-2xl border border-white/10" />
-                        <div className="absolute bottom-10 left-1/2 -translate-x-1/2 px-8 py-3 bg-white/5 backdrop-blur-md rounded-2xl border border-white/5 text-[10px] font-black uppercase tracking-widest text-slate-400">Tap anywhere to return</div>
+            {viewerGallery && (
+                <div className="fixed inset-0 z-[250] bg-slate-950/98 backdrop-blur-3xl flex flex-col items-center justify-center animate-in fade-in transition-all duration-500">
+                    {/* Background Tap Surface */}
+                    <div className="absolute inset-0 z-0" onClick={() => setViewerGallery(null)} />
+                    
+                    {/* Header: Progress & Close */}
+                    <div className="absolute top-0 left-0 right-0 p-8 flex items-center justify-between z-20 pointer-events-none">
+                        <div className="px-6 py-2 bg-white/5 backdrop-blur-xl rounded-2xl border border-white/10 text-[10px] font-black uppercase tracking-widest text-white ring-1 ring-white/5">
+                            Visual {viewerIndex + 1} <span className="opacity-30 mx-2">/</span> {viewerGallery.length}
+                        </div>
+                        <button 
+                            className="p-4 bg-red-600/10 hover:bg-red-600 text-red-500 hover:text-white rounded-3xl border border-red-600/20 shadow-2xl transition-all active:scale-95 pointer-events-auto"
+                            onClick={() => setViewerGallery(null)}
+                        >
+                            <X className="w-8 h-8" />
+                        </button>
                     </div>
+
+                    {/* Main Image Container */}
+                    <div className="relative w-full h-[70vh] flex items-center justify-center p-4 z-10">
+                        <AnimatePresence mode="wait">
+                            <Motion.img 
+                                key={viewerIndex}
+                                src={resolvePhotoUrl(viewerGallery[viewerIndex])} 
+                                alt={`View ${viewerIndex + 1}`}
+                                initial={{ opacity: 0, x: 20, scale: 0.95 }}
+                                animate={{ opacity: 1, x: 0, scale: 1 }}
+                                exit={{ opacity: 0, x: -20, scale: 0.95 }}
+                                transition={{ duration: 0.3, ease: 'easeOut' }}
+                                className="max-w-full max-h-full object-contain rounded-[2rem] shadow-[0_40px_100px_rgba(0,0,0,0.8)] border border-white/10 ring-1 ring-white/5" 
+                            />
+                        </AnimatePresence>
+                    </div>
+
+                    {/* Navigation Controls */}
+                    {viewerGallery.length > 1 && (
+                        <>
+                            {/* Left/Right Floating Arrows */}
+                            <button 
+                                onClick={(e) => { e.stopPropagation(); setViewerIndex(prev => (prev > 0 ? prev - 1 : viewerGallery.length - 1)); }}
+                                className="absolute left-8 top-1/2 -translate-y-1/2 p-6 bg-white/5 hover:bg-white/10 text-white rounded-full border border-white/10 shadow-2xl transition-all z-20"
+                            >
+                                <ChevronLeft className="w-10 h-10" />
+                            </button>
+                            <button 
+                                onClick={(e) => { e.stopPropagation(); setViewerIndex(prev => (prev < viewerGallery.length - 1 ? prev + 1 : 0)); }}
+                                className="absolute right-8 top-1/2 -translate-y-1/2 p-6 bg-white/5 hover:bg-white/10 text-white rounded-full border border-white/10 shadow-2xl transition-all z-20"
+                            >
+                                <ChevronRight className="w-10 h-10" />
+                            </button>
+
+                            {/* Dot Indicators */}
+                            <div className="absolute bottom-12 flex gap-3 p-4 bg-white/5 backdrop-blur-2xl rounded-3xl border border-white/5 z-20">
+                                {viewerGallery.map((_, idx) => (
+                                    <button 
+                                        key={idx}
+                                        onClick={() => setViewerIndex(idx)}
+                                        className={`h-2.5 rounded-full transition-all duration-500 ${idx === viewerIndex ? 'bg-indigo-500 w-10 shadow-[0_0_15px_rgba(99,102,241,0.5)]' : 'bg-white/20 w-2.5 hover:bg-white/40'}`}
+                                    />
+                                ))}
+                            </div>
+                        </>
+                    )}
+
+                    {/* Mobile Tip */}
+                    <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-[8px] font-black uppercase tracking-[0.3em] text-slate-500 animate-pulse z-0">Keyboard Left / Right to cycle</div>
                 </div>
             )}
             <CompactStatsBar 
@@ -1549,7 +1609,7 @@ function ManagerDashboard({ activeProperty, tenants, payments, propertyUnits, ut
                                         onEditLease={() => { setEditingTenant(tenant); setSelectedUnitForLease(unit); setShowLeaseModal(true); }}
                                         onUpdateLeaseDoc={onUpdateLeaseDoc}
                                         onMoveOut={() => setOffboardingSession({ unit, tenant })}
-                                        onViewImage={(url) => setViewerImage(url)}
+                                        onViewGallery={(gallery, idx) => { setViewerGallery(gallery); setViewerIndex(idx || 0); }}
                                     />
                                 );
                             })}
@@ -3095,7 +3155,7 @@ function InventoryModal({ unit, onClose, onSave }) {
     );
 }
 
-function UnitCard({ unit, tenant, currency = 'USD', history, onUpdateFittings, onEditUnit, onDeleteUnit, onAddLease, onEditLease, onUpdateLeaseDoc, onMoveOut, onViewImage }) {
+function UnitCard({ unit, tenant, currency = 'USD', history, onUpdateFittings, onEditUnit, onDeleteUnit, onAddLease, onEditLease, onUpdateLeaseDoc, onMoveOut, onViewGallery }) {
     const images = useMemo(() => {
         if (!unit.image) return [];
         const raw = String(unit.image).trim();
@@ -3149,7 +3209,7 @@ function UnitCard({ unit, tenant, currency = 'USD', history, onUpdateFittings, o
             <div className={`h-32 md:h-36 relative flex items-center justify-center overflow-hidden bg-slate-950/40 border-b border-white/5`}>
                 <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(79,70,229,0.05),transparent_70%)]" />
                 
-                <div className="relative group/thumb cursor-pointer" onClick={() => images[0] && onViewImage(images[0])}>
+                <div className="relative group/thumb cursor-pointer" onClick={() => images.length > 0 && onViewGallery(images, 0)}>
                     {images.length > 0 ? (
                         <div className="relative">
                             <img src={resolvePhotoUrl(images[0])} alt="" className="w-24 h-24 md:w-28 md:h-28 object-cover rounded-3xl border-2 border-white/10 group-hover/thumb:border-indigo-500/50 group-hover/thumb:scale-105 transition-all duration-500 shadow-2xl" />
