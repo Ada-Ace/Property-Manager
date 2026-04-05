@@ -185,11 +185,20 @@ const formatDate = (date, includeTime = false) => {
     try {
         const d = typeof date === 'string' ? new Date(date) : date;
         if (isNaN(d.getTime())) return 'N/A';
+        
+        // For date-only displays (Bills, Leases, Payments), use UTC to avoid timezone shifts
+        if (!includeTime) {
+            const dd = String(d.getUTCDate()).padStart(2, '0');
+            const mmm = MONTHS_SHORT[d.getUTCMonth()];
+            const yyyy = d.getUTCFullYear();
+            return `${dd}-${mmm}-${yyyy}`;
+        }
+        
+        // For displays with time (Messages, Logs), use local components
         const dd   = String(d.getDate()).padStart(2, '0');
         const mmm  = MONTHS_SHORT[d.getMonth()];
         const yyyy = d.getFullYear();
         const base = `${dd}-${mmm}-${yyyy}`;
-        if (!includeTime) return base;
         const hh = String(d.getHours()).padStart(2, '0');
         const mi = String(d.getMinutes()).padStart(2, '0');
         return `${base} ${hh}:${mi}`;
@@ -202,20 +211,23 @@ const fmtDate = (str) => {
     if (!str) return 'N/A';
     try {
         const strVal = String(str).trim();
-        const clean = strVal.split('T')[0];
-        const parts = clean.split('-');
         
-        // Handle yyyy-mm-dd or similar standard iso prefixes
-        if (parts.length === 3) {
-            const [y, m, d] = parts;
-            if (y.length === 4 && !isNaN(m) && !isNaN(d)) {
-                return `${d.padStart(2,'0')}-${MONTHS_SHORT[parseInt(m,10)-1]}-${y}`;
+        // Prioritise fixed-width component parsing for YYYY-MM-DD
+        const clean = strVal.split('T')[0];
+        if (clean.includes('-')) {
+            const p = clean.split('-');
+            if (p.length === 3 && p[0].length === 4) {
+                const y = p[0], m = p[1], d = p[2];
+                if (!isNaN(y) && !isNaN(m) && !isNaN(d)) {
+                    return `${d.padStart(2,'0')}-${MONTHS_SHORT[parseInt(m,10)-1]}-${y}`;
+                }
             }
         }
         
-        // Fallback for JS date string formats natively
+        // Fallback for native JS date string formats natively
         const d = new Date(strVal);
         if (!isNaN(d.getTime())) {
+            // We use the upgraded formatDate which handles the UTC logic
             return formatDate(d, false);
         }
         return 'N/A';
