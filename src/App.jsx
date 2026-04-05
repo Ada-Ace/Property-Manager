@@ -724,7 +724,8 @@ function App() {
                     tenantId: tenant.id,
                     amount: amount,
                     date: new Date().toISOString(),
-                    propertyName: activeProperty
+                    propertyName: activeProperty,
+                    confirmedBy: activeManager?.name || 'Admin'
                 };
 
                 setTenants(prev => prev.map(t => t.id === tenantId ? updatedTenant : t));
@@ -1589,8 +1590,7 @@ function ManagerDashboard({ activeProperty, tenants, payments, propertyUnits, ut
 }
 
 // --- Payment Confirmation Modal ---
-function PaymentConfirmModal({ tenant, currency, proofMessages, onConfirm, onClose }) {
-    const [selectedProof, setSelectedProof] = useState(proofMessages[0] || null);
+function PaymentConfirmModal({ tenant, currency, activeManager, onConfirm, onClose }) {
     const bp = getBillingPeriod(tenant?.leaseStart);
     const totalDue = (Number(tenant?.baseRent) || 0) + (Number(tenant?.utilityShare) || 0);
 
@@ -1626,9 +1626,9 @@ function PaymentConfirmModal({ tenant, currency, proofMessages, onConfirm, onClo
                     <div>
                         <p className="text-[8px] font-black uppercase tracking-widest text-slate-600 mb-1">Billing Period</p>
                         <p className="text-[11px] font-black text-slate-300 flex items-center gap-1.5 font-mono-data">
-                            {bp.from ? fmtDate(bp.from.toISOString()) : 'N/A'}
+                            {bp.from ? formatDate(bp.from) : 'N/A'}
                             <span className="text-indigo-400">/</span>
-                            {bp.to ? fmtDate(bp.to.toISOString()) : 'N/A'}
+                            {bp.to ? formatDate(bp.to) : 'N/A'}
                         </p>
                     </div>
                     <div className="text-right">
@@ -1637,49 +1637,18 @@ function PaymentConfirmModal({ tenant, currency, proofMessages, onConfirm, onClo
                     </div>
                 </div>
 
-                {/* Proof Preview */}
-                <div className="p-6">
-                    {proofMessages.length > 0 ? (
-                        <>
-                            <p className="text-[9px] font-black uppercase tracking-widest text-slate-600 mb-3 flex items-center gap-2">
-                                <ImageIcon className="w-3 h-3" /> Payment Proof ({proofMessages.length} file{proofMessages.length > 1 ? 's' : ''})
-                            </p>
-                            {/* Main large preview */}
-                            <div className="w-full h-56 rounded-2xl overflow-hidden border border-white/10 bg-black/30 flex items-center justify-center mb-3">
-                                {selectedProof?.photoUrl ? (
-                                    <img
-                                        src={selectedProof.photoUrl}
-                                        alt="Payment proof"
-                                        className="w-full h-full object-contain"
-                                        onError={e => { e.target.style.display='none'; e.target.nextSibling.style.display='flex'; }}
-                                    />
-                                ) : null}
-                                <div className="hidden flex-col items-center gap-2 text-slate-600">
-                                    <ImageIcon className="w-8 h-8 opacity-30" />
-                                    <p className="text-[9px] font-black uppercase tracking-widest">Preview Unavailable</p>
-                                </div>
-                            </div>
-                            {/* Thumbnail strip if multiple */}
-                            {proofMessages.length > 1 && (
-                                <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
-                                    {proofMessages.map((m, i) => (
-                                        <button key={i} onClick={() => setSelectedProof(m)}
-                                            className={`w-14 h-14 rounded-xl overflow-hidden border-2 shrink-0 transition-all ${selectedProof === m ? 'border-amber-400' : 'border-white/5 hover:border-white/20'}`}>
-                                            <img src={m.photoUrl} alt="" className="w-full h-full object-cover" />
-                                        </button>
-                                    ))}
-                                </div>
-                            )}
-                            <p className="text-[8px] text-slate-600 mt-2 font-medium font-mono-data">
-                                Submitted: {selectedProof ? fmtDate(selectedProof.timestamp, true) : 'N/A'}
-                            </p>
-                        </>
-                    ) : (
-                        <div className="flex flex-col items-center gap-3 py-10 border-2 border-dashed border-white/5 rounded-2xl text-slate-600">
-                            <ImageIcon className="w-10 h-10 opacity-20" />
-                            <p className="text-[10px] font-black uppercase tracking-widest text-center">No proof submitted yet.<br />You can still manually confirm payment.</p>
+                {/* Admin Audit Trail */}
+                <div className="p-8 bg-slate-950/20 border-b border-white/5">
+                    <div className="flex items-center gap-4 py-6 border-2 border-dashed border-indigo-500/20 rounded-3xl bg-indigo-500/5 px-8">
+                        <div className="w-12 h-12 rounded-2xl bg-indigo-600/20 flex items-center justify-center border border-indigo-500/30">
+                            <ShieldCheck className="w-6 h-6 text-indigo-400" />
                         </div>
-                    )}
+                        <div>
+                            <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Authenticated Admin</p>
+                            <p className="text-sm font-black text-white italic tracking-tight">{activeManager?.name || 'System Administrator'}</p>
+                            <p className="text-[9px] text-indigo-400/60 font-medium mt-0.5">Authorization logged for audit trail</p>
+                        </div>
+                    </div>
                 </div>
 
                 {/* Footer */}
@@ -1773,9 +1742,9 @@ function RentSummaryTab({ tenants, payments, currency = 'USD', onMarkPaid, prope
                 <PaymentConfirmModal
                     tenant={confirmTenant}
                     currency={currency}
-                    proofMessages={tenantMessages.filter(m => m.tenantId === confirmTenant.id && m.photoUrl).sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp))}
+                    activeManager={activeManager}
                     onConfirm={() => {
-                        onMarkPaid(confirmTenant.id, (Number(confirmTenant.baseRent) + Number(confirmTenant.utilityShare || 0)).toFixed(2));
+                        onMarkPaid(confirmTenant.id, (Number(confirmTenant.baseRent) + Number(confirmTenant.utilityShare || 0)).toFixed(2), activeManager?.name);
                         setConfirmTenant(null);
                     }}
                     onClose={() => setConfirmTenant(null)}
@@ -1943,6 +1912,7 @@ function RentSummaryTab({ tenants, payments, currency = 'USD', onMarkPaid, prope
                                     <th className="px-8 py-5 text-[9px] font-black uppercase text-slate-500 tracking-widest">Unit</th>
                                     <th className="px-8 py-5 text-[9px] font-black uppercase text-slate-500 tracking-widest">Tenant</th>
                                     <th className="px-8 py-5 text-[9px] font-black uppercase text-slate-500 tracking-widest">Date</th>
+                                    <th className="px-8 py-5 text-[9px] font-black uppercase text-slate-500 tracking-widest">Verified By</th>
                                     <th className="px-8 py-5 text-[9px] font-black uppercase text-slate-500 tracking-widest text-right">Amount</th>
                                 </tr>
                             </thead>
@@ -1955,7 +1925,10 @@ function RentSummaryTab({ tenants, payments, currency = 'USD', onMarkPaid, prope
                                             <td className="px-8 py-6">
                                                 <p className="text-sm font-bold text-white tracking-tight">{t?.name || 'Archived Tenant'}</p>
                                             </td>
-                                            <td className="px-8 py-6 text-xs text-slate-400 font-bold font-mono-data">{fmtDate(pay.date)}</td>
+                                            <td className="px-8 py-6 text-xs text-slate-400 font-bold font-mono-data">{formatDate(pay.date)}</td>
+                                            <td className="px-8 py-6">
+                                                <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest bg-indigo-500/10 px-3 py-1 rounded-lg border border-indigo-500/20">{pay.confirmedBy || 'Admin'}</span>
+                                            </td>
                                             <td className="px-8 py-6 text-right">
                                                 <span className="text-sm font-black text-emerald-400 tabular-nums font-mono-data">{currency} {Number(pay.amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                                             </td>
