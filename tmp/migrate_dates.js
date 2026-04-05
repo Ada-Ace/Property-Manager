@@ -12,25 +12,26 @@ const dateFields = [
 ];
 
 /**
- * Normalizes any date to 'dd-mm-yyyy format (prefixed with apostrophe for GS text force).
+ * Normalizes any date to yyyy-mm-dd format (UTC Safe).
  */
 const toSheetDate = (val) => {
     if (!val) return '';
     const s = String(val).trim().replace(/^'/, '');
     
-    // Check if already dd-mm-yyyy
-    if (/^\d{2}-\d{2}-\d{4}$/.test(s)) return `'${s}`;
+    // 1. ISO pattern yyyy-mm-dd
+    const iso = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (iso) return `${iso[1]}-${iso[2]}-${iso[3]}`;
     
-    // Check if yyyy-mm-dd
-    const isoMatch = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
-    if (isoMatch) return `'${isoMatch[3]}-${isoMatch[2]}-${isoMatch[1]}`;
-
+    // 2. dd-mm-yyyy pattern
+    const rev = s.match(/^(\d{2})[-\/](\d{2})[-\/](\d{4})/);
+    if (rev) return `${rev[3]}-${rev[2]}-${rev[1]}`;
+    
+    // Fallback: Date object/timestamp using UTC
     try {
         const d = new Date(val);
-        if (isNaN(d.getTime())) return `'${s}`;
-        const res = `${String(d.getDate()).padStart(2, '0')}-${String(d.getMonth() + 1).padStart(2, '0')}-${d.getFullYear()}`;
-        return `'${res}`;
-    } catch { return `'${s}`; }
+        if (isNaN(d.getTime())) return s;
+        return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`;
+    } catch { return s; }
 };
 
 const migrate = async () => {
@@ -43,7 +44,7 @@ const migrate = async () => {
     try {
         const resp = await fetch(API_URL);
         const data = await resp.json();
-        console.log('Success. Starting migration tasks.');
+        console.log('Success. Starting restoration to yyyy-mm-dd.');
 
         for (const sheetName of Object.keys(data)) {
             const collection = data[sheetName];
@@ -59,12 +60,7 @@ const migrate = async () => {
                     if (dateFields.includes(lkey)) {
                         const originalVal = String(item[key]);
                         const newVal = toSheetDate(item[key]);
-                        // We check if the value in the sheet is already equal to our target (with or without ')
-                        if (originalVal !== newVal && originalVal !== newVal.replace(/^'/, '')) {
-                            updatedItem[key] = newVal;
-                            modified = true;
-                        } else if (!originalVal.startsWith("'") && newVal.startsWith("'")) {
-                            // Even if characters are same, if we need to force text, mark as modified
+                        if (originalVal !== newVal) {
                             updatedItem[key] = newVal;
                             modified = true;
                         }
@@ -72,7 +68,7 @@ const migrate = async () => {
                 }
 
                 if (modified && item.id) {
-                    console.log(`Updating ${sheetName} item: ${item.id} with ${JSON.stringify(updatedItem)}`);
+                    console.log(`Restoring ${sheetName} item: ${item.id} to ${JSON.stringify(updatedItem)}`);
                     try {
                         const postData = { action: 'UPDATE', sheetName, data: updatedItem };
                         const result = await fetch(API_URL, {
@@ -87,7 +83,7 @@ const migrate = async () => {
                 }
             }
         }
-        console.log('Migration complete.');
+        console.log('Restoration complete.');
     } catch (e) {
         console.error('Fatal Migration Error:', e.message);
     }

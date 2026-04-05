@@ -172,26 +172,30 @@ const toDirectImageUrl = (url) => {
 
 const toSheetDate = (val) => {
     if (!val) return '';
-    const s = String(val).trim().replace(/^'/, ''); // Remove existing ' to avoid duplication
-    // If it's already dd-mm-yyyy, prepend ' and return
-    if (/^\d{2}-\d{2}-\d{4}$/.test(s)) return `'${s}`;
+    const s = String(val).trim().replace(/^'/, ''); 
     
-    // If it's yyyy-mm-dd (ISO), reorder then prepend '
+    // 1. Prioritize yyyy-mm-dd regex
     const isoMatch = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
-    if (isoMatch) return `'${isoMatch[3]}-${isoMatch[2]}-${isoMatch[1]}`;
+    if (isoMatch) return `${isoMatch[1]}-${isoMatch[2]}-${isoMatch[3]}`;
+    
+    // 2. Handle dd-mm-yyyy strings
+    const sheetMatch = s.match(/^(\d{2})-(\d{2})-(\d{4})$/);
+    if (sheetMatch) return `${sheetMatch[3]}-${sheetMatch[2]}-${sheetMatch[1]}`;
 
+    // 3. Date object or complex string: Use UTC methods for safety
     try {
         const d = (val instanceof Date) ? val : new Date(val);
-        if (isNaN(d.getTime())) return `'${s}`;
-        const res = `${String(d.getDate()).padStart(2, '0')}-${String(d.getMonth() + 1).padStart(2, '0')}-${d.getFullYear()}`;
-        return `'${res}`;
-    } catch { return `'${s}`; }
+        if (isNaN(d.getTime())) return s;
+        return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`;
+    } catch { return s; }
 };
 
 const fromSheetDate = (val) => {
     if (!val || typeof val !== 'string') return val;
-    const trimmed = val.trim().replace(/^'/, ''); // Remove leading ' if present (Google Sheets text force)
-    // Convert dd-mm-yyyy or dd/mm/yyyy to yyyy-mm-dd
+    const trimmed = val.trim().replace(/^'/, ''); 
+    // If already yyyy-mm-dd, return as is
+    if (/^\d{4}-\d{2}-\d{2}/.test(trimmed)) return trimmed;
+    // Otherwise try to convert dd-mm-yyyy to yyyy-mm-dd
     const match = trimmed.match(/^(\d{2})[-\/](\d{2})[-\/](\d{4})/);
     if (match) {
         const [_, d, m, y] = match;
@@ -202,21 +206,18 @@ const fromSheetDate = (val) => {
 
 const formatDate = (date, includeTime = false) => {
     if (!date) return 'N/A';
-    const s = String(date).trim();
+    const s = String(date).trim().replace(/^'/, '');
     
-    // Direct mapping for dd-mm-yyyy or yyyy-mm-dd strings
-    const sheetMatch = s.match(/^(\d{2})-(\d{2})-(\d{4})$/);
-    if (sheetMatch && !includeTime) return s;
     const isoMatch = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-    if (isoMatch && !includeTime) return `${isoMatch[3]}-${isoMatch[2]}-${isoMatch[1]}`;
+    if (isoMatch && !includeTime) return s;
 
     try {
         const d = (date instanceof Date) ? date : new Date(fromSheetDate(s));
         if (isNaN(d.getTime())) return 'N/A';
-        const dd = String(d.getDate()).padStart(2, '0');
-        const mm = String(d.getMonth() + 1).padStart(2, '0');
-        const yyyy = d.getFullYear();
-        const base = `${dd}-${mm}-${yyyy}`;
+        const yyyy = d.getUTCFullYear();
+        const mm = String(d.getUTCMonth() + 1).padStart(2, '0');
+        const dd = String(d.getUTCDate()).padStart(2, '0');
+        const base = `${yyyy}-${mm}-${dd}`;
         if (!includeTime) return base;
         const hh = String(d.getHours()).padStart(2, '0');
         const mi = String(d.getMinutes()).padStart(2, '0');
@@ -226,17 +227,16 @@ const formatDate = (date, includeTime = false) => {
 
 const fmtDate = (str) => {
     if (!str) return 'N/A';
-    const s = String(str).trim();
-    // Try regex-only reorder for pure dates
-    const sheetMatch = s.match(/^(\d{2})-(\d{2})-(\d{4})$/);
-    if (sheetMatch) return s;
+    const s = String(str).trim().replace(/^'/, '');
     const isoMatch = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-    if (isoMatch) return `${isoMatch[3]}-${isoMatch[2]}-${isoMatch[1]}`;
+    if (isoMatch) return s;
+    const sheetMatch = s.match(/^(\d{2})-(\d{2})-(\d{4})$/);
+    if (sheetMatch) return `${sheetMatch[3]}-${sheetMatch[2]}-${sheetMatch[1]}`;
 
     try {
         const d = new Date(fromSheetDate(s));
         if (!isNaN(d.getTime())) {
-            return `${String(d.getDate()).padStart(2, '0')}-${String(d.getMonth() + 1).padStart(2, '0')}-${d.getFullYear()}`;
+            return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`;
         }
         return 'N/A';
     } catch { return 'N/A'; }
