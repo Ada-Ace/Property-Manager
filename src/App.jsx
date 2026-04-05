@@ -2827,7 +2827,16 @@ function UtilityManager({ tenants, utilityBills, payments, onAddBill, onMarkUtil
                                 return acc;
                             }, []);
                             const totalOwed = breakdowns.reduce((sum, item) => sum + item.amount, 0);
-                            const isPaid = Array.isArray(payments) && payments.some(p => p.tenantId === t.id && p.type === 'Utility' && extractYearMonth(p.date) === effectiveMonth);
+                            
+                            // Enhanced Matching: Robust check for verified payments in this month
+                            const isPaid = Array.isArray(payments) && payments.some(p => {
+                                if (p.tenantId !== t.id) return false;
+                                if (extractYearMonth(p.date) !== effectiveMonth) return false;
+                                // Match if type is explicitly 'Utility' (any case) OR if the amount matches the exact bill total precisely
+                                const isUtilityType = String(p.type || '').toLowerCase() === 'utility';
+                                const amountMatches = Math.abs(parseFloat(p.amount) - totalOwed) < 0.01;
+                                return isUtilityType || (totalOwed > 0 && amountMatches);
+                            });
 
                             return (
                                 <Motion.div
