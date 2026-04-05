@@ -2864,77 +2864,77 @@ function UtilityManager({ tenants, utilityBills, onAddBill, onMarkUtilityPaid, a
                             initial={{ opacity: 0, scale: 0.9, y: 20 }}
                             animate={{ opacity: 1, scale: 1, y: 0 }}
                             exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                            className="relative w-full max-w-lg bg-slate-900 border border-white/10 rounded-[3rem] shadow-2xl overflow-hidden"
+                            className="relative w-full max-w-lg bg-slate-900 border border-white/10 rounded-[2.5rem] shadow-2xl overflow-hidden"
                         >
                             {/* Header Section */}
-                            <div className="p-8 pb-0 relative text-center">
+                            <div className="p-6 pb-2 relative text-center">
                                 {/* Glow Effect */}
-                                <div className="absolute -top-24 -left-24 w-48 h-48 bg-indigo-500/20 rounded-full blur-[80px]" />
+                                <div className="absolute -top-12 -left-12 w-32 h-32 bg-indigo-500/15 rounded-full blur-[60px]" />
                                 
-                                <div className="mx-auto w-16 h-16 bg-indigo-600/15 border border-indigo-500/20 rounded-2xl flex items-center justify-center mb-6">
-                                    <Receipt className="w-8 h-8 text-indigo-400" />
+                                <div className="mx-auto w-12 h-12 bg-indigo-600/15 border border-indigo-500/20 rounded-xl flex items-center justify-center mb-3">
+                                    <Receipt className="w-6 h-6 text-indigo-400" />
                                 </div>
                                 
                                 <div>
-                                    <h3 className="text-2xl font-black text-white italic tracking-tight uppercase">Review Utility Payment</h3>
-                                    <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest mt-1">Verification Step · {confirmUtilityTenant.period}</p>
+                                    <h3 className="text-xl font-black text-white italic tracking-tight uppercase">Review Utility Payment</h3>
+                                    <p className="text-[9px] text-slate-500 font-black uppercase tracking-widest mt-0.5">Verification Step · {confirmUtilityTenant.period}</p>
                                 </div>
                             </div>
 
                             {/* Main Content Info */}
-                            <div className="p-8 space-y-6">
-                                <div className="bg-white/5 rounded-[2.5rem] p-8 border border-white/5 space-y-6">
-                                    <div className="flex justify-between items-center pb-6 border-b border-white/5">
-                                        <div className="flex items-center gap-4">
-                                            <div className="w-12 h-12 bg-indigo-600 rounded-2xl flex items-center justify-center font-black text-xs shadow-lg shadow-indigo-600/20 leading-tight px-1 text-center">{confirmUtilityTenant.tenant.unit}</div>
+                            <div className="px-6 py-4 space-y-4">
+                                <div className="bg-white/5 rounded-[2rem] p-6 border border-white/5 space-y-5">
+                                    <div className="flex justify-between items-center pb-4 border-b border-white/5">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center font-black text-[10px] shadow-lg shadow-indigo-600/20 leading-tight px-1 text-center">{confirmUtilityTenant.tenant.unit}</div>
                                             <div>
-                                                <p className="text-base font-black text-white tracking-tight">{confirmUtilityTenant.tenant.name}</p>
-                                                <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest mt-0.5 font-mono-data">{confirmUtilityTenant.tenant.mobile || 'No Contact'}</p>
+                                                <p className="text-sm font-black text-white tracking-tight leading-tight">{confirmUtilityTenant.tenant.name}</p>
+                                                <p className="text-[9px] text-slate-500 font-black uppercase tracking-widest mt-0.5 font-mono-data opacity-60">{confirmUtilityTenant.tenant.mobile || 'No Contact'}</p>
                                             </div>
                                         </div>
                                     </div>
 
-                                    <div className="space-y-3">
+                                    <div className="grid grid-cols-1 gap-2">
                                         {confirmUtilityTenant.breakdowns.map((b, i) => (
-                                            <div key={i} className="flex justify-between items-center bg-white/5 px-5 py-3 rounded-2xl border border-white/5">
-                                                <div className="flex items-center gap-3">
-                                                    {b.type === 'Electricity' ? <Zap className="w-3.5 h-3.5 text-amber-400" /> : b.type === 'Water' ? <Droplets className="w-3.5 h-3.5 text-blue-400" /> : b.type === 'Gas' ? <Flame className="w-3.5 h-3.5 text-orange-400" /> : <Receipt className="w-3.5 h-3.5 text-indigo-400" />}
-                                                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">{b.type} Bill</span>
+                                            <div key={i} className="flex justify-between items-center bg-white/5 px-4 py-2.5 rounded-xl border border-white/5">
+                                                <div className="flex items-center gap-2.5">
+                                                    {b.type === 'Electricity' ? <Zap className="w-3 h-3 text-amber-400" /> : b.type === 'Water' ? <Droplets className="w-3 h-3 text-blue-400" /> : b.type === 'Gas' ? <Flame className="w-3 h-3 text-orange-400" /> : <Receipt className="w-3 h-3 text-indigo-400" />}
+                                                    <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">{b.type} Bill</span>
                                                 </div>
-                                                <span className="text-sm font-black text-white font-mono-data">{currency} {b.amount.toFixed(2)}</span>
+                                                <span className="text-[13px] font-black text-white font-mono-data">{currency} {b.amount.toFixed(2)}</span>
                                             </div>
                                         ))}
                                     </div>
 
-                                    <div className="pt-6 border-t border-white/5 flex justify-between items-end">
+                                    <div className="pt-4 border-t border-white/5 flex justify-between items-end">
                                         <div>
-                                            <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Total Due</p>
-                                            <p className="text-3xl font-black text-emerald-400 tracking-tighter font-mono-data">{currency} {confirmUtilityTenant.totalOwed.toFixed(2)}</p>
+                                            <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-0.5">Total Due</p>
+                                            <p className="text-2xl font-black text-emerald-400 tracking-tighter font-mono-data">{currency} {confirmUtilityTenant.totalOwed.toFixed(2)}</p>
                                         </div>
-                                        <div className="text-[9px] text-slate-600 font-black uppercase tracking-widest text-right mb-1">Payment Method:<br/><span className="text-slate-400">Direct Reference</span></div>
+                                        <div className="text-[8px] text-slate-600 font-black uppercase tracking-widest text-right mb-0.5">Reference:<br/><span className="text-slate-500">Direct Entry</span></div>
                                     </div>
                                 </div>
                             </div>
 
                             {/* Admin Audit Trail */}
-                            <div className="px-8 py-6 bg-slate-950/20 border-y border-white/5">
-                                <div className="flex items-center gap-4 py-5 border-2 border-dashed border-indigo-500/10 rounded-3xl bg-indigo-500/5 px-6">
-                                    <div className="w-12 h-12 rounded-2xl bg-indigo-600/20 flex items-center justify-center border border-indigo-500/30">
-                                        <ShieldCheck className="w-6 h-6 text-indigo-400" />
+                            <div className="px-6 py-3.5 bg-slate-950/20 border-y border-white/5">
+                                <div className="flex items-center gap-3 py-3 border-2 border-dashed border-indigo-500/10 rounded-2xl bg-indigo-500/5 px-4">
+                                    <div className="w-10 h-10 rounded-xl bg-indigo-600/20 flex items-center justify-center border border-indigo-500/30 shrink-0">
+                                        <ShieldCheck className="w-5 h-5 text-indigo-400" />
                                     </div>
-                                    <div>
-                                        <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Authenticated Admin</p>
-                                        <p className="text-sm font-black text-white italic tracking-tight">{activeManager?.name || 'System Administrator'}</p>
-                                        <p className="text-[9px] text-indigo-400/60 font-medium mt-0.5">Authorization logged for verification audit trail</p>
+                                    <div className="min-w-0">
+                                        <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest leading-none mb-1">Authenticated Admin</p>
+                                        <p className="text-sm font-black text-white italic tracking-tight truncate">{activeManager?.name || 'System Administrator'}</p>
+                                        <p className="text-[8px] text-indigo-400/60 font-medium truncate">Authorization logged for audit trail</p>
                                     </div>
                                 </div>
                             </div>
 
                             {/* Footer Buttons */}
-                            <div className="p-8 flex gap-4 bg-slate-900/50">
+                            <div className="p-6 flex gap-3 bg-slate-900/50">
                                 <button
                                     onClick={() => setConfirmUtilityTenant(null)}
-                                    className="flex-1 py-4 text-slate-500 hover:text-white font-black uppercase tracking-widest text-[10px] transition-all bg-white/5 hover:bg-white/10 rounded-2xl border border-white/5"
+                                    className="flex-1 py-3 text-slate-500 hover:text-white font-black uppercase tracking-widest text-[9px] transition-all bg-white/5 hover:bg-white/10 rounded-xl border border-white/5"
                                 >
                                     Cancel
                                 </button>
@@ -2943,9 +2943,9 @@ function UtilityManager({ tenants, utilityBills, onAddBill, onMarkUtilityPaid, a
                                         await onMarkUtilityPaid(confirmUtilityTenant.tenant.id, confirmUtilityTenant.totalOwed);
                                         setConfirmUtilityTenant(null);
                                     }}
-                                    className="flex-[2] py-4 bg-indigo-600 hover:bg-indigo-500 text-white font-black rounded-2xl shadow-xl shadow-indigo-600/20 transition-all uppercase tracking-widest text-[10px] flex items-center justify-center gap-2 glow-indigo"
+                                    className="flex-[2] py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-black rounded-xl shadow-xl shadow-indigo-600/20 transition-all uppercase tracking-widest text-[9px] flex items-center justify-center gap-2 glow-indigo"
                                 >
-                                    <CheckCircle2 className="w-4 h-4" /> Confirm Utility Payment
+                                    <CheckCircle2 className="w-4 h-4" /> Confirm Payment
                                 </button>
                             </div>
                         </Motion.div>
