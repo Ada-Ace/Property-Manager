@@ -267,7 +267,6 @@ const calculateNextRentDue = (leaseStart) => {
     
     let day = 1;
     if (lStartStr) {
-        // Robust Extraction: Use split or more precise regex to avoid any pollution
         const parts = lStartStr.split('-');
         if (parts.length === 3) {
             day = parseInt(parts[2], 10);
@@ -279,25 +278,30 @@ const calculateNextRentDue = (leaseStart) => {
     
     if (isNaN(day) || day < 1) day = 1;
 
-    // Construct the due date for the CURRENT month using the extracted day
-    // Construction is local. 
-    let dueDate = new Date(today.getFullYear(), today.getMonth(), day);
+    // TARGET DATE: We want the collection date for the CURRENT month/cycle
+    // If today is April 6, and target day is 1, return April 1 (the bill for this month).
+    // If today is April 6, and target day is 15, return April 15 (the upcoming bill).
+    let targetDate = new Date(today.getFullYear(), today.getMonth(), day);
     
-    // If the due date for this month has passed, the next collection is next month
-    if (dueDate < today) {
-        dueDate = new Date(today.getFullYear(), today.getMonth() + 1, day);
-    }
-    return dueDate;
+    // We only jump to the NEXT month if it is very late in the current month? 
+    // Actually, for a dashboard, we want to see the ACTIVE cycle.
+    // However, if we are in the next month, today.getMonth() is already +1.
+    
+    // Safety: If for some reason targetDate was significantly in the past (e.g. 2 months ago)
+    // we should bring it to the current month context.
+    return targetDate;
 };
 
 const getDaysUntilDue = (leaseStart) => {
     const today = getLocalDate();
     today.setHours(0, 0, 0, 0);
-    const dueDate = calculateNextRentDue(leaseStart);
-    if (!dueDate || isNaN(dueDate.getTime())) return 0;
-    // Calculation must be local for consistency
-    const target = new Date(dueDate.getFullYear(), dueDate.getMonth(), dueDate.getDate());
-    return Math.ceil((target - today) / (1000 * 60 * 60 * 24));
+    const targetDate = calculateNextRentDue(leaseStart);
+    if (!targetDate || isNaN(targetDate.getTime())) return 0;
+    const target = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate());
+    
+    const diffTime = target - today;
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays;
 };
 
 // Returns the billing period covering the cycle defined by the dueDate
@@ -2158,7 +2162,7 @@ function RentSummaryTab({ tenants, payments, currency = 'USD', onMarkPaid, prope
                 <div className="space-y-4">
                     {upcomingRents.map((rent, idx) => {
                         const isUrgent = rent.daysUntil <= 3;
-                        const isOverdue = rent.daysUntil < 0;
+                        const isOverdue = rent.daysUntil < 0 && !isPaid;
                         const dueDateStr = (rent.dueDate instanceof Date && !isNaN(rent.dueDate)) ? formatDate(rent.dueDate) : 'N/A';
                         const isPaid = isPaidThisMonth(rent.lastPaymentDate);
                         const baseRent = Number(rent.baseRent) || 0;
