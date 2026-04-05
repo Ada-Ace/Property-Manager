@@ -2662,7 +2662,7 @@ function MaintenanceModal({ onClose, onSubmit, tenants = [] }) {
                         value={form.tenantId} onChange={e => setForm({...form, tenantId: e.target.value})}
                     >
                         <option value="">General Property Maintenance</option>
-                        {tenants.map(t => <option key={t.id} value={t.id}>{t.name} ({t.unit})</option>)}
+                        {tenants?.map(t => <option key={t.id} value={t.id}>{t.name} ({t.unit})</option>)}
                     </select>
                 </div>
             </div>
@@ -3506,7 +3506,7 @@ function TasksManager({ tenants, tasks, vendors, onAddTask, onAddVendor, onEditV
                     </div>
 
                     <div className="lg:col-span-2 space-y-3">
-                        {tasks.slice().reverse().map(task => {
+                        {(tasks || [])?.slice().reverse()?.map(task => {
                             const tenant = tenants.find(t => t.id === task.tenantId) || { name: 'All Tenants', unit: 'All' };
                             return (
                                 <div key={task.id} className="bg-slate-900/60 border border-white/5 rounded-2xl px-5 py-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 hover:border-indigo-500/20 hover:bg-slate-900/90 transition-all group">
@@ -3545,7 +3545,7 @@ function TasksManager({ tenants, tasks, vendors, onAddTask, onAddVendor, onEditV
                 </div>
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {vendors.slice().reverse().map((v, i) => (
+                    {(vendors || [])?.slice().reverse()?.map((v, i) => (
                         <Motion.div
                             key={v.id || i}
                             initial={{ opacity: 0, y: 20 }}
@@ -3892,7 +3892,7 @@ export function TenantDashboard({ tenant, unit, tenantMessages = [], onSendMessa
                             <p className="text-slate-400 font-bold text-sm">No support tickets found.</p>
                         </div>
                     ) : (
-                        tenantMessages.map(msg => (
+                        tenantMessages?.map(msg => (
                             <div key={msg.id} className="bg-slate-950/50 border border-white/5 p-5 rounded-3xl relative overflow-hidden group hover:border-indigo-500/30 transition-all">
                                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-3">
                                     <div className="flex items-center gap-3">
