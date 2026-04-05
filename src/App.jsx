@@ -3159,15 +3159,20 @@ function UnitCard({ unit, tenant, currency = 'USD', history, onUpdateFittings, o
     const images = useMemo(() => {
         if (!unit.image) return [];
         const raw = String(unit.image).trim();
-        // Case 1: JSON array of URLs (new format)
-        if (raw.startsWith('[') && raw.endsWith(']')) {
-            try {
-                const parsed = JSON.parse(raw);
-                return Array.isArray(parsed) ? parsed : [raw];
-            } catch (e) { /* fall through */ }
+        
+        // 1. Precise JSON Recovery
+        try {
+            const parsed = JSON.parse(raw);
+            if (Array.isArray(parsed)) return parsed.filter(Boolean).map(url => String(url).trim());
+            if (typeof parsed === 'string' && parsed.length > 5) return [parsed.trim()];
+        } catch (e) { /* fallback to direct string handling */ }
+
+        // 2. Direct String Recovery (handle extra quotes or fragments)
+        const cleanRaw = raw.replace(/^["']|["']$/g, '').trim();
+        if (cleanRaw.startsWith('http') || cleanRaw.startsWith('data:image') || cleanRaw.includes('drive.google.com')) {
+            return [cleanRaw];
         }
-        // Case 2: Direct URL or Base64 (legacy or single upload)
-        if (raw.startsWith('http') || raw.startsWith('data:image')) return [raw];
+        
         return [];
     }, [unit.image]);
     const [activeSubTab, setActiveSubTab] = useState('info');
