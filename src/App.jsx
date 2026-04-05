@@ -1412,6 +1412,7 @@ function ManagerDashboard({ activeProperty, tenants, payments, propertyUnits, ut
     const [editingUnit, setEditingUnit] = useState(null);
     const [selectedUnitForLease, setSelectedUnitForLease] = useState(null);
     const [offboardingSession, setOffboardingSession] = useState(null);
+    const [viewerImage, setViewerImage] = useState(null);
 
     const [showVendorModal, setShowVendorModal] = useState(false);
     const [editingVendor, setEditingVendor] = useState(null);
@@ -1444,6 +1445,15 @@ function ManagerDashboard({ activeProperty, tenants, payments, propertyUnits, ut
                 onSubmit={editingVendor ? handleUpdateVendor : handleAddVendor} 
                 editingVendor={editingVendor} 
             />
+            {viewerImage && (
+                <div className="fixed inset-0 z-[250] bg-slate-950/95 backdrop-blur-2xl flex flex-col items-center justify-center p-8 animate-in fade-in transition-all" onClick={() => setViewerImage(null)}>
+                    <button className="absolute top-8 right-8 p-3 text-slate-500 hover:text-white bg-white/5 rounded-2xl border border-white/5 transition-all"><X className="w-8 h-8" /></button>
+                    <div className="relative w-full h-full flex items-center justify-center">
+                        <img src={viewerImage} alt="Fullscreen View" className="max-w-full max-h-full object-contain rounded-[2rem] shadow-2xl border border-white/10" />
+                        <div className="absolute bottom-10 left-1/2 -translate-x-1/2 px-8 py-3 bg-white/5 backdrop-blur-md rounded-2xl border border-white/5 text-[10px] font-black uppercase tracking-widest text-slate-400">Tap anywhere to return</div>
+                    </div>
+                </div>
+            )}
             <CompactStatsBar 
                 stats={[
                     { title: "Revenue", value: cur(totalRevenue), icon: <CreditCard className="text-emerald-400" /> },
@@ -1525,6 +1535,7 @@ function ManagerDashboard({ activeProperty, tenants, payments, propertyUnits, ut
                                         onEditLease={() => { setEditingTenant(tenant); setSelectedUnitForLease(unit); setShowLeaseModal(true); }}
                                         onUpdateLeaseDoc={onUpdateLeaseDoc}
                                         onMoveOut={() => setOffboardingSession({ unit, tenant })}
+                                        onViewImage={(url) => setViewerImage(url)}
                                     />
                                 );
                             })}
@@ -3070,7 +3081,16 @@ function InventoryModal({ unit, onClose, onSave }) {
     );
 }
 
-function UnitCard({ unit, tenant, currency = 'USD', history, onUpdateFittings, onEditUnit, onDeleteUnit, onAddLease, onEditLease, onUpdateLeaseDoc, onMoveOut }) {
+function UnitCard({ unit, tenant, currency = 'USD', history, onUpdateFittings, onEditUnit, onDeleteUnit, onAddLease, onEditLease, onUpdateLeaseDoc, onMoveOut, onViewImage }) {
+    const images = useMemo(() => {
+        if (!unit.image) return [];
+        try {
+            const parsed = JSON.parse(unit.image);
+            return Array.isArray(parsed) ? parsed : [String(unit.image)];
+        } catch (e) {
+            return [String(unit.image)];
+        }
+    }, [unit.image]);
     const [activeSubTab, setActiveSubTab] = useState('info');
     const tenantName = tenant?.name;
     const actualRent = tenant?.baseRent;
@@ -3107,17 +3127,29 @@ function UnitCard({ unit, tenant, currency = 'USD', history, onUpdateFittings, o
                 leaseStatus?.pulse ? 'border-red-500/30' : 'border-white/5'
             }`}
         >
-            <div className={`h-40 md:h-48 relative flex items-center justify-center overflow-hidden bg-slate-800/50`}>
-                <div className="absolute inset-0 bg-gradient-to-b from-transparent to-slate-900/80 z-10" />
+            <div className={`h-32 md:h-36 relative flex items-center justify-center overflow-hidden bg-slate-950/40 border-b border-white/5`}>
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(79,70,229,0.05),transparent_70%)]" />
                 
-                {unit.image ? (
-                    <img src={unit.image} alt="" className="absolute inset-0 w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
-                ) : (
-                    <div className="text-slate-700 flex flex-col items-center gap-2 relative z-0 transition-transform group-hover:scale-110 duration-700">
-                        <ImageIcon className="w-16 h-16 opacity-10" />
-                        <span className="text-[10px] font-black uppercase tracking-[0.3em] opacity-30">Unit {unit.unitNumber}</span>
-                    </div>
-                )}
+                <div className="relative group/thumb cursor-pointer" onClick={() => images[0] && onViewImage(images[0])}>
+                    {images.length > 0 ? (
+                        <div className="relative">
+                            <img src={images[0]} alt="" className="w-24 h-24 md:w-28 md:h-28 object-cover rounded-3xl border-2 border-white/10 group-hover/thumb:border-indigo-500/50 group-hover/thumb:scale-105 transition-all duration-500 shadow-2xl" />
+                            {images.length > 1 && (
+                                <div className="absolute -bottom-2 -right-2 bg-indigo-600 text-white text-[8px] font-black px-2 py-1 rounded-lg border border-white/10 shadow-lg">
+                                    +{images.length - 1} MORE
+                                </div>
+                            )}
+                            <div className="absolute inset-0 bg-indigo-600/20 opacity-0 group-hover/thumb:opacity-100 transition-opacity rounded-3xl flex items-center justify-center">
+                                <Maximize className="w-5 h-5 text-white" />
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="w-24 h-24 md:w-28 md:h-28 rounded-3xl border-2 border-dashed border-white/10 flex flex-col items-center justify-center text-slate-800 transition-colors group-hover/thumb:border-white/20">
+                            <ImageIcon className="w-8 h-8 opacity-20" />
+                            <span className="text-[7px] font-black uppercase tracking-widest mt-1 opacity-20">NO VISUALS</span>
+                        </div>
+                    )}
+                </div>
 
                 {/* Quick Actions (Floating) */}
                 <div className="absolute top-6 left-6 flex flex-col gap-2 z-20">
@@ -3397,27 +3429,41 @@ function UnitCard({ unit, tenant, currency = 'USD', history, onUpdateFittings, o
 }
 
 function UnitModal({ initialData, onSubmit, onClose }) {
-    const [form, setForm] = useState(initialData || { unitNumber: '', size: '', expectedRent: '', status: 'Available', image: null });
-    const [imagePreview, setImagePreview] = useState(initialData?.image || null);
+    const parseInitialImages = () => {
+        if (!initialData?.image) return [];
+        try {
+            const parsed = JSON.parse(initialData.image);
+            return Array.isArray(parsed) ? parsed : [String(initialData.image)];
+        } catch (e) {
+            return [String(initialData.image)];
+        }
+    };
+
+    const [form, setForm] = useState(initialData || { unitNumber: '', size: '', expectedRent: '', status: 'Available', image: '[]' });
+    const [images, setImages] = useState(parseInitialImages());
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     const handleFileChange = (e) => {
-        const file = e.target.files[0];
-        if (file) {
+        const files = Array.from(e.target.files);
+        files.forEach(file => {
             const reader = new FileReader();
             reader.onloadend = () => {
-                setImagePreview(reader.result);
-                setForm({ ...form, newImageFile: reader.result });
+                setImages(prev => [...prev, reader.result]);
             };
             reader.readAsDataURL(file);
-        }
+        });
+    };
+
+    const removeImage = (index) => {
+        setImages(images.filter((_, i) => i !== index));
     };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         setIsSubmitting(true);
         try {
-            await onSubmit(form);
+            // Save as JSON string
+            await onSubmit({ ...form, image: JSON.stringify(images) });
         } finally {
             setIsSubmitting(false);
         }
@@ -3456,33 +3502,36 @@ function UnitModal({ initialData, onSubmit, onClose }) {
                 </div>
 
                 <form onSubmit={handleSubmit} className="space-y-10 flex-1">
-                    {/* Hero Image Upload */}
-                    <div className="relative group section-animate" style={{ animationDelay: '0.1s' }}>
-                        <div className="w-full h-40 md:h-64 rounded-[2rem] md:rounded-[2.5rem] bg-slate-800/50 flex flex-col items-center justify-center overflow-hidden border-2 border-dashed border-white/10 hover:border-indigo-500/40 transition-all cursor-pointer relative group">
-                            {imagePreview ? (
-                                <>
-                                    <img src={imagePreview} alt="Preview" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
-                                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                        <div className="bg-white/10 backdrop-blur-md px-5 py-2.5 rounded-2xl border border-white/20 text-[10px] font-black uppercase tracking-widest text-white">Change Photo</div>
-                                    </div>
-                                </>
-                            ) : (
-                                <div className="flex flex-col items-center gap-4 py-8">
-                                    <div className="p-5 bg-slate-900 rounded-3xl border border-white/5 shadow-inner">
-                                        <Camera className="w-10 h-10 text-slate-500 group-hover:text-indigo-400 transition-colors" />
-                                    </div>
-                                    <div className="text-center">
-                                        <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 block mb-1">Asset Visualization</span>
-                                        <span className="text-[9px] font-bold uppercase tracking-[0.1em] text-slate-600 block italic">Tap to Upload Photo</span>
-                                    </div>
+                    {/* Hero Image Upload Gallery */}
+                    <div className="section-animate" style={{ animationDelay: '0.1s' }}>
+                        <label className="text-[10px] text-slate-500 font-black uppercase tracking-[0.3em] ml-2 mb-4 flex items-center gap-2">
+                            <Camera className="w-3.5 h-3.5" /> Unit Visuals Catalog
+                        </label>
+                        
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                            {images.map((url, idx) => (
+                                <div key={idx} className="relative group aspect-square rounded-[1.5rem] overflow-hidden border border-white/10 bg-slate-800">
+                                    <img src={url} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                                    <button 
+                                        type="button"
+                                        onClick={() => removeImage(idx)}
+                                        className="absolute top-2 right-2 p-1.5 bg-red-600/80 text-white rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                                    >
+                                        <Trash2 className="w-3.5 h-3.5" />
+                                    </button>
                                 </div>
-                            )}
-                            <input 
-                                type="file" 
-                                accept="image/*" 
-                                onChange={handleFileChange} 
-                                className="absolute inset-0 opacity-0 cursor-pointer z-10" 
-                            />
+                            ))}
+                            <label className="aspect-square rounded-[1.5rem] border-2 border-dashed border-white/10 hover:border-indigo-500/40 hover:bg-indigo-500/5 transition-all cursor-pointer flex flex-col items-center justify-center gap-2 group">
+                                <PlusCircle className="w-6 h-6 text-slate-600 group-hover:text-indigo-400 group-hover:scale-110 transition-all" />
+                                <span className="text-[8px] font-black uppercase tracking-widest text-slate-600">Add Photo</span>
+                                <input 
+                                    type="file" 
+                                    multiple
+                                    accept="image/*" 
+                                    onChange={handleFileChange} 
+                                    className="hidden" 
+                                />
+                            </label>
                         </div>
                     </div>
 
