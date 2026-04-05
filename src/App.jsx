@@ -251,22 +251,24 @@ const isPaidThisMonth = (lastPaymentDate) => {
 
 const calculateNextRentDue = (leaseStart) => {
     const today = getLocalDate();
+    const lStartStr = fromSheetDate(leaseStart);
     
     let day = 1;
-    try {
-        const d = new Date(fromSheetDate(leaseStart));
-        if (!isNaN(d.getTime())) {
-            // Extract the day of the month using the target timezone consistently
-            const lStartStr = d.toLocaleString("en-US", { day: 'numeric', timeZone: APP_TIMEZONE });
-            day = parseInt(lStartStr, 10);
+    if (lStartStr) {
+        // Safe Extraction: Parse YYYY-MM-DD string directly to get the commencement day
+        const match = lStartStr.match(/-(\d{2})$/);
+        if (match) {
+            day = parseInt(match[1], 10);
+        } else {
+            const d = new Date(lStartStr);
+            if (!isNaN(d.getTime())) day = d.getUTCDate();
         }
-    } catch (e) {
-        day = 1;
     }
     
-    if (isNaN(day)) day = 1;
+    if (isNaN(day) || day < 1) day = 1;
 
-    // Rent is now due EXACTLY on the lease commencement day of the month
+    // Construct the due date for the CURRENT month using the extracted day
+    // We use local constructor but handle day-overflow (e.g. 31st on a 30-day month)
     let dueDate = new Date(today.getFullYear(), today.getMonth(), day);
     
     // If the due date for this month has passed, the next collection is next month
@@ -280,9 +282,9 @@ const getDaysUntilDue = (leaseStart) => {
     const today = getLocalDate();
     today.setHours(0, 0, 0, 0);
     const dueDate = calculateNextRentDue(leaseStart);
-    if (isNaN(dueDate.getTime())) return 0;
-    dueDate.setHours(0, 0, 0, 0);
-    return Math.ceil((dueDate - today) / (1000 * 60 * 60 * 24));
+    if (!dueDate || isNaN(dueDate.getTime())) return 0;
+    const target = new Date(dueDate.getFullYear(), dueDate.getMonth(), dueDate.getDate());
+    return Math.ceil((target - today) / (1000 * 60 * 60 * 24));
 };
 
 // Returns the current billing period { from, to } based on lease start day
@@ -290,10 +292,11 @@ const getBillingPeriod = (leaseStart) => {
     const dueDate = calculateNextRentDue(leaseStart);
     if (!dueDate || isNaN(dueDate.getTime())) return { from: null, to: null };
     
-    // Rent period starts EXACTLY on the lease commencement day (aligned with the due date)
+    // Period starts exactly on the calculated due date
     const from = new Date(dueDate.getFullYear(), dueDate.getMonth(), dueDate.getDate());
     
-    // Rent period ends on the day before the same day in the next month
+    // Period ends on the day BEFORE the same day in the next month
+    // Using 0 as the date with the next month automatically rolls back to last day of current month
     const to = new Date(from.getFullYear(), from.getMonth() + 1, from.getDate() - 1);
     
     return { from, to };
