@@ -368,7 +368,9 @@ function ManagerDashboard(props) {
                     { id: 'inventory', icon: <Building2 className="w-3.5 h-3.5" />, label: 'My Property Assets' },
                     { id: 'utilities', icon: <Droplets className="w-3.5 h-3.5" />, label: 'Utility Ledger' },
                     { id: 'tasks', icon: <Hammer className="w-3.5 h-3.5" />, label: 'Maintenance Desk' },
-                    { id: 'messages', icon: <MessageSquare className="w-3.5 h-3.5" />, label: 'Communications', badge: (tenantMessages?.length > 0) }
+                    { id: 'vendors', icon: <Users className="w-3.5 h-3.5" />, label: 'Service Network' },
+                    { id: 'messages', icon: <MessageSquare className="w-3.5 h-3.5" />, label: 'Communications', badge: (tenantMessages?.length > 0) },
+                    { id: 'settings', icon: <Lock className="w-3.5 h-3.5" />, label: 'Security Hub' }
                 ] : [])?.map((tab) => (
                     <Motion.button 
                         key={tab.id}
@@ -452,7 +454,9 @@ function ManagerDashboard(props) {
                         />
                     )}
                     {activeTab === 'tasks' && <MaintenanceManager tasks={tasks} tenants={tenants} onAddTask={onAddTask} currency={currency} />}
+                    {activeTab === 'vendors' && <VendorManager vendors={vendors} />}
                     {activeTab === 'messages' && <ManagerChat messages={tenantMessages} onUpdateMessage={onUpdateMessage} onAddVendor={setShowVendorModal} vendors={vendors} onEditVendor={setEditingVendor} onDeleteVendor={onDeleteVendor} />}
+                    {activeTab === 'settings' && <CredentialManager activeManager={activeManager} onEditManager={onEditManager} />}
                 </Motion.div>
             </AnimatePresence>
 
@@ -2531,6 +2535,74 @@ const extractYearMonth = (dateStr) => {
 };
 
 // --- Utility Components ---
+
+function ManagerChat({ messages = [], onUpdateMessage, onAddVendor, vendors = [], onEditVendor, onDeleteVendor }) {
+    const [filter, setFilter] = useState('ALL');
+    const currentList = messages?.filter(m => filter === 'ALL' || m.status === filter);
+
+    return (
+        <div className="space-y-12 animate-in fade-in slide-in-from-bottom-5">
+            {/* Communication Hub Stats */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="bg-white/5 border border-white/5 p-8 rounded-[2rem] flex items-center justify-between">
+                    <div><p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Total Signals</p><p className="text-3xl font-black text-white italic">{messages?.length}</p></div>
+                    <div className="p-4 bg-indigo-500/10 rounded-2xl border border-indigo-500/20"><MessageSquare className="w-6 h-6 text-indigo-400" /></div>
+                </div>
+                <div className="bg-white/5 border border-white/5 p-8 rounded-[2rem] flex items-center justify-between">
+                    <div><p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Pending Actions</p><p className="text-3xl font-black text-amber-500 italic">{messages?.filter(m => m.status === 'UNREAD')?.length}</p></div>
+                    <div className="p-4 bg-amber-500/10 rounded-2xl border border-amber-500/20"><Clock className="w-6 h-6 text-amber-400" /></div>
+                </div>
+                <div className="bg-white/5 border border-white/5 p-8 rounded-[2rem] flex items-center justify-between">
+                    <div><p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Service Partners</p><p className="text-3xl font-black text-emerald-500 italic">{vendors?.length}</p></div>
+                    <div className="p-4 bg-emerald-500/10 rounded-2xl border border-emerald-500/20"><Shield className="w-6 h-6 text-emerald-400" /></div>
+                </div>
+            </div>
+
+            {/* Signal Feed */}
+            <div className="premium-card rounded-[2.5rem] p-8">
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-10 pb-6 border-b border-white/5">
+                    <div>
+                        <h3 className="font-black text-2xl text-white italic tracking-tight flex items-center gap-3"><Broadcast className="w-7 h-7 text-indigo-400" /> Signal Communications</h3>
+                        <div className="flex gap-4 mt-3">
+                            <button onClick={() => setFilter('ALL')} className={`text-[9px] font-black uppercase tracking-widest ${filter === 'ALL' ? 'text-indigo-400' : 'text-slate-500'}`}>All Signals</button>
+                            <button onClick={() => setFilter('UNREAD')} className={`text-[9px] font-black uppercase tracking-widest ${filter === 'UNREAD' ? 'text-indigo-400' : 'text-slate-500'}`}>Unread {messages?.filter(m => m.status === 'UNREAD')?.length > 0 && `(${messages?.filter(m => m.status === 'UNREAD')?.length})`}</button>
+                        </div>
+                    </div>
+                </div>
+
+                {!currentList || currentList?.length === 0 ? (
+                    <div className="text-center py-20 border-2 border-dashed border-white/5 rounded-[2rem]">
+                        <p className="text-[10px] uppercase font-black tracking-widest text-slate-600">No active signals found</p>
+                    </div>
+                ) : (
+                    <div className="space-y-4">
+                        {currentList?.map((msg, idx) => (
+                            <div key={msg.id || idx} className="bg-white/[0.03] border border-white/5 p-6 rounded-[2rem] flex flex-col md:flex-row justify-between items-start md:items-center gap-6 group hover:bg-white/[0.06] transition-all">
+                                <div className="flex-1">
+                                    <div className="flex items-center gap-3 mb-2">
+                                        <span className="text-[9px] font-black text-indigo-400 uppercase tracking-widest bg-indigo-500/10 px-3 py-1 rounded-lg border border-indigo-500/20">{msg.tenantName || 'Tenant Signal'}</span>
+                                        <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">{new Date(msg.date).toLocaleDateString()}</span>
+                                    </div>
+                                    <p className="text-sm text-slate-300 font-medium leading-relaxed">{msg.message}</p>
+                                </div>
+                                <div className="flex items-center gap-4">
+                                    {msg.status === 'UNREAD' && (
+                                        <button 
+                                            onClick={() => onUpdateMessage(msg.id, 'READ')}
+                                            className="bg-white/5 hover:bg-white/10 text-[9px] font-black text-white p-3 rounded-xl uppercase tracking-widest border border-white/5 transition-all"
+                                        >
+                                            Mark Resolved
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+}
 
 function MaintenanceModal({ onClose, onSubmit, tenants = [] }) {
     const [form, setForm] = useState({ title: '', description: '', category: 'Plumbing', priority: 'NORMAL', tenantId: '', dateOptions: [] });
