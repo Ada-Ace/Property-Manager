@@ -3130,8 +3130,6 @@ function InventoryModal({ unit, onClose, onSave }) {
 }
 
 function UnitCard({ unit, tenant, currency = 'USD', history, onUpdateFittings, onEditUnit, onDeleteUnit, onAddLease, onEditLease, onUpdateLeaseDoc, onMoveOut }) {
-    const [activeSubTab, setActiveSubTab] = useState('info');
-    const [showInventoryModal, setShowInventoryModal] = useState(false);
     const tenantName = tenant?.name;
     const actualRent = tenant?.baseRent;
     const isOccupied = unit.status === 'Occupied' && !!tenant;
@@ -3232,198 +3230,108 @@ function UnitCard({ unit, tenant, currency = 'USD', history, onUpdateFittings, o
                     </div>
                 </div>
 
-                <div className="flex bg-slate-800/40 p-1 rounded-2xl border border-white/5 mb-6 backdrop-blur-md">
-                    {[
-                        { id: 'info', icon: <CreditCard className="w-3.5 h-3.5" />, label: 'My Financials' },
-                        { id: 'activity', icon: <Activity className="w-3.5 h-3.5" />, label: 'My Activity' },
-                        { id: 'inventory', icon: <ShieldCheck className="w-3.5 h-3.5" />, label: 'My Inventory' }
-                    ].map((tab) => (
-                        <button
-                            key={tab.id}
-                            onClick={() => setActiveSubTab(tab.id)}
-                            className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${
-                                activeSubTab === tab.id ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20 glow-indigo' : 'text-slate-500 hover:text-slate-300'
-                            }`}
-                        >
-                            {tab.icon} {tab.label}
-                        </button>
-                    ))}
-                </div>
-
                 <div className="flex-1 min-h-[160px]">
                     <AnimatePresence mode="wait">
                         <Motion.div
-                            key={activeSubTab}
-                            initial={{ opacity: 0, x: 5 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            exit={{ opacity: 0, x: -5 }}
-                            transition={{ duration: 0.15 }}
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
                             className="h-full"
                         >
-                            {activeSubTab === 'info' ? (
-                                isOccupied ? (
-                                    <div className="flex flex-col gap-5 pt-2">
-                                        <div className="grid grid-cols-2 gap-3">
-                                            <div className="bg-slate-950/40 p-4 rounded-2xl border border-white/5 space-y-1.5">
-                                                <p className="text-[8px] font-black text-slate-600 uppercase tracking-widest">Resident</p>
-                                                <p className="text-white font-black text-sm truncate uppercase tracking-tight">{tenantName}</p>
-                                            </div>
-                                            <div className="bg-indigo-600/10 p-4 rounded-2xl border border-indigo-500/20 space-y-1.5 glow-indigo">
-                                                <p className="text-[8px] font-black text-indigo-400 uppercase tracking-widest">Base Rent</p>
-                                                <p className="text-white font-black text-lg tracking-tighter font-mono-data">
-                                                    <span className="text-xs text-indigo-500 mr-0.5">{currency}</span>{Number(actualRent).toLocaleString()}
-                                                </p>
-                                            </div>
+                            {isOccupied ? (
+                                <div className="flex flex-col gap-5 pt-2">
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div className="bg-slate-950/40 p-4 rounded-2xl border border-white/5 space-y-1.5">
+                                            <p className="text-[8px] font-black text-slate-600 uppercase tracking-widest">Resident</p>
+                                            <p className="text-white font-black text-sm truncate uppercase tracking-tight">{tenantName}</p>
                                         </div>
-
-                                        <div className="grid grid-cols-2 gap-3">
-                                            <div className="bg-slate-950/20 p-4 rounded-2xl border border-white/5 flex items-center justify-between">
-                                                <div>
-                                                    <p className="text-[8px] font-black text-slate-600 uppercase tracking-widest">Security Deposit</p>
-                                                    <p className="text-white font-bold text-xs mt-0.5 font-mono-data">{currency} {Number(tenant.deposit || 0).toLocaleString()}</p>
-                                                </div>
-                                                <Lock className="w-3.5 h-3.5 text-slate-700" />
-                                            </div>
-                                            <div className="bg-slate-950/20 p-4 rounded-2xl border border-white/5 flex items-center justify-between">
-                                                <div>
-                                                    <p className="text-[8px] font-black text-slate-600 uppercase tracking-widest">Utilities Allocation</p>
-                                                    <p className="text-white font-bold text-xs mt-0.5 font-mono-data">{currency} {Number(tenant.utilityShare || 0).toLocaleString()}</p>
-                                                </div>
-                                                <Droplets className="w-3.5 h-3.5 text-blue-500/50" />
-                                            </div>
-                                        </div>
-
-                                        <div className="bg-slate-950/20 rounded-2xl border border-white/5 p-4 space-y-4">
-                                            <div className="flex items-center justify-between text-[9px] font-bold uppercase text-slate-500 border-b border-white/5 pb-3">
-                                                <span className="flex items-center gap-2 font-mono-data"><Calendar className="w-3 h-3" /> Tenure</span>
-                                                <span className="text-indigo-400 font-mono-data">{fmtDate(tenant.leaseStart)} - {fmtDate(tenant.leaseEnd)}</span>
-                                            </div>
-                                            <div className="flex items-center justify-between gap-3">
-                                                <div className="flex-1">
-                                                    {tenant.leaseDocument && typeof tenant.leaseDocument === 'string' && !tenant.leaseDocument.includes('[object') ? (
-                                                        <a href={tenant.leaseDocument} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2.5 text-[10px] font-black uppercase text-emerald-400 bg-emerald-500/5 px-4 py-2.5 rounded-xl border border-emerald-500/10 hover:bg-emerald-500/10 transition-all">
-                                                            <FileCheck className="w-4 h-4" /> Agreement Signed
-                                                        </a>
-                                                    ) : (
-                                                        <label className="flex items-center gap-2.5 text-[10px] font-black text-slate-500 uppercase bg-white/5 px-4 py-2.5 rounded-xl border border-dashed border-white/10 cursor-pointer hover:text-indigo-400 hover:border-indigo-500/30 transition-all">
-                                                            <Upload className="w-4 h-4" /> Pending Documentation
-                                                            <input type="file" className="hidden" onChange={(e) => e.target.files[0] && onUpdateLeaseDoc(tenant.id, e.target.files[0])} />
-                                                        </label>
-                                                    )}
-                                                </div>
-                                                <button onClick={onEditLease} className="p-3 bg-slate-900 border border-white/5 text-slate-500 hover:text-white rounded-xl transition-all"><Settings className="w-3.5 h-3.5" /></button>
-                                            </div>
-                                        </div>
-
-                                        <div className="flex gap-2.5 mt-2">
-                                            <a href={`https://wa.me/${String(tenant.mobile || '').replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" className="flex-1 bg-emerald-600/10 hover:bg-emerald-600/20 border border-emerald-500/20 text-emerald-500 font-black rounded-2xl py-3.5 flex items-center justify-center gap-2.5 text-[10px] uppercase tracking-widest transition-all glow-emerald">
-                                                <MessageCircle className="w-4 h-4" /> CONTACT RESIDENT
-                                            </a>
-                                            <button onClick={onMoveOut} className="bg-slate-900 border border-white/5 text-slate-500 hover:text-red-400 font-black rounded-2xl px-6 py-3.5 flex items-center justify-center gap-2.5 text-[10px] uppercase tracking-widest transition-all">
-                                                <LogOut className="w-4 h-4" /> MOVE OUT
-                                            </button>
+                                        <div className="bg-indigo-600/10 p-4 rounded-2xl border border-indigo-500/20 space-y-1.5 glow-indigo">
+                                            <p className="text-[8px] font-black text-indigo-400 uppercase tracking-widest">Base Rent</p>
+                                            <p className="text-white font-black text-lg tracking-tighter font-mono-data">
+                                                <span className="text-xs text-indigo-500 mr-0.5">{currency}</span>{Number(actualRent).toLocaleString()}
+                                            </p>
                                         </div>
                                     </div>
-                                ) : (
-                                    <div className="h-full flex flex-col pt-2">
-                                        <div className="bg-slate-950/20 rounded-[2rem] border border-white/5 p-6 mb-6">
-                                            <div className="flex justify-between items-start mb-6">
-                                                <div className="space-y-4">
-                                                    <div className="flex items-center gap-2.5 text-emerald-500 font-black bg-emerald-500/5 px-4 py-2 rounded-2xl border border-emerald-500/10 glow-emerald">
-                                                        <LayoutGrid className="w-4 h-4" />
-                                                        <span className="text-[9px] uppercase tracking-widest">Market Ready Status</span>
-                                                    </div>
-                                                </div>
-                                                <div className="text-right">
-                                                    <p className="text-[8px] font-black text-slate-600 uppercase tracking-widest">Target Revenue</p>
-                                                    <p className="text-3xl font-black text-white tracking-tighter font-mono-data">
-                                                        <span className="text-sm mr-0.5">$</span>{Number(unit.expectedRent).toLocaleString()}
-                                                    </p>
-                                                </div>
-                                            </div>
-                                            
-                                            <div className="grid grid-cols-2 gap-4 border-t border-white/5 pt-6">
-                                                <div className="space-y-1">
-                                                    <p className="text-[8px] font-black text-slate-600 uppercase tracking-widest">Projected Yield</p>
-                                                    <p className="text-emerald-400 font-black text-sm">8.4% APY</p>
-                                                </div>
-                                                <div className="space-y-1 text-right">
-                                                    <p className="text-[8px] font-black text-slate-600 uppercase tracking-widest">Estimated Vacancy</p>
-                                                    <p className="text-slate-400 font-black text-sm">Low Demand</p>
-                                                </div>
-                                            </div>
-                                        </div>
 
-                                        <button onClick={onAddLease} className="w-full py-5 bg-indigo-600 hover:bg-indigo-500 text-white font-black rounded-[2rem] shadow-2xl shadow-indigo-600/30 uppercase tracking-[0.2em] text-[11px] flex items-center justify-center gap-3 transition-all transform hover:scale-[1.02] active:scale-[0.98]">
-                                            <PlusCircle className="w-5 h-5" /> RE-POPULATE UNIT
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div className="bg-slate-950/20 p-4 rounded-2xl border border-white/5 flex items-center justify-between">
+                                            <div>
+                                                <p className="text-[8px] font-black text-slate-600 uppercase tracking-widest">Security Deposit</p>
+                                                <p className="text-white font-bold text-xs mt-0.5 font-mono-data">{currency} {Number(tenant.deposit || 0).toLocaleString()}</p>
+                                            </div>
+                                            <Lock className="w-3.5 h-3.5 text-slate-700" />
+                                        </div>
+                                        <div className="bg-slate-950/20 p-4 rounded-2xl border border-white/5 flex items-center justify-between">
+                                            <div>
+                                                <p className="text-[8px] font-black text-slate-600 uppercase tracking-widest">Utilities Allocation</p>
+                                                <p className="text-white font-bold text-xs mt-0.5 font-mono-data">{currency} {Number(tenant.utilityShare || 0).toLocaleString()}</p>
+                                            </div>
+                                            <Droplets className="w-3.5 h-3.5 text-blue-500/50" />
+                                        </div>
+                                    </div>
+
+                                    <div className="bg-slate-950/20 rounded-2xl border border-white/5 p-4 space-y-4">
+                                        <div className="flex items-center justify-between text-[9px] font-bold uppercase text-slate-500 border-b border-white/5 pb-3">
+                                            <span className="flex items-center gap-2 font-mono-data"><Calendar className="w-3 h-3" /> Tenure</span>
+                                            <span className="text-indigo-400 font-mono-data">{fmtDate(tenant.leaseStart)} - {fmtDate(tenant.leaseEnd)}</span>
+                                        </div>
+                                        <div className="flex items-center justify-between gap-3">
+                                            <div className="flex-1">
+                                                {tenant.leaseDocument && typeof tenant.leaseDocument === 'string' && !tenant.leaseDocument.includes('[object') ? (
+                                                    <a href={tenant.leaseDocument} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2.5 text-[10px] font-black uppercase text-emerald-400 bg-emerald-500/5 px-4 py-2.5 rounded-xl border border-emerald-500/10 hover:bg-emerald-500/10 transition-all">
+                                                        <FileCheck className="w-4 h-4" /> Agreement Signed
+                                                    </a>
+                                                ) : (
+                                                    <label className="flex items-center gap-2.5 text-[10px] font-black text-slate-500 uppercase bg-white/5 px-4 py-2.5 rounded-xl border border-dashed border-white/10 cursor-pointer hover:text-indigo-400 hover:border-indigo-500/30 transition-all">
+                                                        <Upload className="w-4 h-4" /> Pending Documentation
+                                                        <input type="file" className="hidden" onChange={(e) => e.target.files[0] && onUpdateLeaseDoc(tenant.id, e.target.files[0])} />
+                                                    </label>
+                                                )}
+                                            </div>
+                                            <button onClick={onEditLease} className="p-3 bg-slate-900 border border-white/5 text-slate-500 hover:text-white rounded-xl transition-all"><Settings className="w-3.5 h-3.5" /></button>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex gap-2.5 mt-2">
+                                        <a href={`https://wa.me/${String(tenant.mobile || '').replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" className="flex-1 bg-emerald-600/10 hover:bg-emerald-600/20 border border-emerald-500/20 text-emerald-500 font-black rounded-2xl py-3.5 flex items-center justify-center gap-2.5 text-[10px] uppercase tracking-widest transition-all glow-emerald">
+                                            <MessageCircle className="w-4 h-4" /> CONTACT RESIDENT
+                                        </a>
+                                        <button onClick={onMoveOut} className="bg-slate-900 border border-white/5 text-slate-500 hover:text-red-400 font-black rounded-2xl px-6 py-3.5 flex items-center justify-center gap-2.5 text-[10px] uppercase tracking-widest transition-all">
+                                            <LogOut className="w-4 h-4" /> MOVE OUT
                                         </button>
-                                    </div>
-                                )
-                            ) : activeSubTab === 'activity' ? (
-                                <div className="space-y-6 pt-2 h-full flex flex-col">
-                                    <div className="bg-slate-950/40 border border-white/5 rounded-[2rem] p-5 space-y-4">
-                                        <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-2 border-b border-white/5 pb-3">
-                                            <History className="w-3.5 h-3.5 text-indigo-400" /> Revenue & Task Stream
-                                        </p>
-                                        <div className="space-y-2 max-h-[160px] overflow-y-auto pr-2 custom-scrollbar">
-                                            {history?.rents?.length > 0 ? history.rents.map((r, i) => (
-                                                <div key={`rent-${i}`} className="bg-white/5 border border-white/5 p-3 rounded-xl flex justify-between items-center group hover:bg-white/10 transition-all">
-                                                    <div className="flex items-center gap-3">
-                                                        <div className="p-1.5 bg-emerald-500/10 rounded-lg"><Receipt className="w-3 h-3 text-emerald-400" /></div>
-                                                        <span className="text-[10px] text-white font-bold">{new Date(r.dueDate).toLocaleDateString([], { month: 'short', year: 'numeric' })} Bill</span>
-                                                    </div>
-                                                    <span className="text-[10px] text-emerald-400 font-black">{currency} {r.totalAmount}</span>
-                                                </div>
-                                            )) : null}
-                                            {history?.tasks?.length > 0 ? history.tasks.map((t, i) => (
-                                                <div key={`task-${i}`} className="bg-white/5 border border-white/5 p-3 rounded-xl flex justify-between items-center group hover:bg-white/10 transition-all">
-                                                    <div className="flex items-center gap-3">
-                                                        <div className="p-1.5 bg-amber-500/10 rounded-lg"><Wrench className="w-3 h-3 text-amber-400" /></div>
-                                                        <span className="text-[10px] text-white font-bold truncate max-w-[100px]">{t.task}</span>
-                                                    </div>
-                                                    <span className="text-[8px] text-slate-400 font-black uppercase px-2 py-0.5 bg-slate-800 rounded-lg">{t.status}</span>
-                                                </div>
-                                            )) : null}
-                                            {(!history?.rents?.length && !history?.tasks?.length) && (
-                                                <div className="py-10 text-center opacity-30 flex flex-col items-center gap-2">
-                                                    <Activity className="w-6 h-6" />
-                                                    <p className="text-[9px] font-black uppercase tracking-widest">No recent stream data</p>
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-                                    <div className="grid grid-cols-2 gap-3 mt-auto">
-                                        <div className="bg-slate-900 border border-white/5 p-4 rounded-2xl flex flex-col gap-1">
-                                            <p className="text-[8px] font-black text-slate-600 uppercase tracking-widest">Avg Response</p>
-                                            <p className="text-white font-black text-xs">2.4 Hours</p>
-                                        </div>
-                                        <div className="bg-slate-900 border border-white/5 p-4 rounded-2xl flex flex-col gap-1">
-                                            <p className="text-[8px] font-black text-slate-600 uppercase tracking-widest">Lifetime Rev</p>
-                                            <p className="text-white font-black text-xs">{currency} 12,450</p>
-                                        </div>
                                     </div>
                                 </div>
                             ) : (
-                                <div className="space-y-5 h-full flex flex-col pt-2">
-                                    <div className="bg-slate-950/20 border border-white/5 rounded-[2rem] p-6 flex-1">
-                                        <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-2 mb-6">
-                                            <Package className="w-3.5 h-3.5 text-indigo-400" /> Unit Specifications
-                                        </p>
-                                        <div className="flex flex-wrap gap-2.5">
-                                            {unit.fittings?.length > 0 ? unit.fittings.map((fit, idx) => (
-                                                <span key={idx} className="bg-slate-900/60 border border-white/5 text-slate-300 text-[9px] font-black px-4 py-2.5 rounded-2xl uppercase flex items-center gap-2 hover:border-indigo-500/30 transition-all">
-                                                    <div className="w-1.5 h-1.5 rounded-full bg-indigo-500" /> {fit}
-                                                </span>
-                                            )) : (
-                                                <div className="w-full py-8 text-center opacity-20 border-2 border-dashed border-white/5 rounded-3xl">
-                                                    <Package className="w-8 h-8 mx-auto mb-2" />
-                                                    <p className="text-[9px] font-black uppercase">No Fittings cataloged</p>
+                                <div className="h-full flex flex-col pt-2">
+                                    <div className="bg-slate-950/20 rounded-[2rem] border border-white/5 p-6 mb-6">
+                                        <div className="flex justify-between items-start mb-6">
+                                            <div className="space-y-4">
+                                                <div className="flex items-center gap-2.5 text-emerald-500 font-black bg-emerald-500/5 px-4 py-2 rounded-2xl border border-emerald-500/10 glow-emerald">
+                                                    <LayoutGrid className="w-4 h-4" />
+                                                    <span className="text-[9px] uppercase tracking-widest">Market Ready Status</span>
                                                 </div>
-                                            )}
+                                            </div>
+                                            <div className="text-right">
+                                                <p className="text-[8px] font-black text-slate-600 uppercase tracking-widest">Target Revenue</p>
+                                                <p className="text-3xl font-black text-white tracking-tighter font-mono-data">
+                                                    <span className="text-sm mr-0.5">$</span>{Number(unit.expectedRent).toLocaleString()}
+                                                </p>
+                                            </div>
+                                        </div>
+                                        
+                                        <div className="grid grid-cols-2 gap-4 border-t border-white/5 pt-6">
+                                            <div className="space-y-1">
+                                                <p className="text-[8px] font-black text-slate-600 uppercase tracking-widest">Projected Yield</p>
+                                                <p className="text-emerald-400 font-black text-sm">8.4% APY</p>
+                                            </div>
+                                            <div className="space-y-1 text-right">
+                                                <p className="text-[8px] font-black text-slate-600 uppercase tracking-widest">Estimated Vacancy</p>
+                                                <p className="text-slate-400 font-black text-sm">Low Demand</p>
+                                            </div>
                                         </div>
                                     </div>
-                                    <button onClick={() => setShowInventoryModal(true)} className="w-full py-4 bg-slate-900 hover:bg-indigo-600 text-slate-400 hover:text-white font-black rounded-2xl uppercase tracking-[0.2em] text-[10px] border border-white/5 transition-all flex items-center justify-center gap-3 group shadow-xl">
-                                        <Settings className="w-4 h-4 group-hover:rotate-90 transition-transform" /> MODIFY INVENTORY CATALOG
+
+                                    <button onClick={onAddLease} className="w-full py-5 bg-indigo-600 hover:bg-indigo-500 text-white font-black rounded-[2rem] shadow-2xl shadow-indigo-600/30 uppercase tracking-[0.2em] text-[11px] flex items-center justify-center gap-3 transition-all transform hover:scale-[1.02] active:scale-[0.98]">
+                                        <PlusCircle className="w-5 h-5" /> RE-POPULATE UNIT
                                     </button>
                                 </div>
                             )}
@@ -3431,17 +3339,6 @@ function UnitCard({ unit, tenant, currency = 'USD', history, onUpdateFittings, o
                     </AnimatePresence>
                 </div>
             </div>
-
-            {showInventoryModal && (
-                <InventoryModal 
-                    unit={unit} 
-                    onClose={() => setShowInventoryModal(false)} 
-                    onSave={(newInventory) => {
-                        onUpdateFittings(unit.id, newInventory);
-                        setShowInventoryModal(false);
-                    }} 
-                />
-            )}
         </Motion.div>
     );
 }
