@@ -2896,81 +2896,145 @@ function TasksManager({ tenants, tasks, vendors, onAddTask, onAddVendor, onEditV
             </div>
 
             {subTab === 'active' ? (
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                    <div className="lg:col-span-1 space-y-6">
-                        <div className="bg-slate-900/50 border border-white/5 p-8 rounded-[2.5rem] shadow-xl">
-                            <h3 className="text-sm font-black text-white italic mb-8 flex items-center gap-2">
-                                <PlusCircle className="w-4 h-4 text-indigo-400" /> Dispatch a New Order
-                            </h3>
-                            <div className="space-y-5">
-                                <div className="space-y-1.5">
-                                    <label className="text-[10px] text-slate-500 font-bold uppercase tracking-widest pl-1">Issue Description</label>
-                                    <input type="text" className="w-full bg-slate-800 border-none rounded-xl p-4 text-white text-sm outline-none focus:ring-1 ring-indigo-500" placeholder="e.g. Master Bedroom Leak" value={title} onChange={e => setTitle(e.target.value)} />
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    {/* Compact form panel */}
+                    <div className="lg:col-span-1">
+                        <div className="bg-slate-900/60 border border-white/5 rounded-2xl p-5 space-y-3">
+                            {/* Title row */}
+                            <div className="flex items-center gap-2 pb-3 border-b border-white/5">
+                                <div className="w-7 h-7 bg-indigo-600/15 border border-indigo-500/20 rounded-lg flex items-center justify-center shrink-0">
+                                    <PlusCircle className="w-3.5 h-3.5 text-indigo-400" />
                                 </div>
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="space-y-1.5">
-                                        <label className="text-[10px] text-slate-500 font-bold uppercase tracking-widest pl-1">Category</label>
-                                        <select className="w-full bg-slate-800 border-none rounded-xl p-3 text-white text-[10px] font-black uppercase tracking-widest outline-none focus:ring-1 ring-indigo-500" value={category} onChange={e => setCategory(e.target.value)}>
-                                            {categories.map(c => <option key={c} value={c}>{c}</option>)}
-                                        </select>
-                                    </div>
-                                    <div className="space-y-1.5">
-                                        <label className="text-[10px] text-slate-500 font-bold uppercase tracking-widest pl-1">Priority</label>
-                                        <select className="w-full bg-slate-800 border-none rounded-xl p-3 text-white text-[10px] font-black uppercase tracking-widest outline-none focus:ring-1 ring-indigo-500" value={priority} onChange={e => setPriority(e.target.value)}>
-                                            {priorities.map(p => <option key={p} value={p}>{p}</option>)}
-                                        </select>
-                                    </div>
-                                </div>
-                                <div className="space-y-1.5">
-                                    <label className="text-[10px] text-slate-500 font-bold uppercase tracking-widest pl-1">Assign Resident</label>
-                                    <select className="w-full bg-slate-800 border-none rounded-xl p-4 text-white text-sm outline-none focus:ring-1 ring-indigo-500" value={tenantId} onChange={e => setTenantId(e.target.value)}>
-                                        <option value="">Select Tenant...</option>
-                                        <option value="ALL">Broadcast to All</option>
-                                        {tenants.map(t => <option key={t.id} value={t.id}>{t.name} ({t.unit})</option>)}
+                                <span className="text-xs font-black text-white uppercase tracking-widest">New Work Order</span>
+                            </div>
+
+                            {/* Issue Description */}
+                            <div className="space-y-1">
+                                <label className="text-[9px] text-slate-500 font-black uppercase tracking-widest pl-0.5">Issue</label>
+                                <input
+                                    type="text"
+                                    className="w-full bg-slate-800/80 border border-white/5 focus:border-indigo-500/50 rounded-xl px-3 py-2.5 text-white text-xs outline-none focus:ring-1 ring-indigo-500/40 placeholder-slate-600 transition-all"
+                                    placeholder="e.g. Master Bedroom Leak"
+                                    value={title}
+                                    onChange={e => setTitle(e.target.value)}
+                                />
+                            </div>
+
+                            {/* Category + Priority inline */}
+                            <div className="grid grid-cols-2 gap-2">
+                                <div className="space-y-1">
+                                    <label className="text-[9px] text-slate-500 font-black uppercase tracking-widest pl-0.5">Category</label>
+                                    <select
+                                        className="w-full bg-slate-800/80 border border-white/5 focus:border-indigo-500/50 rounded-xl px-3 py-2.5 text-white text-[9px] font-black uppercase tracking-wide outline-none focus:ring-1 ring-indigo-500/40 transition-all"
+                                        value={category}
+                                        onChange={e => setCategory(e.target.value)}
+                                    >
+                                        {categories.map(c => <option key={c} value={c}>{c}</option>)}
                                     </select>
                                 </div>
-                                <div className="space-y-3">
-                                    <label className="text-[10px] text-slate-500 font-bold uppercase tracking-widest pl-1">Inspection Slots</label>
-                                    {dateOptions.map((opt, i) => (
-                                        <div key={i} className="flex gap-2">
-                                            <input type="date" style={{ colorScheme: 'dark' }} className="flex-1 bg-slate-800 border-none rounded-xl p-3 text-white text-xs outline-none focus:ring-1 ring-indigo-500 font-mono-data" value={opt.date} onChange={e => { const n = [...dateOptions]; n[i].date = e.target.value; setDateOptions(n); }} />
-                                            <input type="time" style={{ colorScheme: 'dark' }} className="flex-1 bg-slate-800 border-none rounded-xl p-3 text-white text-xs outline-none focus:ring-1 ring-indigo-500 font-mono-data" value={opt.time} onChange={e => { const n = [...dateOptions]; n[i].time = e.target.value; setDateOptions(n); }} />
-                                        </div>
-                                    ))}
-                                    <button onClick={() => setDateOptions([...dateOptions, { date: '', time: '' }])} className="text-[9px] text-indigo-400 font-black uppercase tracking-[0.2em] px-2 py-1 hover:text-white transition-all">+ Add Option</button>
+                                <div className="space-y-1">
+                                    <label className="text-[9px] text-slate-500 font-black uppercase tracking-widest pl-0.5">Priority</label>
+                                    <select
+                                        className="w-full bg-slate-800/80 border border-white/5 focus:border-indigo-500/50 rounded-xl px-3 py-2.5 text-white text-[9px] font-black uppercase tracking-wide outline-none focus:ring-1 ring-indigo-500/40 transition-all"
+                                        value={priority}
+                                        onChange={e => setPriority(e.target.value)}
+                                    >
+                                        {priorities.map(p => <option key={p} value={p}>{p}</option>)}
+                                    </select>
                                 </div>
-                                <button onClick={handleAdd} className="w-full mt-4 py-4 bg-indigo-600 hover:bg-indigo-500 text-white font-black rounded-2xl shadow-xl shadow-indigo-600/20 transition-all uppercase tracking-widest text-[10px] glow-indigo">Generate Work Order</button>
                             </div>
+
+                            {/* Assign Resident */}
+                            <div className="space-y-1">
+                                <label className="text-[9px] text-slate-500 font-black uppercase tracking-widest pl-0.5">Resident</label>
+                                <select
+                                    className="w-full bg-slate-800/80 border border-white/5 focus:border-indigo-500/50 rounded-xl px-3 py-2.5 text-white text-xs outline-none focus:ring-1 ring-indigo-500/40 transition-all"
+                                    value={tenantId}
+                                    onChange={e => setTenantId(e.target.value)}
+                                >
+                                    <option value="">Select Tenant...</option>
+                                    <option value="ALL">Broadcast to All</option>
+                                    {tenants.map(t => <option key={t.id} value={t.id}>{t.name} ({t.unit})</option>)}
+                                </select>
+                            </div>
+
+                            {/* Inspection Slots */}
+                            <div className="space-y-1.5">
+                                <div className="flex items-center justify-between pl-0.5">
+                                    <label className="text-[9px] text-slate-500 font-black uppercase tracking-widest">Slots</label>
+                                    <button
+                                        onClick={() => setDateOptions([...dateOptions, { date: '', time: '' }])}
+                                        className="text-[9px] text-indigo-400 font-black uppercase tracking-widest hover:text-white transition-all"
+                                    >
+                                        + Add
+                                    </button>
+                                </div>
+                                {dateOptions.map((opt, i) => (
+                                    <div key={i} className="flex gap-2">
+                                        <input
+                                            type="date"
+                                            style={{ colorScheme: 'dark' }}
+                                            className="flex-1 bg-slate-800/80 border border-white/5 rounded-xl px-3 py-2 text-white text-[10px] outline-none focus:ring-1 ring-indigo-500/40 font-mono-data min-w-0"
+                                            value={opt.date}
+                                            onChange={e => { const n = [...dateOptions]; n[i].date = e.target.value; setDateOptions(n); }}
+                                        />
+                                        <input
+                                            type="time"
+                                            style={{ colorScheme: 'dark' }}
+                                            className="w-[90px] bg-slate-800/80 border border-white/5 rounded-xl px-3 py-2 text-white text-[10px] outline-none focus:ring-1 ring-indigo-500/40 font-mono-data"
+                                            value={opt.time}
+                                            onChange={e => { const n = [...dateOptions]; n[i].time = e.target.value; setDateOptions(n); }}
+                                        />
+                                    </div>
+                                ))}
+                            </div>
+
+                            {/* Submit */}
+                            <button
+                                onClick={handleAdd}
+                                className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-black rounded-xl shadow-lg shadow-indigo-600/20 transition-all uppercase tracking-widest text-[10px] flex items-center justify-center gap-2 glow-indigo mt-1"
+                            >
+                                <Hammer className="w-3.5 h-3.5" /> Generate Work Order
+                            </button>
                         </div>
                     </div>
 
-                    <div className="lg:col-span-2 space-y-4">
+                    <div className="lg:col-span-2 space-y-3">
                         {tasks.slice().reverse().map(task => {
                             const tenant = tenants.find(t => t.id === task.tenantId) || { name: 'All Tenants', unit: 'All' };
                             return (
-                                <div key={task.id} className="bg-slate-900 border border-white/5 p-6 rounded-[2rem] flex flex-col md:flex-row justify-between gap-6 hover:border-indigo-500/30 transition-all group">
-                                    <div className="flex-1 space-y-3">
-                                        <div className="flex items-center gap-3">
-                                            <span className={`px-2 py-1 rounded-md text-[8px] font-black uppercase tracking-widest ${task.priority === 'URGENT' ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-slate-800 text-slate-400 border border-white/5'}`}>{task.priority}</span>
+                                <div key={task.id} className="bg-slate-900/60 border border-white/5 rounded-2xl px-5 py-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 hover:border-indigo-500/20 hover:bg-slate-900/90 transition-all group">
+                                    <div className="flex-1 min-w-0 space-y-1.5">
+                                        <div className="flex items-center gap-2 flex-wrap">
+                                            <span className={`px-2 py-0.5 rounded-md text-[8px] font-black uppercase tracking-widest ${task.priority === 'URGENT' ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-slate-800 text-slate-400 border border-white/5'}`}>{task.priority}</span>
                                             <span className="text-[9px] font-black text-indigo-400 uppercase tracking-widest">{task.category || 'Maintenance'}</span>
                                         </div>
-                                        <h4 className="text-xl font-black text-white tracking-tight">{task.title}</h4>
-                                        <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Unit {tenant.unit} -?{tenant.name}</p>
-                                        <div className="flex flex-wrap gap-2 pt-2">
-                                            {task.dateOptions?.map((d, idx) => <span key={idx} className="bg-slate-950/40 text-slate-400 text-[9px] font-bold px-3 py-1.5 rounded-lg border border-white/5 font-mono-data">{d}</span>)}
-                                        </div>
+                                        <p className="text-sm font-black text-white tracking-tight truncate">{task.title}</p>
+                                        <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest">Unit {tenant.unit} · {tenant.name}</p>
+                                        {task.dateOptions?.length > 0 && (
+                                            <div className="flex flex-wrap gap-1.5 pt-0.5">
+                                                {task.dateOptions.map((d, idx) => <span key={idx} className="bg-slate-800/60 text-slate-400 text-[9px] font-bold px-2 py-1 rounded-lg border border-white/5 font-mono-data">{d}</span>)}
+                                            </div>
+                                        )}
                                     </div>
-                                    <div className="flex flex-col gap-2 min-w-[160px]">
-                                        <div className="px-4 py-2 bg-slate-950/50 rounded-xl border border-white/5 text-center">
-                                            <p className="text-[8px] font-black text-slate-600 uppercase mb-1">Status</p>
-                                            <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">{task.status}</p>
-                                        </div>
-                                        <a href={`https://wa.me/${String(tenant.mobile || '').replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" className="bg-emerald-600/10 hover:bg-emerald-600/20 border border-emerald-500/20 text-emerald-500 p-3 rounded-xl text-[9px] font-black uppercase tracking-widest text-center transition-all glow-emerald">Notify Tenant</a>
-                                        <button className="bg-white/5 hover:bg-white/10 text-slate-400 p-3 rounded-xl text-[9px] font-black uppercase tracking-widest text-center transition-all">Close Order</button>
+                                    <div className="flex items-center gap-2 shrink-0">
+                                        <span className="text-[9px] font-black text-indigo-400 uppercase bg-indigo-500/10 border border-indigo-500/20 px-3 py-1.5 rounded-lg tracking-widest">{task.status}</span>
+                                        <a href={`https://wa.me/${String(tenant.mobile || '').replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" title="Notify Tenant" className="p-2 bg-emerald-600/10 hover:bg-emerald-600 border border-emerald-500/20 text-emerald-400 hover:text-white rounded-xl transition-all">
+                                            <Send className="w-3.5 h-3.5" />
+                                        </a>
+                                        <button title="Close Order" className="p-2 bg-slate-800/60 hover:bg-slate-700 text-slate-400 hover:text-white rounded-xl transition-all border border-white/5">
+                                            <XCircle className="w-3.5 h-3.5" />
+                                        </button>
                                     </div>
                                 </div>
                             );
                         })}
+                        {tasks.length === 0 && (
+                            <div className="flex flex-col items-center justify-center py-20 border-2 border-dashed border-white/5 rounded-2xl text-slate-600">
+                                <Hammer className="w-10 h-10 mb-3 opacity-20" />
+                                <p className="text-[10px] font-black uppercase tracking-widest">No active work orders</p>
+                            </div>
+                        )}
                     </div>
                 </div>
             ) : (
