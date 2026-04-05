@@ -908,7 +908,7 @@ function App() {
             if (tenant) {
                 const updatedTenant = { 
                     ...tenant, 
-                    lastPaymentDate: new Date().toISOString() 
+                    lastPaymentDate: toSheetDate(new Date()) 
                 };
                 const newPayment = {
                     id: generateId('PAY'),
@@ -948,7 +948,7 @@ function App() {
                     id: generateId('UTL'),
                     tenantId: tenant.id,
                     amount: amount,
-                    date: billingCycle ? (billingCycle + '-01T12:00:00.000Z') : getTodayString(),
+                    date: billingCycle ? (billingCycle + '-01') : getTodayString(),
                     propertyName: activeProperty,
                     confirmedBy: activeManager?.name || 'Admin',
                     type: 'Utility'
