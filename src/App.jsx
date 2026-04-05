@@ -604,7 +604,7 @@ function App() {
 
                 // Robustly Extract Collections (Keys are now lowercased & trimmed from GAS)
                 const keyMap={'unitnumber':'unitNumber','expectedrent':'expectedRent','propertyname':'propertyName','baserent':'baseRent','leasestart':'leaseStart','leaseend':'leaseEnd','leasedocument':'leaseDocument','utilityshare':'utilityShare','depositrefunded':'depositRefunded','depositdeducted':'depositDeducted','moveoutdate':'moveOutDate','lastpaymentdate':'lastPaymentDate','scheduledate':'scheduleDate','tenantid':'tenantId','photourl':'photoUrl','handledby':'handledBy','duedate':'dueDate','maintenanceselection':'maintenanceSelection','vacantsince':'vacantSince','lastupdated':'lastUpdated','image':'image','status':'status','size':'size','fittings':'fittings'};
-                const normalize=(arr)=>arr.map(item=>{const obj={...item};for(const key of Object.keys(item)){const lk=key.toLowerCase().trim();if(lk==='image'||lk==='img'||lk==='photo'||lk==='visual'||lk==='visuals')obj.image=item[key];if(lk==='status')obj.status=item[key];if(lk==='size')obj.size=item[key];if(lk==='unitnumber')obj.unitNumber=item[key];if(keyMap[lk]&&key!==keyMap[lk]){obj[keyMap[lk]]=obj[key];delete obj[key];}}if(obj.propertyname&&!obj.propertyName){obj.propertyName=String(obj.propertyname);delete obj.propertyname;}return obj;});
+                const normalize=(arr)=>arr.map(item=>{const obj={...item};for(const key of Object.keys(item)){const lk=key.toLowerCase().trim().replace(/_/g,'');if(['image','img','photo','visual','visuals','unitimage','unitphoto','photourl'].includes(lk))obj.image=item[key];if(lk==='status')obj.status=item[key];if(lk==='size')obj.size=item[key];if(lk==='unitnumber')obj.unitNumber=item[key];if(keyMap[lk]&&key!==keyMap[lk]){obj[keyMap[lk]]=obj[key];delete obj[key];}}if(obj.propertyname&&!obj.propertyName){obj.propertyName=String(obj.propertyname);delete obj.propertyname;}return obj;});
                 const rawUnits = normalize(findCollection(data, 'units'));
                 const rawTenants = normalize(findCollection(data, 'tenants'));
                 const rawBills = normalize(findCollection(data, 'bills'));
@@ -2952,7 +2952,7 @@ function TenantDashboard({ tenant, unit, tenantMessages = [], onSendMessage, cur
                                 </div>
                             </div>
                             <div>
-                                <p className="text-[10px] font-black text-slate-600 uppercase tracking-widest mb-1">Security Deposit</p>
+                                <p className="text-[9px] font-black text-slate-600 uppercase tracking-widest mb-1">Security Deposit</p>
                                 <div className="flex items-center gap-2">
                                     <ShieldCheck className="w-4 h-4 text-emerald-400" />
                                     <p className="text-sm font-black text-white tracking-tight font-mono-data">{currency} {Number(tenant.deposit || 0).toLocaleString()}</p>
@@ -3176,7 +3176,8 @@ function InventoryModal({ unit, onClose, onSave }) {
 
 function UnitCard({ unit, tenant, currency = 'USD', history, onUpdateFittings, onEditUnit, onDeleteUnit, onAddLease, onEditLease, onUpdateLeaseDoc, onMoveOut, onViewGallery }) {
     const images = useMemo(() => {
-        const rawImage = unit.image || unit.IMAGE || unit.photo || unit.PHOTO || unit.visuals || unit.Image;
+        const keys = ['image', 'IMAGE', 'photo', 'PHOTO', 'visuals', 'Image', 'photoUrl', 'photo_url', 'unitImage', 'unitPhoto'];
+        const rawImage = keys.reduce((acc, key) => acc || unit[key], null);
         if (!rawImage) return [];
         const raw = String(rawImage).trim();
         
@@ -3253,7 +3254,7 @@ function UnitCard({ unit, tenant, currency = 'USD', history, onUpdateFittings, o
                             <span className="text-[7px] font-black uppercase tracking-widest mt-1 opacity-20">NO VISUALS</span>
                             {/* Diagnostic Helper for Manager (Debug Only) */}
                             <span className="absolute bottom-2 inset-x-0 text-[5px] text-white/5 font-mono text-center truncate px-2">
-                                DATA: {String(unit.image || unit.IMAGE || 'NULL').slice(0, 15)}
+                                KEYS: {Object.keys(unit).slice(0, 4).join(',')} | V: {String(unit.image || 'X').slice(0, 5)}
                             </span>
                         </div>
                     )}
