@@ -588,7 +588,7 @@ function App() {
                 });
 
                 // Robustly Extract Collections (Keys are now lowercased & trimmed from GAS)
-                const keyMap={'unitnumber':'unitNumber','expectedrent':'expectedRent','propertyname':'propertyName','baserent':'baseRent','leasestart':'leaseStart','leaseend':'leaseEnd','leasedocument':'leaseDocument','leaseextensiondoc':'leaseExtensionDoc','utilityshare':'utilityShare','depositrefunded':'depositRefunded','depositdeducted':'depositDeducted','moveoutdate':'moveOutDate','lastpaymentdate':'lastPaymentDate','scheduledate':'scheduleDate','tenantid':'tenantId','photourl':'photoUrl','handledby':'handledBy','duedate':'dueDate','maintenanceselection':'maintenanceSelection','vacantsince':'vacantSince','lastupdated':'lastUpdated','image':'image','status':'status','size':'size','fittings':'fittings'};
+                const keyMap={'unitnumber':'unitNumber','expectedrent':'expectedRent','propertyname':'propertyName','baserent':'baseRent','leasestart':'leaseStart','leaseend':'leaseEnd','leasedocument':'leaseDocument','leaseextensiondoc':'leaseExtensionDoc','mobile':'mobile','password':'password','utilityshare':'utilityShare','depositrefunded':'depositRefunded','depositdeducted':'depositDeducted','moveoutdate':'moveOutDate','lastpaymentdate':'lastPaymentDate','scheduledate':'scheduleDate','tenantid':'tenantId','photourl':'photoUrl','handledby':'handledBy','duedate':'dueDate','maintenanceselection':'maintenanceSelection','vacantsince':'vacantSince','lastupdated':'lastUpdated','image':'image','status':'status','size':'size','fittings':'fittings'};
                 const normalize = (arr) => {
                     if (arr.length > 0) console.log('SYNC_KEYS:', Object.keys(arr[0]).join(','));
                     return arr.map(item => {
@@ -1421,6 +1421,7 @@ function App() {
                                 currency={activeCurrency}
                                 tenantMessages={tenantMessages.filter(m => m.tenantId === activeTenantId)}
                                 onSendMessage={handleSendMessage}
+                                onUpdateProfile={editTenant}
                             />
                         )}
                     </Motion.div>
@@ -2810,7 +2811,8 @@ function TasksManager({ tenants, tasks, vendors, onAddTask, onAddVendor, onEditV
 
 // --- Tenant Dashboard (unchanged logic, showing for completeness) ---
 
-function TenantDashboard({ tenant, unit, tenantMessages = [], onSendMessage, currency = 'USD' }) {
+function TenantDashboard({ tenant, unit, tenantMessages = [], onSendMessage, onUpdateProfile, currency = 'USD' }) {
+    const [profileForm, setProfileForm] = React.useState({ mobile: tenant?.mobile || '', password: tenant?.password || '' });
     const [showMsgModal, setShowMsgModal] = useState(false);
     if (!tenant) {
         return (
@@ -2970,6 +2972,46 @@ function TenantDashboard({ tenant, unit, tenantMessages = [], onSendMessage, cur
                         <p className="text-[11px] leading-relaxed text-indigo-200/70 font-medium">
                             Bills are updated monthly based on building consumption. {tenant.utilityShare > 0 ? "The current amount includes shared building water and electricity charges." : "Utilities for this period haven't been shared yet."}
                         </p>
+                    </div>
+
+                    {/* Digital Identity Section */}
+                    <div className="bg-slate-900/60 border border-white/5 p-6 md:p-8 rounded-[2rem] backdrop-blur-md shadow-2xl relative overflow-hidden group border-indigo-500/10">
+                        <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity">
+                            <ShieldCheck className="w-16 h-16 text-indigo-500" />
+                        </div>
+                        <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-2 mb-6">
+                            <Lock className="w-4 h-4 text-indigo-400" />
+                            Digital Access & Credentials
+                        </h3>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 relative z-10">
+                            <div className="space-y-4">
+                                <label className="text-[10px] text-slate-500 font-bold uppercase tracking-widest ml-1">WhatsApp Number</label>
+                                <input 
+                                    type="tel" 
+                                    className="w-full bg-slate-950/50 border border-white/5 rounded-2xl p-4 text-white text-sm font-bold outline-none focus:border-indigo-500/30 transition-all"
+                                    value={profileForm.mobile}
+                                    onChange={e => setProfileForm({ ...profileForm, mobile: e.target.value })}
+                                />
+                            </div>
+                            <div className="space-y-4">
+                                <label className="text-[10px] text-slate-500 font-bold uppercase tracking-widest ml-1">Portal Password</label>
+                                <input 
+                                    type="text" 
+                                    className="w-full bg-slate-950/50 border border-white/5 rounded-2xl p-4 text-white text-sm font-bold outline-none focus:border-indigo-500/30 transition-all"
+                                    value={profileForm.password}
+                                    onChange={e => setProfileForm({ ...profileForm, password: e.target.value })}
+                                />
+                            </div>
+                        </div>
+
+                        <button 
+                            disabled={profileForm.mobile === tenant.mobile && profileForm.password === tenant.password}
+                            onClick={() => onUpdateProfile({ ...tenant, ...profileForm })}
+                            className="w-full mt-8 bg-slate-800 hover:bg-emerald-600 disabled:opacity-20 disabled:hover:bg-slate-800 text-white font-black py-4 rounded-2xl transition-all text-[11px] uppercase tracking-[0.2em] shadow-xl hover:shadow-emerald-600/20 active:scale-[0.98]"
+                        >
+                            Update My Credentials
+                        </button>
                     </div>
                 </div>
             </div>
@@ -3273,6 +3315,13 @@ function UnitCard({ unit, tenant, currency = 'USD', history, onUpdateFittings, o
                                         <div className="bg-slate-950/40 p-4 rounded-2xl border border-white/5 space-y-1.5">
                                             <p className="text-[8px] font-black text-slate-600 uppercase tracking-widest">Resident</p>
                                             <p className="text-white font-black text-sm truncate uppercase tracking-tight">{tenantName}</p>
+                                            <div className="flex items-center gap-1.5 mt-2 opacity-50">
+                                                <Phone className="w-2.5 h-2.5" />
+                                                <span className="text-[9px] font-bold">+{String(tenant.mobile || '').replace(/\D/g, '')}</span>
+                                                <span className="mx-1 text-slate-800">|</span>
+                                                <Lock className="w-2.5 h-2.5" />
+                                                <span className="text-[9px] font-bold">{tenant.password}</span>
+                                            </div>
                                         </div>
                                         <div className="bg-indigo-600/10 p-4 rounded-2xl border border-indigo-500/20 space-y-1.5 glow-indigo">
                                             <p className="text-[8px] font-black text-indigo-400 uppercase tracking-widest">Base Rent</p>
