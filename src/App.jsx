@@ -3235,6 +3235,10 @@ function UnitCard({ unit, tenant, currency = 'USD', history, onUpdateFittings, o
                         <div className="w-24 h-24 md:w-28 md:h-28 rounded-3xl border-2 border-dashed border-white/10 flex flex-col items-center justify-center text-slate-800 transition-colors group-hover/thumb:border-white/20">
                             <ImageIcon className="w-8 h-8 opacity-20" />
                             <span className="text-[7px] font-black uppercase tracking-widest mt-1 opacity-20">NO VISUALS</span>
+                            {/* Diagnostic Helper for Manager (Debug Only) */}
+                            <span className="absolute bottom-2 inset-x-0 text-[5px] text-white/5 font-mono text-center truncate px-2">
+                                DATA: {String(unit.image || unit.IMAGE || 'NULL').slice(0, 15)}
+                            </span>
                         </div>
                     )}
                 </div>
