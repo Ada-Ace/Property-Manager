@@ -1733,7 +1733,15 @@ function ManagerDashboard({ activeProperty, tenants, payments, propertyUnits, ut
                         </div>
                     )}
                     {activeTab === 'utilities' && (
-                        <UtilityManager tenants={tenants} utilityBills={utilityBills} onAddBill={onAddBill} onMarkUtilityPaid={onMarkUtilityPaid} activeManager={activeManager} currency={currency} />
+                        <UtilityManager 
+                            tenants={tenants} 
+                            utilityBills={utilityBills} 
+                            payments={payments} 
+                            onAddBill={onAddBill} 
+                            onMarkUtilityPaid={onMarkUtilityPaid} 
+                            activeManager={activeManager} 
+                            currency={currency} 
+                        />
                     )}
                 </Motion.div>
             </AnimatePresence>
@@ -2534,7 +2542,7 @@ function WhatsAppRentButton({ tenant, mode = 'rent', currency = 'USD', fullWidth
 
 // --- Utility Components ---
 
-function UtilityManager({ tenants, utilityBills, onAddBill, onMarkUtilityPaid, activeManager, currency = 'USD' }) {
+function UtilityManager({ tenants, utilityBills, payments, onAddBill, onMarkUtilityPaid, activeManager, currency = 'USD' }) {
     const [activeTab, setActiveTab] = useState('new'); // 'new', 'monthly', or 'history'
     const [confirmUtilityTenant, setConfirmUtilityTenant] = useState(null); // { tenant, totalOwed, breakdowns }
 
@@ -2767,6 +2775,7 @@ function UtilityManager({ tenants, utilityBills, onAddBill, onMarkUtilityPaid, a
                                 return acc;
                             }, []);
                             const totalOwed = breakdowns.reduce((sum, item) => sum + item.amount, 0);
+                            const isPaid = Array.isArray(payments) && payments.some(p => p.tenantId === t.id && p.type === 'Utility' && p.date && typeof p.date === 'string' && p.date.substring(0, 7) === effectiveMonth);
 
                             return (
                                 <Motion.div
@@ -2804,15 +2813,15 @@ function UtilityManager({ tenants, utilityBills, onAddBill, onMarkUtilityPaid, a
                                         )}
                                     </div>
 
-                                    {/* Right: total box + alert button */}
-                                    <div className="flex flex-wrap items-center gap-4 md:gap-6 w-full md:w-auto">
+                                    {/* Right: total box + alert button */}                                    <div className="flex flex-wrap items-center gap-4 md:gap-6 w-full md:w-auto">
                                         <div className="bg-white/5 px-5 py-3 rounded-2xl border border-white/5">
                                             <p className="text-[9px] font-black text-slate-600 uppercase tracking-widest mb-1">Utility Total</p>
-                                            <p className={`text-xl font-black tracking-tighter font-mono-data ${totalOwed > 0 ? 'text-emerald-400' : 'text-slate-600'}`}>
+                                            <p className={`text-xl font-black tracking-tighter font-mono-data ${totalOwed > 0 && !isPaid ? 'text-emerald-400' : 'text-slate-600'}`}>
                                                 {currency} {totalOwed.toFixed(2)}
                                             </p>
                                         </div>
-                                        {t.mobile && totalOwed > 0 ? (
+
+                                        {!isPaid && totalOwed > 0 ? (
                                             <div className="flex items-center gap-2">
                                                 <Motion.button
                                                     whileHover={{ scale: 1.02 }}
@@ -2838,9 +2847,13 @@ function UtilityManager({ tenants, utilityBills, onAddBill, onMarkUtilityPaid, a
                                                     <MessageSquare className="w-4 h-4" /> Send Alert
                                                 </Motion.a>
                                             </div>
+                                        ) : totalOwed > 0 ? (
+                                            <div className="flex items-center gap-2 px-5 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
+                                                <CheckCircle2 className="w-4 h-4" /> Paid
+                                            </div>
                                         ) : (
                                             <div className="flex items-center gap-2 px-5 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest bg-white/5 border border-white/5 text-slate-600">
-                                                <CheckCircle2 className="w-4 h-4" /> Paid
+                                                <CheckCircle2 className="w-4 h-4" /> No Bill
                                             </div>
                                         )}
                                     </div>
