@@ -1,5 +1,4 @@
 import fs from 'fs';
-import path from 'path';
 
 // Get API_URL from .env
 const envFile = fs.readFileSync('.env', 'utf8');
@@ -13,32 +12,33 @@ const dateFields = [
 ];
 
 /**
- * Normalizes any date to dd-mm-yyyy format.
+ * Normalizes any date to 'dd-mm-yyyy format (prefixed with apostrophe for GS text force).
  */
 const toSheetDate = (val) => {
     if (!val) return '';
+    const s = String(val).trim().replace(/^'/, '');
+    
+    // Check if already dd-mm-yyyy
+    if (/^\d{2}-\d{2}-\d{4}$/.test(s)) return `'${s}`;
+    
+    // Check if yyyy-mm-dd
+    const isoMatch = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (isoMatch) return `'${isoMatch[3]}-${isoMatch[2]}-${isoMatch[1]}`;
+
     try {
-        const strVal = String(val).trim();
-        // Check if already dd-mm-yyyy
-        if (/^\d{2}-\d{2}-\d{4}$/.test(strVal)) return strVal;
-        
         const d = new Date(val);
-        if (isNaN(d.getTime())) return strVal;
-        
-        const dd = String(d.getDate()).padStart(2, '0');
-        const mm = String(d.getMonth() + 1).padStart(2, '0');
-        const yyyy = d.getFullYear();
-        return `${dd}-${mm}-${yyyy}`;
-    } catch { return val; }
+        if (isNaN(d.getTime())) return `'${s}`;
+        const res = `${String(d.getDate()).padStart(2, '0')}-${String(d.getMonth() + 1).padStart(2, '0')}-${d.getFullYear()}`;
+        return `'${res}`;
+    } catch { return `'${s}`; }
 };
 
 const migrate = async () => {
     if (!API_URL) {
-        console.error('VITE_API_URL is not set in .env.');
+        console.error('VITE_API_URL is not set.');
         return;
     }
 
-    console.log(`Cloud endpoint: ${API_URL}`);
     console.log('Fetching all data from cloud...');
     try {
         const resp = await fetch(API_URL);
@@ -59,7 +59,12 @@ const migrate = async () => {
                     if (dateFields.includes(lkey)) {
                         const originalVal = String(item[key]);
                         const newVal = toSheetDate(item[key]);
-                        if (originalVal !== newVal) {
+                        // We check if the value in the sheet is already equal to our target (with or without ')
+                        if (originalVal !== newVal && originalVal !== newVal.replace(/^'/, '')) {
+                            updatedItem[key] = newVal;
+                            modified = true;
+                        } else if (!originalVal.startsWith("'") && newVal.startsWith("'")) {
+                            // Even if characters are same, if we need to force text, mark as modified
                             updatedItem[key] = newVal;
                             modified = true;
                         }
@@ -67,7 +72,7 @@ const migrate = async () => {
                 }
 
                 if (modified && item.id) {
-                    console.log(`Updating ${sheetName} item: ${item.id}`);
+                    console.log(`Updating ${sheetName} item: ${item.id} with ${JSON.stringify(updatedItem)}`);
                     try {
                         const postData = { action: 'UPDATE', sheetName, data: updatedItem };
                         const result = await fetch(API_URL, {
@@ -75,12 +80,9 @@ const migrate = async () => {
                             headers: { 'Content-Type': 'text/plain' },
                             body: JSON.stringify(postData)
                         });
-                        const resJson = await result.json();
-                        if (!resJson.success) {
-                            console.error(`- Failed to update ${item.id}:`, resJson.message);
-                        }
+                        await result.json();
                     } catch (e) {
-                        console.error(`- Failed to update ${sheetName} item ${item.id}:`, e.message);
+                        console.error(`- Failed to update ${item.id}:`, e.message);
                     }
                 }
             }

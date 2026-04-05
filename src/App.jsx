@@ -170,36 +170,34 @@ const toDirectImageUrl = (url) => {
     return trimmed;
 };
 
-// Robust date handlers to prevent timezone-shift-bugs
 const toSheetDate = (val) => {
     if (!val) return '';
-    const s = String(val).trim();
-    // If it's already dd-mm-yyyy or dd/mm/yyyy, return it
-    if (/^\d{2}[-\/]\d{2}[-\/]\d{4}$/.test(s)) return s.replace(/\//g, '-');
-    // If it's yyyy-mm-dd (ISO), reorder directly to avoid Timezone shifts from Date objects
+    const s = String(val).trim().replace(/^'/, ''); // Remove existing ' to avoid duplication
+    // If it's already dd-mm-yyyy, prepend ' and return
+    if (/^\d{2}-\d{2}-\d{4}$/.test(s)) return `'${s}`;
+    
+    // If it's yyyy-mm-dd (ISO), reorder then prepend '
     const isoMatch = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
-    if (isoMatch) return `${isoMatch[3]}-${isoMatch[2]}-${isoMatch[1]}`;
+    if (isoMatch) return `'${isoMatch[3]}-${isoMatch[2]}-${isoMatch[1]}`;
 
-    // Fallback for Date objects or timestamp strings
     try {
         const d = (val instanceof Date) ? val : new Date(val);
-        if (isNaN(d.getTime())) return s;
-        // Check if we should use UTC (for pure strings) or local?
-        // To keep it simple and safe for "dates", we extract component strings if possible.
-        return `${String(d.getDate()).padStart(2, '0')}-${String(d.getMonth() + 1).padStart(2, '0')}-${d.getFullYear()}`;
-    } catch { return s; }
+        if (isNaN(d.getTime())) return `'${s}`;
+        const res = `${String(d.getDate()).padStart(2, '0')}-${String(d.getMonth() + 1).padStart(2, '0')}-${d.getFullYear()}`;
+        return `'${res}`;
+    } catch { return `'${s}`; }
 };
 
 const fromSheetDate = (val) => {
     if (!val || typeof val !== 'string') return val;
-    const trimmed = val.trim();
+    const trimmed = val.trim().replace(/^'/, ''); // Remove leading ' if present (Google Sheets text force)
     // Convert dd-mm-yyyy or dd/mm/yyyy to yyyy-mm-dd
     const match = trimmed.match(/^(\d{2})[-\/](\d{2})[-\/](\d{4})/);
     if (match) {
         const [_, d, m, y] = match;
         return `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
     }
-    return val;
+    return trimmed;
 };
 
 const formatDate = (date, includeTime = false) => {
