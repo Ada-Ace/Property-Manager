@@ -3344,7 +3344,10 @@ function UnitCard({ unit, tenant, currency = 'USD', history, onUpdateFittings, o
 }
 
 function UnitModal({ initialData, onSubmit, onClose }) {
-    const [form, setForm] = useState(initialData || { unitNumber: '', size: '', expectedRent: '', status: 'Available' });
+    const [form, setForm] = useState(initialData ? {
+        ...initialData,
+        fittings: Array.isArray(initialData.fittings) ? initialData.fittings.join(', ') : (initialData.fittings || '')
+    } : { unitNumber: '', size: '', expectedRent: '', status: 'Available', fittings: '' });
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     const handleSubmit = async (e) => {
@@ -3438,8 +3441,22 @@ function UnitModal({ initialData, onSubmit, onClose }) {
                             </div>
                         </div>
                     </div>
+                    
+                    <div className="space-y-2 section-animate" style={{ animationDelay: '0.4s' }}>
+                        <label className="text-[10px] text-slate-500 font-black uppercase tracking-[0.3em] ml-2 flex items-center gap-2">
+                            <Package className="w-3.5 h-3.5" /> Fittings & Inventory
+                        </label>
+                        <textarea 
+                            className="w-full bg-slate-950/50 border border-white/5 focus:border-indigo-500/40 rounded-[1.5rem] p-5 md:p-6 text-white text-base font-bold outline-none transition-all placeholder:text-slate-800 shadow-inner no-scrollbar" 
+                            rows={3}
+                            placeholder="E.g. Smart TV, AC Unit, Queen Bed..." 
+                            value={form.fittings} 
+                            onChange={e => setForm({ ...form, fittings: e.target.value })} 
+                        />
+                        <p className="text-[8px] text-slate-600 font-black uppercase tracking-widest ml-3 opacity-60">* Separate items with commas</p>
+                    </div>
 
-                    <div className="pt-8 pb-4 md:pb-0 section-animate" style={{ animationDelay: '0.4s' }}>
+                    <div className="pt-8 pb-4 md:pb-0 section-animate" style={{ animationDelay: '0.5s' }}>
                         <Motion.button 
                             type="submit" 
                             disabled={isSubmitting}
