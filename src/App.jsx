@@ -359,17 +359,33 @@ const API = {
 
     async saveToSheet(action, sheetName, data) {
         if (!this.isValid()) return { success: false, message: 'Invalid API URL' };
+        
+        // Ensure compatibility with diverse Spreadsheet headers (Case-Insensitive Mapping)
+        const dataToSave = { ...data };
+        if (data && typeof data === 'object' && !Array.isArray(data)) {
+            Object.keys(data).forEach(key => {
+                // Send both lowercase and uppercase variations to ensure the GAS script finds a match
+                dataToSave[key.toUpperCase()] = data[key];
+                
+                // Special mapping for common visual fields
+                if (key.toLowerCase() === 'image') {
+                    dataToSave['PHOTO'] = data[key];
+                    dataToSave['IMG'] = data[key];
+                    dataToSave['VISUALS'] = data[key];
+                }
+            });
+        }
+
         try {
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s timeout
 
-            // Using text/plain to avoid preflight (CORS-safe for Google Scripts)
             const resp = await fetch(API_URL, {
                 signal: controller.signal,
                 method: 'POST',
                 mode: 'cors',
                 headers: { 'Content-Type': 'text/plain' },
-                body: JSON.stringify({ action, sheetName, data })
+                body: JSON.stringify({ action, sheetName, data: dataToSave })
             });
             clearTimeout(timeoutId);
             return await resp.json();
