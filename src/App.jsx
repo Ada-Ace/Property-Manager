@@ -154,7 +154,120 @@ export class ErrorBoundary extends React.Component {
     }
 }
 
+// --- Utility: Direct Image Link Transformer ---
+const toDirectImageUrl = (url) => {
+    if (!url || typeof url !== 'string') return '';
+    if (url.includes('drive.google.com')) {
+        const id = url.split('id=')[1] || url.split('/d/')[1]?.split('/')[0];
+        return id ? `https://lh3.googleusercontent.com/u/0/d/${id}=w1000?authuser=0` : url;
+    }
+    return url;
+};
+
+function PhotoGallery({ photos = [], onClose }) {
+    const [activeIdx, setActiveIdx] = useState(0);
+    const total = Array.isArray(photos) ? photos.length : 0;
+    
+    const prev = (e) => { e.stopPropagation(); setActiveIdx(i => (i - 1 + total) % total); };
+    const next = (e) => { e.stopPropagation(); setActiveIdx(i => (i + 1) % total); };
+
+    useEffect(() => {
+        const handleKey = (e) => {
+            if (e.key === 'ArrowLeft') setActiveIdx(i => (i - 1 + total) % total);
+            if (e.key === 'ArrowRight') setActiveIdx(i => (i + 1) % total);
+            if (e.key === 'Escape') onClose();
+        };
+        window.addEventListener('keydown', handleKey);
+        return () => window.removeEventListener('keydown', handleKey);
+    }, [total, onClose]);
+
+    if (!total) return null;
+
+    return (
+        <div className="fixed inset-0 z-[250] flex items-center justify-center bg-slate-950/95 backdrop-blur-3xl animate-in fade-in" onClick={onClose}>
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(79,70,229,0.15),transparent_70%)] pointer-events-none" />
+
+            <Motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="relative w-full max-w-6xl mx-6 flex flex-col gap-8"
+                onClick={e => e.stopPropagation()}
+            >
+                {/* Header Panel */}
+                <div className="flex justify-between items-end">
+                    <div>
+                        <h3 className="text-3xl font-black text-white italic tracking-tighter uppercase flex items-center gap-4">
+                            <Camera className="w-8 h-8 text-indigo-500" /> Digital Visual Assets
+                        </h3>
+                        <p className="text-[10px] text-slate-500 font-black uppercase tracking-[0.4em] mt-1.5 ml-1">Asset View {activeIdx + 1} of {total} — System Sync Active</p>
+                    </div>
+                    <div className="flex items-center gap-4">
+                        <Motion.button
+                            whileHover={{ rotate: 90, scale: 1.1 }} whileTap={{ scale: 0.9 }}
+                            onClick={onClose}
+                            className="p-4 text-slate-500 hover:text-white bg-white/5 rounded-[1.5rem] border border-white/10 transition-all shadow-xl"
+                        >
+                            <X className="w-7 h-7" />
+                        </Motion.button>
+                    </div>
+                </div>
+
+                {/* Full-Scale Image Frame */}
+                <div className="relative w-full group">
+                    <div className="w-full rounded-[3rem] overflow-hidden bg-slate-900 border border-white/10 shadow-[0_50px_100px_-20px_rgba(0,0,0,0.8)]" style={{ aspectRatio: '16/9' }}>
+                        <AnimatePresence mode="wait">
+                            <Motion.img
+                                key={activeIdx}
+                                src={toDirectImageUrl(photos[activeIdx])}
+                                alt=""
+                                initial={{ opacity: 0, x: 50, filter: 'blur(10px)' }}
+                                animate={{ opacity: 1, x: 0, filter: 'blur(0px)' }}
+                                exit={{ opacity: 0, x: -50, filter: 'blur(10px)' }}
+                                transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+                                className="w-full h-full object-cover"
+                            />
+                        </AnimatePresence>
+                    </div>
+
+                    {/* Navigation Overlays */}
+                    {total > 1 && (
+                        <>
+                            <button
+                                onClick={prev}
+                                className="absolute left-6 top-1/2 -translate-y-1/2 p-6 bg-slate-950/80 hover:bg-indigo-600 backdrop-blur-2xl border border-white/10 text-white rounded-[2rem] opacity-0 group-hover:opacity-100 transition-all shadow-2xl hover:scale-110 active:scale-90"
+                            >
+                                <ChevronLeft className="w-8 h-8" />
+                            </button>
+                            <button
+                                onClick={next}
+                                className="absolute right-6 top-1/2 -translate-y-1/2 p-6 bg-slate-950/80 hover:bg-indigo-600 backdrop-blur-2xl border border-white/10 text-white rounded-[2rem] opacity-0 group-hover:opacity-100 transition-all shadow-2xl hover:scale-110 active:scale-90"
+                            >
+                                <ChevronRight className="w-8 h-8" />
+                            </button>
+                        </>
+                    )}
+                </div>
+
+                {/* Professional Thumbnail Grid */}
+                <div className="flex justify-center flex-wrap items-center gap-4">
+                    {photos.map((url, i) => (
+                        <button
+                            key={i}
+                            onClick={() => setActiveIdx(i)}
+                            className={`transition-all rounded-2xl overflow-hidden border-2 p-0.5 ${i === activeIdx ? 'border-indigo-500 scale-110 shadow-[0_0_20px_rgba(99,102,241,0.4)]' : 'border-white/10 opacity-40 hover:opacity-100'}`}
+                            style={{ width: 80, height: 50 }}
+                        >
+                            <img src={toDirectImageUrl(url)} alt="" className="w-full h-full object-cover rounded-[calc(1rem-2.5px)]" />
+                        </button>
+                    ))}
+                </div>
+            </Motion.div>
+        </div>
+    );
+}
+
 // --- Dashboard Components (Hoisted for Safety) ---
+
 
 function StatCard({ title, value, icon, index, trend }) {
     return (
@@ -620,17 +733,6 @@ const generateId = (prefix) => {
     return `${prefix}-${result}`;
 };
 
-// --- Drive URL Converter: Converts share links to embeddable direct image URLs ---
-const toDirectImageUrl = (url) => {
-    if (!url || typeof url !== 'string') return '';
-    const trimmed = url.trim();
-    if (trimmed.includes('lh3.googleusercontent.com')) return trimmed;
-    const fileMatch = trimmed.match(/\/d\/([a-zA-Z0-9_-]+)/);
-    if (fileMatch) return `https://lh3.googleusercontent.com/d/${fileMatch[1]}`;
-    const idMatch = trimmed.match(/[?&]id=([a-zA-Z0-9_-]+)/);
-    if (idMatch) return `https://lh3.googleusercontent.com/d/${idMatch[1]}`;
-    return trimmed;
-};
 
 const toSheetDate = (val) => {
     if (!val) return '';
