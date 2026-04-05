@@ -129,6 +129,28 @@ const ISO_CURRENCIES = [
 const APP_TIMEZONE = 'Asia/Kuala_Lumpur'; // GMT+8
 const LOCALE = 'en-MY'; // Or your preferred region for GMT+8
 
+// --- Global Support ---
+export class ErrorBoundary extends React.Component {
+    constructor(props) { super(props); this.state = { hasError: false, error: null }; }
+    static getDerivedStateFromError(error) { return { hasError: true, error }; }
+    render() {
+        if (this.state.hasError) {
+            return (
+                <div className="bg-red-500/10 border border-red-500/20 p-8 rounded-3xl text-center">
+                    <AlertCircle className="w-10 h-10 text-red-500 mx-auto mb-4" />
+                    <h2 className="text-xl font-black text-white italic mb-2">Portal Crash Detected</h2>
+                    <p className="text-[10px] text-red-400 font-bold uppercase tracking-widest leading-relaxed">
+                        An incompatibility in local data or browser settings prevented this dashboard from loading.<br/>
+                        <span className="opacity-60 text-[8px]">{this.state.error?.message}</span>
+                    </p>
+                    <button onClick={() => window.location.reload()} className="mt-6 text-[9px] font-black text-white bg-red-600 px-6 py-2 rounded-xl uppercase tracking-widest shadow-lg active:scale-95">Re-sync Dashboard</button>
+                </div>
+            );
+        }
+        return this.props.children;
+    }
+}
+
 // --- Helper Functions ---
 const cleanMobile = (str) => String(str || '').replace(/[^\d]/g, ''); // Digits Only for max compatibility
 
@@ -4728,27 +4750,6 @@ function PropertySelectView({ properties, onSelect }) {
 }
 
 
-// --- Global Support ---
-export class ErrorBoundary extends React.Component {
-    constructor(props) { super(props); this.state = { hasError: false, error: null }; }
-    static getDerivedStateFromError(error) { return { hasError: true, error }; }
-    render() {
-        if (this.state.hasError) {
-            return (
-                <div className="bg-red-500/10 border border-red-500/20 p-8 rounded-3xl text-center">
-                    <AlertCircle className="w-10 h-10 text-red-500 mx-auto mb-4" />
-                    <h2 className="text-xl font-black text-white italic mb-2">Portal Crash Detected</h2>
-                    <p className="text-[10px] text-red-400 font-bold uppercase tracking-widest leading-relaxed">
-                        An incompatibility in local data or browser settings prevented this dashboard from loading.<br/>
-                        <span className="opacity-60 text-[8px]">{this.state.error?.message}</span>
-                    </p>
-                    <button onClick={() => window.location.reload()} className="mt-6 text-[9px] font-black text-white bg-red-600 px-6 py-2 rounded-xl uppercase tracking-widest shadow-lg active:scale-95">Re-sync Dashboard</button>
-                </div>
-            );
-        }
-        return this.props.children;
-    }
-}
 
 function PropertyModal({ initialData, apiStatus, onClose, onSave }) {
     const [form, setForm] = useState({
