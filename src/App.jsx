@@ -345,14 +345,18 @@ const API = {
         const dataToSave = { ...data };
         if (data && typeof data === 'object' && !Array.isArray(data)) {
             Object.keys(data).forEach(key => {
+                const val = data[key];
+                // Ensure arrays (like fittings) are stringified for Google Sheet cell compatibility
+                const processedVal = Array.isArray(val) ? val.join(', ') : val;
+                
                 // Send both lowercase and uppercase variations to ensure the GAS script finds a match
-                dataToSave[key.toUpperCase()] = data[key];
+                dataToSave[key.toUpperCase()] = processedVal;
                 
                 // Special mapping for common visual fields
                 if (key.toLowerCase() === 'image') {
-                    dataToSave['PHOTO'] = data[key];
-                    dataToSave['IMG'] = data[key];
-                    dataToSave['VISUALS'] = data[key];
+                    dataToSave['PHOTO'] = processedVal;
+                    dataToSave['IMG'] = processedVal;
+                    dataToSave['VISUALS'] = processedVal;
                 }
             });
         }
@@ -585,7 +589,48 @@ function App() {
 
                 // Robustly Extract Collections (Keys are now lowercased & trimmed from GAS)
                 const keyMap={'unitnumber':'unitNumber','expectedrent':'expectedRent','propertyname':'propertyName','baserent':'baseRent','leasestart':'leaseStart','leaseend':'leaseEnd','leasedocument':'leaseDocument','utilityshare':'utilityShare','depositrefunded':'depositRefunded','depositdeducted':'depositDeducted','moveoutdate':'moveOutDate','lastpaymentdate':'lastPaymentDate','scheduledate':'scheduleDate','tenantid':'tenantId','photourl':'photoUrl','handledby':'handledBy','duedate':'dueDate','maintenanceselection':'maintenanceSelection','vacantsince':'vacantSince','lastupdated':'lastUpdated','image':'image','status':'status','size':'size','fittings':'fittings'};
-                const normalize=(arr)=>{if(arr.length>0)console.log('SYNC_KEYS:', Object.keys(arr[0]).join(',')); return arr.map(item=>{const obj={...item};for(const key of Object.keys(item)){const lk=key.toLowerCase().replace(/[^a-z]/g,'');const val=item[key];if(lk==='status')obj.status=val;if(lk==='size')obj.size=val;if(lk.includes('unitnumber')||lk==='unitno')obj.unitNumber=val;if(lk.includes('expectedrent')||lk==='rent')obj.expectedRent=val;if(keyMap[lk]&&key!==keyMap[lk]){obj[keyMap[lk]]=val;delete obj[key];}}if(obj.propertyname&&!obj.propertyName){obj.propertyName=String(obj.propertyname);delete obj.propertyname;}return obj;});};
+                const normalize = (arr) => {
+                    if (arr.length > 0) console.log('SYNC_KEYS:', Object.keys(arr[0]).join(','));
+                    return arr.map(item => {
+                        const obj = { ...item };
+                        for (const key of Object.keys(item)) {
+                            const lk = key.toLowerCase().replace(/[^a-z]/g, '');
+                            const val = item[key];
+                            if (lk === 'status') obj.status = val;
+                            if (lk === 'size') obj.size = val;
+                            if (lk.includes('unitnumber') || lk === 'unitno') obj.unitNumber = val;
+                            if (lk.includes('expectedrent') || lk === 'rent') obj.expectedRent = val;
+                            if (keyMap[lk] && key !== keyMap[lk]) {
+                                obj[keyMap[lk]] = val;
+                                delete obj[key];
+                            }
+                        }
+
+                        // Hardened Fittings/Inventory Parsing
+                        if (obj.fittings) {
+                            if (typeof obj.fittings === 'string') {
+                                const trimmed = obj.fittings.trim();
+                                if (trimmed === '' || trimmed === '[]') {
+                                    obj.fittings = [];
+                                } else if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
+                                    try { obj.fittings = JSON.parse(trimmed); } catch(e) { obj.fittings = trimmed.split(',').map(s => s.trim()).filter(Boolean); }
+                                } else {
+                                    obj.fittings = trimmed.split(',').map(s => s.trim()).filter(Boolean);
+                                }
+                            } else if (!Array.isArray(obj.fittings)) {
+                                obj.fittings = [];
+                            }
+                        } else {
+                            obj.fittings = [];
+                        }
+
+                        if (obj.propertyname && !obj.propertyName) {
+                            obj.propertyName = String(obj.propertyname);
+                            delete obj.propertyname;
+                        }
+                        return obj;
+                    });
+                };
                 const rawUnits = normalize(findCollection(data, 'units'));
                 const rawTenants = normalize(findCollection(data, 'tenants'));
                 const rawBills = normalize(findCollection(data, 'bills'));
