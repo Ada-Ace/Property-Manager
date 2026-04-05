@@ -1539,6 +1539,7 @@ function MobileBottomNav({ activeTab, setActiveTab, tenantMessages, onLogout }) 
 // --- Manager Components ---
 
 function ManagerDashboard({ activeProperty, tenants, payments, propertyUnits, utilityBills, tasks, vendors, tenantMessages, currency = 'USD', onAddUnit, onEditUnit, onUpdateUnitPhotos, onDeleteUnit, onAddTenant, onEditTenant, onUpdateFittings, onAddBill, onAddTask, onAddVendor, onEditVendor, onDeleteVendor, onMarkPaid, onUpdateLeaseDoc, onMoveOut, onUpdateMessage, activeManager, activeTab: externalActiveTab, setActiveTab: setExternalActiveTab }) {
+    const [viewingPhotos, setViewingPhotos] = useState(null);
     const [internalActiveTab, setInternalActiveTab] = useState('rents');
     const [editingCredentials, setEditingCredentials] = useState(null);
     const activeTab = externalActiveTab || internalActiveTab;
@@ -1709,6 +1710,59 @@ function ManagerDashboard({ activeProperty, tenants, payments, propertyUnits, ut
                         setOffboardingSession(null);
                     }}
                 />
+            )}
+
+            {/* Photo Gallery Modal */}
+            {viewingPhotos && (
+                <div className="fixed inset-0 z-[190] flex items-center justify-center p-6 bg-slate-900/90 backdrop-blur-2xl animate-in fade-in zoom-in-95 duration-300">
+                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(79,70,229,0.15),transparent_70%)] pointer-events-none" />
+                    
+                    <Motion.div 
+                        initial={{ opacity: 0, scale: 0.9, y: 30 }}
+                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.9, y: 30 }}
+                        className="bg-slate-900 border border-white/10 w-full max-w-4xl rounded-[3rem] md:rounded-[4rem] p-8 md:p-12 shadow-[0_0_100px_rgba(0,0,0,0.8)] relative overflow-hidden"
+                    >
+                        <div className="flex justify-between items-center mb-12 shrink-0">
+                            <div className="space-y-1">
+                                <h3 className="text-3xl md:text-4xl font-black text-white italic flex items-center gap-4 tracking-tighter uppercase grayscale hover:grayscale-0 transition-all cursor-default">
+                                    <Camera className="w-8 h-8 text-indigo-500" />
+                                    Visual catalog
+                                </h3>
+                                <p className="text-[10px] text-slate-500 font-black uppercase tracking-[0.3em] ml-1 opacity-60">Asset Inventory Check</p>
+                            </div>
+                            <Motion.button 
+                                whileHover={{ rotate: 90, scale: 1.1 }}
+                                whileTap={{ scale: 0.9 }}
+                                onClick={() => setViewingPhotos(null)} 
+                                className="p-3 text-slate-500 hover:text-white bg-white/5 rounded-2xl border border-white/5 transition-all"
+                            >
+                                <X className="w-6 h-6" />
+                            </Motion.button>
+                        </div>
+
+                        <div className="flex flex-nowrap gap-8 overflow-x-auto pb-10 no-scrollbar snap-x snap-mandatory px-2 items-center">
+                            {viewingPhotos.map((url, i) => (
+                                <div key={i} className="shrink-0 w-[85vw] md:w-[620px] aspect-video bg-slate-950 rounded-[2.5rem] border border-white/10 overflow-hidden snap-center relative group shadow-2xl">
+                                    <img src={url} alt="" className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105" />
+                                    <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent pointer-events-none" />
+                                    <div className="absolute bottom-8 left-8 flex items-center gap-4">
+                                        <div className="bg-indigo-600/90 backdrop-blur-xl px-5 py-2.5 rounded-2xl border border-white/10 shadow-2xl flex items-center gap-3">
+                                            <div className="w-2 h-2 rounded-full bg-white animate-pulse" />
+                                            <p className="text-[11px] font-black text-white tracking-widest uppercase italic font-mono-data">Asset Point {i + 1}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                        
+                        <div className="flex justify-center gap-2 mt-2">
+                             {viewingPhotos.map((_, i) => (
+                                <div key={i} className="w-1 h-1 rounded-full bg-slate-800" />
+                             ))}
+                        </div>
+                    </Motion.div>
+                </div>
             )}
             {editingCredentials && (
                 <CredentialModal 
@@ -3415,27 +3469,13 @@ function UnitCard({ unit, tenant, currency = 'USD', history, onUpdateFittings, o
                                         </div>
 
                                         {unit.photos && unit.photos.length > 0 ? (
-                                            <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1 max-w-[140px] md:max-w-[160px] items-center">
-                                                {unit.photos.map((url, i) => (
-                                                    <img 
-                                                        key={i} 
-                                                        src={url} 
-                                                        onClick={(e) => { e.stopPropagation(); window.open(url, '_blank'); }}
-                                                        className="w-10 h-10 shrink-0 object-cover rounded-xl border border-white/10 cursor-pointer hover:border-indigo-500/50 transition-all" 
-                                                        alt=""
-                                                    />
-                                                ))}
-                                                <label className="w-10 h-10 shrink-0 flex items-center justify-center bg-slate-900 border border-dashed border-white/10 rounded-xl cursor-pointer hover:border-indigo-500/50 transition-all text-slate-700">
-                                                    <Plus className="w-3.5 h-3.5" />
-                                                    <input 
-                                                        type="file" 
-                                                        multiple 
-                                                        accept="image/*" 
-                                                        className="hidden" 
-                                                        onChange={(e) => onUpdateUnitPhotos(unit.id, e.target.files)} 
-                                                    />
-                                                </label>
-                                            </div>
+                                        <div 
+                                            onClick={(e) => { e.stopPropagation(); setViewingPhotos(unit.photos); }}
+                                            className="bg-slate-900 border border-dashed border-white/10 p-3.5 rounded-2xl flex items-center justify-center gap-3 cursor-pointer hover:border-indigo-500/50 transition-all text-slate-400 hover:text-indigo-400 flex-1 group"
+                                        >
+                                            <Camera className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                                            <span className="text-[10px] font-black uppercase tracking-[0.2em]">{unit.photos.length} Photos</span>
+                                        </div>
                                         ) : (
                                             <label className="bg-slate-900 border border-dashed border-white/10 p-3.5 rounded-2xl flex items-center justify-center gap-2 cursor-pointer hover:border-indigo-500/50 transition-all text-slate-600 hover:text-indigo-400">
                                                 <Camera className="w-4 h-4" />
@@ -3507,41 +3547,13 @@ function UnitCard({ unit, tenant, currency = 'USD', history, onUpdateFittings, o
                                             </div>
                                         </div>
 
-                                        {unit.photos && unit.photos.length > 0 ? (
-                                            <div className="flex gap-2 mt-4 overflow-x-auto no-scrollbar pb-1">
-                                                {unit.photos.map((url, i) => (
-                                                    <img 
-                                                        key={i} 
-                                                        src={url} 
-                                                        onClick={(e) => { e.stopPropagation(); window.open(url, '_blank'); }}
-                                                        className="w-12 h-12 object-cover rounded-lg border border-white/10 cursor-pointer hover:scale-105 transition-transform" 
-                                                        alt="Unit"
-                                                    />
-                                                ))}
-                                                <label className="w-12 h-12 flex items-center justify-center bg-slate-900 border border-dashed border-white/10 rounded-lg cursor-pointer hover:border-indigo-500/50 transition-all text-slate-700">
-                                                    <Plus className="w-4 h-4" />
-                                                    <input 
-                                                        type="file" 
-                                                        multiple 
-                                                        accept="image/*" 
-                                                        className="hidden" 
-                                                        onChange={(e) => onUpdateUnitPhotos(unit.id, e.target.files)} 
-                                                    />
-                                                </label>
-                                            </div>
-                                        ) : (
-                                            <label className="w-full h-16 flex items-center justify-center bg-slate-900 border border-dashed border-white/10 rounded-2xl cursor-pointer hover:border-indigo-500/50 transition-all text-slate-600 hover:text-indigo-400 mt-4 group">
-                                                <Camera className="w-5 h-5 mr-3 group-hover:scale-110 transition-transform" />
-                                                <span className="text-[9px] font-black uppercase tracking-widest">Upload Unit Visuals</span>
-                                                <input 
-                                                    type="file" 
-                                                    multiple 
-                                                    accept="image/*" 
-                                                    className="hidden" 
-                                                    onChange={(e) => onUpdateUnitPhotos(unit.id, e.target.files)} 
-                                                />
-                                            </label>
-                                        )}
+                                        <div 
+                                            onClick={(e) => { e.stopPropagation(); setViewingPhotos(unit.photos); }}
+                                            className="w-full h-18 py-4 flex items-center justify-center bg-slate-900 border border-dashed border-white/10 rounded-[1.5rem] cursor-pointer hover:border-indigo-500/50 transition-all text-slate-400 hover:text-indigo-400 mt-4 group"
+                                        >
+                                            <Camera className="w-5 h-5 mr-3 group-hover:scale-110 transition-transform" />
+                                            <span className="text-[10px] font-black uppercase tracking-[0.25em]">{unit.photos.length} Photos</span>
+                                        </div>
                                     </div>
 
                                     <button onClick={onAddLease} className="w-full py-5 bg-indigo-600 hover:bg-indigo-500 text-white font-black rounded-[2rem] shadow-2xl shadow-indigo-600/30 uppercase tracking-[0.2em] text-[11px] flex items-center justify-center gap-3 transition-all transform hover:scale-[1.02] active:scale-[0.98]">
