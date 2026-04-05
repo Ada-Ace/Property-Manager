@@ -2727,7 +2727,7 @@ function UtilityManager({ tenants, utilityBills, onAddBill, currency = 'USD' }) 
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div className="space-y-4">
                         {Array.isArray(tenants) && tenants.map((t, idx) => {
                             const billsInMonth = (Array.isArray(utilityBills) ? utilityBills.filter(b => b && typeof b.date === 'string' && b.date.startsWith(effectiveMonth)) : []);
                             const breakdowns = billsInMonth.reduce((acc, bill) => {
@@ -2738,57 +2738,64 @@ function UtilityManager({ tenants, utilityBills, onAddBill, currency = 'USD' }) 
                             const totalOwed = breakdowns.reduce((sum, item) => sum + item.amount, 0);
 
                             return (
-                                <Motion.div 
-                                    key={t.id} 
-                                    initial={{ opacity: 0, y: 15 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    transition={{ delay: idx * 0.08 }}
-                                    className="bg-white/[0.03] rounded-3xl p-6 border border-white/5 flex flex-col hover:border-indigo-500/20 hover:bg-white/[0.06] transition-all group"
+                                <Motion.div
+                                    key={t.id}
+                                    initial={{ opacity: 0, x: -10 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                    transition={{ delay: idx * 0.05 }}
+                                    className="rounded-3xl p-6 border flex flex-col md:flex-row items-start md:items-center justify-between gap-5 transition-all bg-white/[0.03] border-white/5 hover:bg-white/[0.06]"
                                 >
-                                    <div className="flex items-center gap-4 mb-6">
-                                        <div className="w-12 h-12 bg-indigo-600/20 text-indigo-400 border border-indigo-500/20 rounded-2xl flex items-center justify-center font-black text-sm shrink-0">{t.unit}</div>
+                                    {/* Left: unit badge + name */}
+                                    <div className="flex items-center gap-5">
+                                        <div className="w-14 h-14 rounded-2xl flex items-center justify-center font-black text-xs shadow-lg shrink-0 bg-indigo-600 shadow-indigo-600/20 text-white text-center leading-tight px-1">
+                                            {t.unit}
+                                        </div>
                                         <div>
-                                            <p className="font-black text-white">{t.name}</p>
-                                            <p className="text-[10px] text-slate-600 font-black uppercase tracking-widest mt-0.5">{t.mobile || 'No Contact'}</p>
+                                            <p className="text-base font-black text-white tracking-tight">{t.name}</p>
+                                            <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest mt-0.5 font-mono-data">{t.mobile || 'No Contact'}</p>
                                         </div>
                                     </div>
 
-                                    <div className="flex-1">
+                                    {/* Center: bill chips */}
+                                    <div className="flex-1 md:px-6">
                                         {breakdowns.length > 0 ? (
-                                            <div className="space-y-2.5">
+                                            <div className="flex flex-wrap gap-2">
                                                 {breakdowns.map((b, i) => (
-                                                    <div key={i} className="flex justify-between items-center bg-white/5 px-4 py-2.5 rounded-xl border border-white/5">
-                                                        <span className="text-slate-400 font-black uppercase tracking-widest text-[9px] flex items-center gap-2">
-                                                            {b.type === 'Electricity' ? <Zap className="w-3 h-3 text-amber-400" /> : b.type === 'Water' ? <Droplets className="w-3 h-3 text-blue-400" /> : b.type === 'Gas' ? <Flame className="w-3 h-3 text-orange-400" /> : null}
-                                                            {b.type}
-                                                        </span>
-                                                        <span className="text-white font-black text-sm font-mono-data">{currency} {b.amount.toFixed(2)}</span>
+                                                    <div key={i} className="flex items-center gap-2 bg-white/5 border border-white/5 px-3 py-2 rounded-xl">
+                                                        {b.type === 'Electricity' ? <Zap className="w-3 h-3 text-amber-400 shrink-0" /> : b.type === 'Water' ? <Droplets className="w-3 h-3 text-blue-400 shrink-0" /> : b.type === 'Gas' ? <Flame className="w-3 h-3 text-orange-400 shrink-0" /> : <Receipt className="w-3 h-3 text-slate-400 shrink-0" />}
+                                                        <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">{b.type}</span>
+                                                        <span className="text-[11px] font-black text-white font-mono-data">{currency} {b.amount.toFixed(2)}</span>
                                                     </div>
                                                 ))}
                                             </div>
                                         ) : (
-                                            <div className="flex-1 flex items-center justify-center py-8 border border-dashed border-white/5 rounded-2xl">
-                                                <p className="text-[9px] text-slate-600 font-black uppercase tracking-widest">No Bills Allocated</p>
-                                            </div>
+                                            <span className="text-[9px] text-slate-600 font-black uppercase tracking-widest">No bills allocated this month</span>
                                         )}
                                     </div>
 
-                                    <div className="pt-5 mt-5 border-t border-white/5">
-                                        <div className="flex justify-between items-center mb-4">
-                                            <span className="text-[10px] text-slate-500 font-black uppercase tracking-widest">Utility Total</span>
-                                            <span className={`text-2xl font-black tracking-tighter font-mono-data ${totalOwed > 0 ? 'text-emerald-400' : 'text-slate-600'}`}>{currency} {totalOwed.toFixed(2)}</span>
+                                    {/* Right: total box + alert button */}
+                                    <div className="flex flex-wrap items-center gap-4 md:gap-6 w-full md:w-auto">
+                                        <div className="bg-white/5 px-5 py-3 rounded-2xl border border-white/5">
+                                            <p className="text-[9px] font-black text-slate-600 uppercase tracking-widest mb-1">Utility Total</p>
+                                            <p className={`text-xl font-black tracking-tighter font-mono-data ${totalOwed > 0 ? 'text-emerald-400' : 'text-slate-600'}`}>
+                                                {currency} {totalOwed.toFixed(2)}
+                                            </p>
                                         </div>
-                                        {t.mobile && totalOwed > 0 && (
+                                        {t.mobile && totalOwed > 0 ? (
                                             <Motion.a
                                                 whileHover={{ scale: 1.02 }}
                                                 whileTap={{ scale: 0.98 }}
                                                 href={`https://wa.me/${String(t.mobile || '').replace(/\D/g, '')}?text=${encodeURIComponent(`Hi ${String(t.name || 'Tenant').split(' ')[0]},\n\nYour utility bill summary for ${new Date(effectiveMonth + '-01').toLocaleString('default', { month: 'long', year: 'numeric' })} is:\n${breakdowns.map(b => `- ${b.type}: ${currency} ${b.amount.toFixed(2)}`).join('\n')}\n\n*Total Due: ${currency} ${totalOwed.toFixed(2)}*`)}`}
                                                 target="_blank"
                                                 rel="noopener noreferrer"
-                                                className="w-full bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-widest flex justify-center items-center gap-2 transition-all shadow-lg shadow-emerald-600/5 glow-emerald"
+                                                className="flex items-center gap-2 px-5 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all bg-emerald-600/20 hover:bg-emerald-600 text-emerald-400 hover:text-white border border-emerald-500/30 glow-emerald"
                                             >
-                                                <MessageSquare className="w-3.5 h-3.5" /> Send Utility Alert
+                                                <MessageSquare className="w-4 h-4" /> Send Alert
                                             </Motion.a>
+                                        ) : (
+                                            <div className="flex items-center gap-2 px-5 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest bg-white/5 border border-white/5 text-slate-600">
+                                                <CheckCircle2 className="w-4 h-4" /> No Bill
+                                            </div>
                                         )}
                                     </div>
                                 </Motion.div>
