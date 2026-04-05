@@ -3003,7 +3003,14 @@ function UtilityManager({ tenants, utilityBills, payments, onAddBill, onMarkUtil
                                                         </span>
                                                     )}
                                                 </h4>
-                                                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1 font-mono-data"><span className="text-indigo-400">{fmtDate(bill.date)}</span> - {bill.mode === 'equal' ? 'Standard Split' : 'Designated Split'}</p>
+                                                <div className="flex items-center gap-3 mt-1.5">
+                                                    <span className="bg-indigo-600/20 text-indigo-400 text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-lg border border-indigo-500/20">
+                                                        {fmtDate(bill.date)}
+                                                    </span>
+                                                    <span className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">
+                                                        {bill.mode === 'equal' ? 'Standard Split' : 'Designated Split'}
+                                                    </span>
+                                                </div>
                                             </div>
                                         </div>
                                         <div className="text-right">
