@@ -3926,191 +3926,136 @@ function LeaseModal({ initialData, availableUnits, onClose, onSubmit }) {
                 animate={{ y: 0 }}
                 exit={{ y: "100%" }}
                 transition={{ type: "spring", damping: 25, stiffness: 200 }}
-                className="bg-slate-900 border-t md:border border-white/10 w-full max-w-xl rounded-t-[2.5rem] md:rounded-[3rem] p-8 pb-32 md:p-12 shadow-2xl relative max-h-[92vh] overflow-y-auto no-scrollbar"
+                className="bg-slate-900 border-t md:border border-white/10 w-full max-w-md rounded-t-[1.5rem] md:rounded-[1.5rem] p-4 pb-20 md:pb-4 shadow-2xl relative max-h-[90vh] overflow-y-auto no-scrollbar"
             >
-                <div className="w-12 h-1.5 bg-white/10 rounded-full mx-auto mb-8 md:hidden" />
+                <div className="w-8 h-1 bg-white/10 rounded-full mx-auto mb-3 md:hidden" />
                 
-                <div className="flex justify-between items-center mb-10">
-                    <div>
-                        <h2 className="text-2xl md:text-3xl font-black text-white italic flex items-center gap-4 tracking-tighter">
-                            {initialData?.id ? <Settings className="w-8 h-8 text-indigo-500" /> : <PlusCircle className="w-8 h-8 text-emerald-500" />}
-                            {initialData?.id ? 'Adjust my Agreement' : 'Register a New Lease'}
-                        </h2>
-                        <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest mt-2 ml-1 opacity-60">Legal Tenure Configuration</p>
+                {/* Header */}
+                <div className="flex justify-between items-center mb-4">
+                    <div className="flex items-center gap-2.5">
+                        <div className={`p-1.5 rounded-lg ${initialData?.id ? 'bg-indigo-500/15' : 'bg-emerald-500/15'}`}>
+                            {initialData?.id ? <Settings className="w-4 h-4 text-indigo-400" /> : <PlusCircle className="w-4 h-4 text-emerald-400" />}
+                        </div>
+                        <div>
+                            <h2 className="text-sm font-black text-white tracking-tight leading-none">
+                                {initialData?.id ? 'Adjust Agreement' : 'Register New Lease'}
+                            </h2>
+                            <p className="text-[8px] text-slate-600 font-black uppercase tracking-widest mt-0.5">Legal Tenure Config</p>
+                        </div>
                     </div>
-                    <button onClick={onClose} className="p-2 text-slate-500 hover:text-white transition-colors"><X className="w-6 h-6" /></button>
+                    <button onClick={onClose} className="p-1.5 text-slate-600 hover:text-white transition-colors bg-white/5 rounded-lg border border-white/5">
+                        <X className="w-3.5 h-3.5" />
+                    </button>
                 </div>
 
-                <form onSubmit={(e) => { e.preventDefault(); onSubmit(leaseForm); }} className="space-y-10">
-                    {/* section: primary */}
-                    <div className="space-y-6">
-                        <div className="flex items-center gap-3 text-[10px] font-black text-indigo-400 uppercase tracking-widest bg-indigo-500/5 py-2 px-4 rounded-full w-fit">
-                            <User className="w-3.5 h-3.5" /> Identity & Unit
+                <form onSubmit={(e) => { e.preventDefault(); onSubmit(leaseForm); }} className="space-y-3.5">
+
+                    {/* Identity & Unit */}
+                    <div className="space-y-2">
+                        <div className="flex items-center gap-1.5 text-[8px] font-black text-indigo-400 uppercase tracking-widest border-l-2 border-indigo-500 pl-2">
+                            <User className="w-2.5 h-2.5" /> Identity & Unit
                         </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <input required className="w-full bg-slate-800/50 border border-white/5 focus:border-indigo-500/50 rounded-2xl p-4 text-white text-base font-bold outline-none transition-all placeholder:text-slate-600" placeholder="Full Resident Name" value={leaseForm.name} onChange={e => setLeaseForm({ ...leaseForm, name: e.target.value })} />
-                            <select required className="w-full bg-slate-800/50 border border-white/5 focus:border-indigo-500/50 rounded-2xl p-4 text-white text-base font-bold outline-none transition-all appearance-none" value={leaseForm.unit} onChange={e => setLeaseForm({ ...leaseForm, unit: e.target.value })}>
+                        <div className="grid grid-cols-2 gap-2">
+                            <input required className="w-full bg-slate-800/60 border border-white/5 focus:border-indigo-500/50 rounded-lg px-3 py-2 text-white text-xs font-bold outline-none transition-all placeholder:text-slate-600" placeholder="Full Resident Name" value={leaseForm.name} onChange={e => setLeaseForm({ ...leaseForm, name: e.target.value })} />
+                            <select required className="w-full bg-slate-800/60 border border-white/5 focus:border-indigo-500/50 rounded-lg px-3 py-2 text-white text-xs font-bold outline-none transition-all appearance-none" value={leaseForm.unit} onChange={e => setLeaseForm({ ...leaseForm, unit: e.target.value })}>
                                 <option value="" disabled>Assigned Unit</option>
-                                {availableUnits.map(u => <option key={u.id} value={u.unitNumber}>{u.unitNumber} ({u.size} SQFT)</option>)}
+                                {availableUnits.map(u => <option key={u.id} value={u.unitNumber}>{u.unitNumber} ({u.size} sqft)</option>)}
                             </select>
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <input required type="tel" className="w-full bg-slate-800/50 border border-white/5 focus:border-indigo-500/50 rounded-2xl p-4 text-white text-base font-bold outline-none transition-all placeholder:text-slate-600" placeholder="WhatsApp Number" value={leaseForm.mobile} onChange={e => setLeaseForm({ ...leaseForm, mobile: e.target.value })} />
-                            <input required type="text" className="w-full bg-slate-800/50 border border-white/5 focus:border-indigo-500/50 rounded-2xl p-4 text-white text-base font-bold outline-none transition-all placeholder:text-slate-600" placeholder="Portal Password" value={leaseForm.password} onChange={e => setLeaseForm({ ...leaseForm, password: e.target.value })} />
+                            <input required type="tel" className="w-full bg-slate-800/60 border border-white/5 focus:border-indigo-500/50 rounded-lg px-3 py-2 text-white text-xs font-bold outline-none transition-all placeholder:text-slate-600" placeholder="WhatsApp Number" value={leaseForm.mobile} onChange={e => setLeaseForm({ ...leaseForm, mobile: e.target.value })} />
+                            <input required type="text" className="w-full bg-slate-800/60 border border-white/5 focus:border-indigo-500/50 rounded-lg px-3 py-2 text-white text-xs font-bold outline-none transition-all placeholder:text-slate-600" placeholder="Portal Password" value={leaseForm.password} onChange={e => setLeaseForm({ ...leaseForm, password: e.target.value })} />
                         </div>
                     </div>
 
-                    {/* section: financial */}
-                    <div className="space-y-6">
-                        <div className="flex items-center gap-3 text-[10px] font-black text-emerald-400 uppercase tracking-widest bg-emerald-500/5 py-2 px-4 rounded-full w-fit">
-                            <DollarSign className="w-3.5 h-3.5" /> Financial Commitment
+                    {/* Financial */}
+                    <div className="space-y-2">
+                        <div className="flex items-center gap-1.5 text-[8px] font-black text-emerald-400 uppercase tracking-widest border-l-2 border-emerald-500 pl-2">
+                            <DollarSign className="w-2.5 h-2.5" /> Financial Commitment
                         </div>
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-2 gap-2">
                             <div className="relative">
-                                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 font-bold text-sm">$</span>
-                                <input type="number" className="w-full bg-slate-800/50 border border-white/5 focus:border-emerald-500/50 rounded-2xl p-4 pl-8 text-white text-base font-bold outline-none transition-all" placeholder="Actual Rent" value={leaseForm.baseRent} onChange={e => setLeaseForm({ ...leaseForm, baseRent: Number(e.target.value) })} />
+                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 font-bold text-xs">$</span>
+                                <input type="number" className="w-full bg-slate-800/60 border border-white/5 focus:border-emerald-500/50 rounded-lg px-3 py-2 pl-6 text-white text-xs font-bold outline-none transition-all placeholder:text-slate-600" placeholder="Actual Rent" value={leaseForm.baseRent} onChange={e => setLeaseForm({ ...leaseForm, baseRent: Number(e.target.value) })} />
                             </div>
                             <div className="relative">
-                                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 font-bold text-sm">$</span>
-                                <input type="number" className="w-full bg-slate-800/50 border border-white/5 focus:border-emerald-500/50 rounded-2xl p-4 pl-8 text-white text-base font-bold outline-none transition-all" placeholder="Security Deposit" value={leaseForm.deposit} onChange={e => setLeaseForm({ ...leaseForm, deposit: Number(e.target.value) })} />
+                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 font-bold text-xs">$</span>
+                                <input type="number" className="w-full bg-slate-800/60 border border-white/5 focus:border-emerald-500/50 rounded-lg px-3 py-2 pl-6 text-white text-xs font-bold outline-none transition-all placeholder:text-slate-600" placeholder="Security Deposit" value={leaseForm.deposit} onChange={e => setLeaseForm({ ...leaseForm, deposit: Number(e.target.value) })} />
                             </div>
                         </div>
                     </div>
 
-                    {/* section: dates */}
-                    <div className="space-y-6">
-                        <div className="flex items-center gap-3 text-[10px] font-black text-amber-400 uppercase tracking-widest bg-amber-500/5 py-2 px-4 rounded-full w-fit">
-                            <CalendarRange className="w-3.5 h-3.5" /> Tenure Boundaries
+                    {/* Dates */}
+                    <div className="space-y-2">
+                        <div className="flex items-center gap-1.5 text-[8px] font-black text-amber-400 uppercase tracking-widest border-l-2 border-amber-500 pl-2">
+                            <CalendarRange className="w-2.5 h-2.5" /> Tenure Boundaries
                         </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div className="space-y-2">
-                                <label className="text-[10px] text-slate-500 font-black uppercase tracking-widest ml-1">Commencement Date</label>
-                                <input 
-                                    required 
-                                    type="date" 
-                                    style={{ colorScheme: 'dark' }} 
-                                    className="w-full bg-slate-800/50 border border-white/5 focus:border-amber-500/50 rounded-2xl p-4 text-white text-[13px] font-bold outline-none transition-all" 
-                                    value={leaseForm.leaseStart} 
-                                    onChange={e => setLeaseForm({ ...leaseForm, leaseStart: e.target.value })} 
-                                />
+                        <div className="grid grid-cols-2 gap-2">
+                            <div className="space-y-1">
+                                <label className="text-[7px] text-slate-600 font-black uppercase tracking-widest ml-0.5">Commencement Date</label>
+                                <input required type="date" style={{ colorScheme: 'dark' }} className="w-full bg-slate-800/60 border border-white/5 focus:border-amber-500/50 rounded-lg px-3 py-2 text-white text-xs font-bold outline-none transition-all" value={leaseForm.leaseStart} onChange={e => setLeaseForm({ ...leaseForm, leaseStart: e.target.value })} />
                             </div>
-                            <div className="space-y-2">
-                                <div className="flex justify-between items-center px-1 mb-2">
-                                    <label className="text-[10px] text-slate-500 font-black uppercase tracking-widest">Termination Date</label>
-                                    <button 
-                                        type="button"
-                                        onClick={() => {
-                                            const baseDate = leaseForm.leaseEnd || leaseForm.leaseStart;
-                                            if (!baseDate) return;
-                                            // Handle as parts to avoid timezone shifting
-                                            const [y, m, d_val] = baseDate.split('-').map(Number);
-                                            const d = new Date(y, m - 1, d_val);
-                                            
-                                            if (leaseForm.leaseEnd) d.setDate(d.getDate() + 1);
-                                            d.setMonth(d.getMonth() + 6);
-                                            d.setDate(d.getDate() - 1);
-                                            
-                                            const year = d.getFullYear();
-                                            const month = String(d.getMonth() + 1).padStart(2, '0');
-                                            const day = String(d.getDate()).padStart(2, '0');
-                                            setLeaseForm({ ...leaseForm, leaseEnd: `${year}-${month}-${day}` });
-                                        }}
-                                        className="text-[9px] font-black text-amber-400 hover:text-amber-300 uppercase tracking-tight bg-amber-500/10 px-3 py-1 rounded-xl border border-amber-500/20 transition-all active:translate-y-0.5"
-                                    >
-                                        + 6 mo
+                            <div className="space-y-1">
+                                <div className="flex justify-between items-center">
+                                    <label className="text-[7px] text-slate-600 font-black uppercase tracking-widest ml-0.5">Termination Date</label>
+                                    <button type="button" onClick={() => {
+                                        const baseDate = leaseForm.leaseEnd || leaseForm.leaseStart;
+                                        if (!baseDate) return;
+                                        const [y, m, d_val] = baseDate.split('-').map(Number);
+                                        const d = new Date(y, m - 1, d_val);
+                                        if (leaseForm.leaseEnd) d.setDate(d.getDate() + 1);
+                                        d.setMonth(d.getMonth() + 6);
+                                        d.setDate(d.getDate() - 1);
+                                        setLeaseForm({ ...leaseForm, leaseEnd: `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}` });
+                                    }} className="text-[7px] font-black text-amber-400 hover:text-amber-300 uppercase tracking-tight bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/20 transition-all">
+                                        +6 mo
                                     </button>
                                 </div>
-                                <input 
-                                    required 
-                                    type="date" 
-                                    style={{ colorScheme: 'dark' }} 
-                                    className="w-full bg-slate-800/50 border border-white/5 focus:border-amber-500/50 rounded-2xl p-4 text-white text-[13px] font-bold outline-none transition-all" 
-                                    value={leaseForm.leaseEnd} 
-                                    onChange={e => setLeaseForm({ ...leaseForm, leaseEnd: e.target.value })} 
-                                />
+                                <input required type="date" style={{ colorScheme: 'dark' }} className="w-full bg-slate-800/60 border border-white/5 focus:border-amber-500/50 rounded-lg px-3 py-2 text-white text-xs font-bold outline-none transition-all" value={leaseForm.leaseEnd} onChange={e => setLeaseForm({ ...leaseForm, leaseEnd: e.target.value })} />
                             </div>
                         </div>
                     </div>
 
-                    {/* section: documentation */}
-                    <div className="space-y-6">
-                        <div className="flex items-center gap-3 text-[10px] font-black text-sky-400 uppercase tracking-widest bg-sky-500/5 py-2 px-4 rounded-full w-fit">
-                            <FileCheck className="w-3.5 h-3.5" /> Primary Agreement
+                    {/* Documents */}
+                    <div className="space-y-2">
+                        <div className="flex items-center gap-1.5 text-[8px] font-black text-sky-400 uppercase tracking-widest border-l-2 border-sky-500 pl-2">
+                            <FileCheck className="w-2.5 h-2.5" /> Documents
                         </div>
-                        <div className="relative group">
-                            <div className="w-full bg-slate-800/30 border-2 border-dashed border-white/5 hover:border-sky-500/30 rounded-[2rem] p-8 transition-all flex flex-col items-center justify-center gap-4 cursor-pointer relative overflow-hidden">
-                                {leaseForm.leaseFile || (leaseForm.leaseDocument && typeof leaseForm.leaseDocument === 'string' && !leaseForm.leaseDocument.includes('[object')) ? (
-                                    <div className="flex flex-col items-center gap-2">
-                                        <div className="p-4 bg-sky-600 rounded-2xl shadow-lg shadow-sky-600/30">
-                                            <FileText className="w-8 h-8 text-white" />
-                                        </div>
-                                        <p className="text-[10px] font-black text-sky-400 uppercase tracking-widest">{leaseForm.leaseFile ? "New File Ready" : "Main Doc Connected"}</p>
-                                        {!leaseForm.leaseFile && <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest mt-1">Tap/Click to Replace</p>}
-                                    </div>
-                                ) : (
-                                    <div className="flex flex-col items-center gap-2">
-                                        <div className="p-4 bg-slate-900 rounded-2xl">
-                                            <UploadCloud className="w-8 h-8 text-slate-500" />
-                                        </div>
-                                        <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Attach Signed Agreement (PDF/IMG)</p>
-                                    </div>
-                                )}
-                                <input 
-                                    type="file" 
-                                    className="absolute inset-0 opacity-0 cursor-pointer z-10" 
-                                    onChange={(e) => {
-                                        const file = e.target.files[0];
-                                        if (file) setLeaseForm({ ...leaseForm, leaseFile: file });
-                                    }}
-                                />
-                            </div>
+                        <div className="space-y-1.5">
+                            <label className="relative flex items-center gap-2.5 w-full bg-slate-800/40 border border-dashed border-white/8 hover:border-sky-500/40 rounded-lg px-3 py-2.5 cursor-pointer transition-all">
+                                <div className={`p-1.5 rounded-lg shrink-0 ${leaseForm.leaseFile || (leaseForm.leaseDocument && typeof leaseForm.leaseDocument === 'string' && !leaseForm.leaseDocument.includes('[object')) ? 'bg-sky-600' : 'bg-slate-700'}`}>
+                                    {leaseForm.leaseFile || (leaseForm.leaseDocument && typeof leaseForm.leaseDocument === 'string' && !leaseForm.leaseDocument.includes('[object')) ? <FileText className="w-3 h-3 text-white" /> : <UploadCloud className="w-3 h-3 text-slate-500" />}
+                                </div>
+                                <div className="min-w-0">
+                                    <p className={`text-[9px] font-black uppercase tracking-wide truncate ${leaseForm.leaseFile ? 'text-sky-400' : leaseForm.leaseDocument ? 'text-sky-400' : 'text-slate-500'}`}>
+                                        {leaseForm.leaseFile ? 'Agreement Ready' : leaseForm.leaseDocument && typeof leaseForm.leaseDocument === 'string' && !leaseForm.leaseDocument.includes('[object') ? 'Agreement Connected' : 'Signed Agreement (PDF/IMG)'}
+                                    </p>
+                                    <p className="text-[7px] text-slate-600 uppercase tracking-widest">Primary lease document</p>
+                                </div>
+                                <input type="file" className="absolute inset-0 opacity-0 cursor-pointer z-10" onChange={(e) => { const file = e.target.files[0]; if (file) setLeaseForm({ ...leaseForm, leaseFile: file }); }} />
+                            </label>
+                            <label className="relative flex items-center gap-2.5 w-full bg-slate-800/40 border border-dashed border-white/8 hover:border-amber-500/40 rounded-lg px-3 py-2.5 cursor-pointer transition-all">
+                                <div className={`p-1.5 rounded-lg shrink-0 ${leaseForm.leaseExtensionFile || (leaseForm.leaseExtensionDoc && typeof leaseForm.leaseExtensionDoc === 'string' && !leaseForm.leaseExtensionDoc.includes('[object')) ? 'bg-amber-600' : 'bg-slate-700'}`}>
+                                    {leaseForm.leaseExtensionFile || (leaseForm.leaseExtensionDoc && typeof leaseForm.leaseExtensionDoc === 'string' && !leaseForm.leaseExtensionDoc.includes('[object')) ? <FileText className="w-3 h-3 text-white" /> : <RefreshCcw className="w-3 h-3 text-slate-500" />}
+                                </div>
+                                <div className="min-w-0">
+                                    <p className={`text-[9px] font-black uppercase tracking-wide truncate ${leaseForm.leaseExtensionFile ? 'text-amber-400' : leaseForm.leaseExtensionDoc ? 'text-amber-400' : 'text-slate-500'}`}>
+                                        {leaseForm.leaseExtensionFile ? 'Extension Ready' : leaseForm.leaseExtensionDoc && typeof leaseForm.leaseExtensionDoc === 'string' && !leaseForm.leaseExtensionDoc.includes('[object') ? 'Extension Connected' : 'Extension Addendum (Optional)'}
+                                    </p>
+                                    <p className="text-[7px] text-slate-600 uppercase tracking-widest">Renewal / extension doc</p>
+                                </div>
+                                <input type="file" className="absolute inset-0 opacity-0 cursor-pointer z-10" onChange={(e) => { const file = e.target.files[0]; if (file) setLeaseForm({ ...leaseForm, leaseExtensionFile: file }); }} />
+                            </label>
                         </div>
                     </div>
 
-                    {/* section: extension documentation */}
-                    <div className="space-y-6">
-                        <div className="flex items-center gap-3 text-[10px] font-black text-amber-400 uppercase tracking-widest bg-amber-500/5 py-2 px-4 rounded-full w-fit">
-                            <RefreshCcw className="w-3.5 h-3.5" /> Lease Extension Doc
-                        </div>
-                        <div className="relative group">
-                            <div className="w-full bg-slate-800/30 border-2 border-dashed border-white/5 hover:border-amber-500/30 rounded-[2rem] p-8 transition-all flex flex-col items-center justify-center gap-4 cursor-pointer relative overflow-hidden">
-                                {leaseForm.leaseExtensionFile || (leaseForm.leaseExtensionDoc && typeof leaseForm.leaseExtensionDoc === 'string' && !leaseForm.leaseExtensionDoc.includes('[object')) ? (
-                                    <div className="flex flex-col items-center gap-2">
-                                        <div className="p-4 bg-amber-600 rounded-2xl shadow-lg shadow-amber-600/30">
-                                            <FileText className="w-8 h-8 text-white" />
-                                        </div>
-                                        <p className="text-[10px] font-black text-amber-400 uppercase tracking-widest">{leaseForm.leaseExtensionFile ? "Extension Ready" : "Extension Connected"}</p>
-                                        {!leaseForm.leaseExtensionFile && <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest mt-1">Tap/Click to Replace</p>}
-                                    </div>
-                                ) : (
-                                    <div className="flex flex-col items-center gap-2">
-                                        <div className="p-4 bg-slate-900 rounded-2xl">
-                                            <UploadCloud className="w-8 h-8 text-slate-500" />
-                                        </div>
-                                        <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Attach Extension Addendum (Optional)</p>
-                                    </div>
-                                )}
-                                <input 
-                                    type="file" 
-                                    className="absolute inset-0 opacity-0 cursor-pointer z-10" 
-                                    onChange={(e) => {
-                                        const file = e.target.files[0];
-                                        if (file) setLeaseForm({ ...leaseForm, leaseExtensionFile: file });
-                                    }}
-                                />
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="pt-4 pb-2 md:pb-0">
+                    <div className="pt-1 pb-1 md:pb-0">
                         <Motion.button 
                             type="submit" 
                             whileHover={{ scale: 1.02 }}
                             whileTap={{ scale: 0.98 }}
-                            className={`w-full py-5 text-white font-black rounded-[2rem] uppercase tracking-[0.2em] text-[11px] transition-all shadow-2xl flex items-center justify-center gap-4 ${initialData?.id ? 'bg-indigo-600 hover:bg-indigo-500 shadow-indigo-600/20' : 'bg-emerald-600 hover:bg-emerald-500 shadow-emerald-500/20'}`}
+                            className={`w-full py-3 text-white font-black rounded-xl uppercase tracking-[0.15em] text-[9px] transition-all shadow-lg flex items-center justify-center gap-2.5 ${initialData?.id ? 'bg-indigo-600 hover:bg-indigo-500 shadow-indigo-600/20' : 'bg-emerald-600 hover:bg-emerald-500 shadow-emerald-500/20'}`}
                         >
-                            <FileCheck className="w-5 h-5" />
-                            {initialData?.id ? 'Update my Lease Agreement' : 'Finalize & Create Lease'}
+                            <FileCheck className="w-3.5 h-3.5" />
+                            {initialData?.id ? 'Update Lease Agreement' : 'Finalize & Create Lease'}
                         </Motion.button>
                     </div>
                 </form>
@@ -4118,6 +4063,8 @@ function LeaseModal({ initialData, availableUnits, onClose, onSubmit }) {
         </div>
     );
 }
+
+
 
 function CompactStatsBar({ stats }) {
     return (
