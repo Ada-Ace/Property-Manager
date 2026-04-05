@@ -1812,7 +1812,7 @@ function RentSummaryTab({ tenants, payments, currency = 'USD', onMarkPaid, prope
                     {upcomingRents.map((rent, idx) => {
                         const isUrgent = rent.daysUntil <= 3;
                         const isOverdue = rent.daysUntil < 0;
-                        const dueDateStr = (rent.dueDate instanceof Date && !isNaN(rent.dueDate)) ? fmtDate(rent.dueDate.toISOString()) : 'N/A';
+                        const dueDateStr = (rent.dueDate instanceof Date && !isNaN(rent.dueDate)) ? formatDate(rent.dueDate) : 'N/A';
                         return (
                             <Motion.div 
                                 key={rent.id} 
@@ -1852,9 +1852,9 @@ function RentSummaryTab({ tenants, payments, currency = 'USD', onMarkPaid, prope
                                             return bp.from && bp.to ? (
                                                 <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest mt-0.5 flex items-center gap-1.5 font-mono-data">
                                                     <CalendarRange className="w-3 h-3 text-indigo-400/60 shrink-0" />
-                                                    {fmtDate(bp.from.toISOString())}
+                                                    {formatDate(bp.from)}
                                                     <span className="text-indigo-400/60">/</span>
-                                                    {fmtDate(bp.to.toISOString())}
+                                                    {formatDate(bp.to)}
                                                 </p>
                                             ) : (
                                                 <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest mt-0.5 font-mono-data">Lease Start: {fmtDate(rent.leaseStart)}</p>
@@ -2223,7 +2223,7 @@ function WhatsAppRentButton({ tenant, mode = 'rent', currency = 'USD', fullWidth
     }
 
     // Default: Rent Mode
-    const dueDate = fmtDate(calculateNextRentDue(tenant.leaseStart).toISOString());
+    const dueDate = formatDate(calculateNextRentDue(tenant.leaseStart));
     const daysUntil = getDaysUntilDue(tenant.leaseStart);
     const message = encodeURIComponent(`Hi ${String(tenant.name || 'Tenant').split(' ')[0]},\n\nJust a friendly reminder that your monthly rent of *${currency} ${(Number(tenant.baseRent) || 0).toLocaleString()}* for Unit *${tenant.unit}* is due on *${dueDate}*.\n\nPlease ensure payment is made before the deadline to avoid any late fees.\n\nThank you!`);
     const waLink = `https://wa.me/${String(tenant.mobile || '').replace(/\D/g, '')}?text=${message}`;
