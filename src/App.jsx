@@ -151,6 +151,443 @@ export class ErrorBoundary extends React.Component {
     }
 }
 
+// --- Dashboard Components (Hoisted for Safety) ---
+
+function StatCard({ title, value, icon, index, trend }) {
+    return (
+        <Motion.div 
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: index * 0.1 }}
+            className="bg-slate-900/40 p-6 rounded-[2rem] border border-white/5 backdrop-blur-sm relative overflow-hidden group shadow-xl"
+        >
+            <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
+                {icon}
+            </div>
+            <div className="flex items-center gap-4 mb-4">
+                <div className="p-3 bg-white/5 rounded-2xl border border-white/5">
+                    {React.cloneElement(icon, { className: "w-5 h-5 " + icon.props.className })}
+                </div>
+                <div>
+                    <p className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-500">{title}</p>
+                    <p className="text-xl font-black text-white italic tracking-tighter truncate font-mono-data">{value}</p>
+                </div>
+            </div>
+            {trend && (
+                <p className={`text-[8px] font-black uppercase tracking-widest ${trend.startsWith('+') ? 'text-emerald-400' : 'text-slate-500'}`}>
+                    {trend} vs last month
+                </p>
+            )}
+        </Motion.div>
+    );
+}
+
+function ManagerDashboard(props) {
+    const { 
+        activeProperty, tenants, payments, propertyUnits, utilityBills, tasks, vendors, tenantMessages, 
+        currency = 'USD', onAddUnit, onEditUnit, onUpdateUnitPhotos, onDeleteUnit, onAddTenant, onEditTenant, 
+        onUpdateFittings, onAddBill, onAddTask, onAddVendor, onEditVendor, onDeleteVendor, onMarkPaid, 
+        onMarkUtilityPaid, onUpdateLeaseDoc, onMoveOut, onUpdateMessage, activeManager, 
+        activeTab: externalActiveTab, setActiveTab: setExternalActiveTab 
+    } = props;
+
+    const [viewingPhotos, setViewingPhotos] = useState(null);
+    const [internalActiveTab, setInternalActiveTab] = useState('rents');
+    const [editingCredentials, setEditingCredentials] = useState(null);
+    const activeTab = externalActiveTab || internalActiveTab;
+    const updateActiveTab = (tabId) => {
+        if (setExternalActiveTab) setExternalActiveTab(tabId);
+        else setInternalActiveTab(tabId);
+    };
+
+    const [showLeaseModal, setShowLeaseModal] = useState(false);
+    const [editingTenant, setEditingTenant] = useState(null);
+    const [showUnitModal, setShowUnitModal] = useState(false);
+    const [editingUnit, setEditingUnit] = useState(null);
+    const [selectedUnitForLease, setSelectedUnitForLease] = useState(null);
+    const [offboardingSession, setOffboardingSession] = useState(null);
+
+    const [showVendorModal, setShowVendorModal] = useState(false);
+    const [editingVendor, setEditingVendor] = useState(null);
+
+    const handleAddVendor = (vendorData) => {
+        onAddVendor(vendorData);
+        setShowVendorModal(false);
+    };
+
+    const handleUpdateVendor = (vendorData) => {
+        onEditVendor(vendorData);
+        setShowVendorModal(false);
+        setEditingVendor(null);
+    };
+
+    const totalRevenue = useMemo(() => (Array.isArray(tenants) ? tenants.reduce((a, b) => a + (Number(b?.baseRent) || 0), 0) : 0), [tenants]);
+    const occupiedUnits = useMemo(() => (Array.isArray(propertyUnits) ? propertyUnits.filter(u => tenants.some(t => t.unit === u.unitNumber)).length : 0), [propertyUnits, tenants]);
+    const totalUnits = Array.isArray(propertyUnits) ? propertyUnits.length : 0;
+    const vacantUnits = totalUnits - occupiedUnits;
+    const tasksCount = Array.isArray(tasks) ? tasks.length : 0;
+
+    const cur = (amount) => `${currency} ${Number(amount || 0).toLocaleString()}`;
+
+    return (
+        <div className="space-y-8 animate-in fade-in duration-700">
+            <VendorModal 
+                isOpen={showVendorModal} 
+                onClose={() => { setShowVendorModal(false); setEditingVendor(null); }} 
+                onSubmit={editingVendor ? handleUpdateVendor : handleAddVendor} 
+                editingVendor={editingVendor} 
+            />
+            <CompactStatsBar 
+                stats={[
+                    { title: "Revenue", value: cur(totalRevenue), icon: <CreditCard className="text-emerald-400" /> },
+                    { title: "Occupancy", value: totalUnits > 0 ? `${Math.round((occupiedUnits / totalUnits) * 100)}%` : '0%', icon: <Users className="text-blue-400" /> },
+                    { title: "Available", value: vacantUnits || 0, icon: <Building2 className="text-sky-400" /> },
+                    { title: "Maintenance", value: (tasksCount || 0).toString(), icon: <Wrench className="text-amber-400" /> }
+                ]}
+            />
+
+            <div className="hidden md:flex bg-slate-900/40 p-1 rounded-2xl border border-white/5 w-full md:w-fit overflow-x-auto no-scrollbar snap-x relative backdrop-blur-md">
+                {(Array.isArray(tenants) ? [
+                    { id: 'rents', icon: <Receipt className="w-3.5 h-3.5" />, label: 'My Collections' },
+                    { id: 'inventory', icon: <Building2 className="w-3.5 h-3.5" />, label: 'My Property Assets' },
+                    { id: 'utilities', icon: <Droplets className="w-3.5 h-3.5" />, label: 'Utility Ledger' },
+                    { id: 'tasks', icon: <Hammer className="w-3.5 h-3.5" />, label: 'Maintenance Desk' },
+                    { id: 'messages', icon: <MessageSquare className="w-3.5 h-3.5" />, label: 'Communications', badge: (tenantMessages?.length > 0) }
+                ] : []).map((tab) => (
+                    <Motion.button 
+                        key={tab.id}
+                        layout
+                        whileHover={{ y: -1 }}
+                        whileTap={{ scale: 0.98 }}
+                        onClick={() => updateActiveTab(tab.id)} 
+                        className={`relative px-5 md:px-7 py-3 rounded-xl text-[10px] md:text-xs font-black transition-all flex items-center justify-center gap-2.5 shrink-0 z-10 snap-start uppercase tracking-widest ${activeTab === tab.id ? 'text-white' : 'text-slate-500 hover:text-slate-300'}`}
+                    >
+                        {tab.icon} {tab.label}
+                        {tab.badge && <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>}
+                        {activeTab === tab.id && (
+                            <Motion.div 
+                                layoutId="activeTab"
+                                className="absolute inset-0 bg-indigo-600 rounded-xl -z-10 shadow-lg shadow-indigo-600/40 glow-indigo"
+                                transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+                            />
+                        )}
+                    </Motion.button>
+                ))}
+            </div>
+
+            <AnimatePresence mode="wait">
+                <Motion.div
+                    key={activeTab}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    transition={{ duration: 0.2 }}
+                >
+                    {activeTab === 'rents' && <RentSummaryTab tenants={tenants} payments={payments.filter(p => !p.propertyName || p.propertyName === activeProperty)} currency={currency} onMarkPaid={onMarkPaid} propertyName={activeProperty} tenantMessages={tenantMessages} activeManager={activeManager} />}
+                    {activeTab === 'inventory' && (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                            {propertyUnits.map(unit => {
+                                const tenant = tenants.find(t => t.unit === unit.unitNumber);
+                                return (
+                                    <UnitCard
+                                        key={unit.id}
+                                        unit={unit}
+                                        tenant={tenant}
+                                        currency={currency}
+                                        history={{
+                                            rents: utilityBills?.filter(b => b.unit === unit.unitNumber).slice(0, 3) || [],
+                                            tasks: tasks?.filter(t => t.unit === unit.unitNumber).slice(0, 3) || []
+                                        }}
+                                        onUpdateFittings={onUpdateFittings}
+                                        onEditUnit={() => setEditingUnit(unit)}
+                                        onViewPhotos={() => setViewingPhotos(unit.photos || [])}
+                                        onUpdateUnitPhotos={onUpdateUnitPhotos}
+                                        onDeleteUnit={() => onDeleteUnit(unit.id)}
+                                        onAddLease={() => { setEditingTenant(null); setSelectedUnitForLease(unit); setShowLeaseModal(true); }}
+                                        onEditLease={() => { setEditingTenant(tenant); setSelectedUnitForLease(unit); setShowLeaseModal(true); }}
+                                        onEditCredentials={() => setEditingCredentials(tenant)}
+                                        onUpdateLeaseDoc={onUpdateLeaseDoc}
+                                        onMoveOut={() => setOffboardingSession({ unit, tenant })}
+                                    />
+                                );
+                            })}
+                            <Motion.button 
+                                whileHover={{ y: -5, scale: 1.01 }}
+                                whileTap={{ scale: 0.98 }}
+                                onClick={() => setShowUnitModal(true)} 
+                                className="h-full min-h-[300px] border-2 border-dashed border-white/5 bg-white/[0.02] rounded-[2.5rem] flex flex-col items-center justify-center gap-4 text-slate-500 hover:text-indigo-400 hover:border-indigo-500/30 transition-all group shadow-xl"
+                            >
+                                <div className="p-5 bg-slate-800 rounded-3xl group-hover:bg-indigo-600 transition-colors">
+                                    <PlusCircle className="w-10 h-10 group-hover:text-white" />
+                                </div>
+                                <span className="text-[10px] font-black uppercase tracking-[0.3em]">Catalog a New Unit for me</span>
+                            </Motion.button>
+                        </div>
+                    )}
+                    {activeTab === 'utilities' && (
+                        <UtilityManager 
+                            tenants={tenants} 
+                            utilityBills={utilityBills} 
+                            payments={payments} 
+                            onAddBill={onAddBill} 
+                            onMarkUtilityPaid={onMarkUtilityPaid} 
+                            activeManager={activeManager} 
+                            currency={currency} 
+                        />
+                    )}
+                    {activeTab === 'tasks' && <MaintenanceManager tasks={tasks} tenants={tenants} onAddTask={onAddTask} currency={currency} />}
+                    {activeTab === 'messages' && <ManagerChat messages={tenantMessages} onUpdateMessage={onUpdateMessage} onAddVendor={setShowVendorModal} vendors={vendors} onEditVendor={setEditingVendor} onDeleteVendor={onDeleteVendor} />}
+                </Motion.div>
+            </AnimatePresence>
+
+            {showUnitModal && <UnitModal onClose={() => setShowUnitModal(false)} onSubmit={async (data) => { await onAddUnit(data); setShowUnitModal(false); }} />}
+            {editingUnit && (
+                <UnitModal 
+                    initialData={editingUnit} 
+                    onClose={() => setEditingUnit(null)} 
+                    onSubmit={async (data) => { 
+                        await onEditUnit(data); 
+                        setEditingUnit(null); 
+                    }} 
+                />
+            )}
+            {showLeaseModal && (
+                <LeaseModal 
+                    unit={selectedUnitForLease} 
+                    tenant={editingTenant} 
+                    onClose={() => setShowLeaseModal(false)} 
+                    onSubmit={onAddTenant} 
+                    onEdit={onEditTenant}
+                    activeManager={activeManager}
+                />
+            )}
+            {editingCredentials && (
+                <CredentialModal
+                    tenant={editingCredentials}
+                    onClose={() => setEditingCredentials(null)}
+                    onSave={onEditTenant}
+                />
+            )}
+
+            <AnimatePresence>
+                {viewingPhotos && <PhotoGallery photos={viewingPhotos} onClose={() => setViewingPhotos(null)} />}
+                {offboardingSession && (
+                    <OffboardingModal 
+                        tenant={offboardingSession.tenant} 
+                        unit={offboardingSession.unit} 
+                        utilityBills={utilityBills.filter(b => b.unit === offboardingSession.unit.unitNumber)}
+                        currency={currency}
+                        onClose={() => setOffboardingSession(null)} 
+                        onSubmit={async (data) => {
+                            await onMoveOut(offboardingSession.tenant.id, offboardingSession.unit.id, data);
+                            setOffboardingSession(null);
+                        }}
+                    />
+                )}
+            </AnimatePresence>
+        </div>
+    );
+}
+
+function RentSummaryTab({ tenants, payments, currency = 'USD', onMarkPaid, propertyName, tenantMessages = [], activeManager }) {
+    const [confirmTenant, setConfirmTenant] = useState(null);
+    const downloadLedgerPDF = () => {
+        if (!window.jspdf) {
+            alert('PDF utility is initializing. Please wait a second.');
+            return;
+        }
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        doc.setFontSize(22);
+        doc.setTextColor(40);
+        doc.text(`${propertyName} - Rent Ledger`, 14, 22);
+        doc.setFontSize(10);
+        doc.setTextColor(100);
+        doc.text(`Transaction Statement Generated: ${formatDate(new Date())}`, 14, 30);
+        const tableColumn = ["Unit", "Tenant", "Payment Date", "Amount"];
+        const tableRows = payments.slice().reverse().map(pay => {
+            const t = tenants.find(ten => ten.id === pay.tenantId);
+            return [t?.unit || 'N/A', t?.name || 'Archived Tenant', fmtDate(pay.date), `${currency} ${Number(pay.amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}` ];
+        });
+        doc.autoTable({ head: [tableColumn], body: tableRows, startY: 40, theme: 'grid', headStyles: { fillColor: [79, 70, 229], textColor: [255, 255, 255] }, alternateRowStyles: { fillColor: [245, 247, 250] } });
+        doc.save(`Ledger_${propertyName}_${toSheetDate(new Date())}.pdf`);
+    };
+
+    const today = getLocalDate() || new Date();
+    const upcomingRents = useMemo(() => {
+        if (!Array.isArray(tenants)) return [];
+        return tenants.map(t => {
+            try {
+                if (!t.leaseStart) throw new Error();
+                const dueDate = calculateNextRentDue(t.leaseStart);
+                const daysUntil = getDaysUntilDue(t.leaseStart);
+                return { ...t, dueDate, daysUntil };
+            } catch (e) { return { ...t, dueDate: new Date(), daysUntil: 0 }; }
+        }).sort((a, b) => {
+            const da = (a.dueDate instanceof Date && !isNaN(a.dueDate)) ? a.dueDate.getTime() : 0;
+            const db = (b.dueDate instanceof Date && !isNaN(b.dueDate)) ? b.dueDate.getTime() : 0;
+            return da - db;
+        });
+    }, [tenants]);
+
+    const totalRevenueThisCycle = useMemo(() => upcomingRents.reduce((a, b) => a + (Number(b?.baseRent) || 0), 0), [upcomingRents]);
+    const soonDueCount = upcomingRents.filter(r => r && (Number(r?.daysUntil) || 0) <= 3).length;
+
+    return (
+        <div className="space-y-8">
+            <AnimatePresence>
+            {confirmTenant && (
+                <PaymentConfirmModal
+                    tenant={confirmTenant}
+                    currency={currency}
+                    activeManager={activeManager}
+                    onConfirm={() => {
+                        onMarkPaid(confirmTenant.id, (Number(confirmTenant.baseRent) + Number(confirmTenant.utilityShare || 0)).toFixed(2), activeManager?.name);
+                        setConfirmTenant(null);
+                    }}
+                    onClose={() => setConfirmTenant(null)}
+                />
+            )}
+            </AnimatePresence>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <StatCard index={0} title="Expected Revenue" value={`${currency} ${totalRevenueThisCycle.toLocaleString()}`} icon={<DollarSign className="text-emerald-400" />} />
+                <StatCard index={1} title="Collections Due" value={upcomingRents.length} icon={<CalendarRange className="text-blue-400" />} />
+                <StatCard index={2} title="Action Priority" value={soonDueCount} icon={<AlertTriangle className={soonDueCount > 0 ? "text-amber-400 animate-pulse" : "text-slate-500"} />} />
+            </div>
+
+            <div className="bg-slate-900/40 rounded-[2.5rem] border border-white/5 overflow-hidden shadow-2xl backdrop-blur-md">
+                <div className="px-8 py-6 border-b border-white/5 bg-slate-950/50 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div>
+                        <h3 className="text-lg font-black text-white italic tracking-tight uppercase">Current Billing Cycle</h3>
+                        <p className="text-[9px] text-slate-500 font-black uppercase tracking-[0.3em] mt-1">Real-time Tenant Obligations</p>
+                    </div>
+                    <button onClick={downloadLedgerPDF} className="bg-white/5 hover:bg-white/10 px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] transition-all border border-white/5 flex items-center gap-3">
+                        <Download className="w-4 h-4" /> Export Ledger
+                    </button>
+                </div>
+                <div className="overflow-x-auto no-scrollbar">
+                    <table className="w-full text-left border-collapse">
+                        <thead>
+                            <tr className="bg-slate-950/50">
+                                <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-slate-500 border-b border-white/5">Resident</th>
+                                <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-slate-500 border-b border-white/5">Unit</th>
+                                <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-slate-500 border-b border-white/5 text-right">Rent Owed</th>
+                                <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-slate-500 border-b border-white/5">Cycle Status</th>
+                                <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-slate-500 border-b border-white/5"></th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-white/5">
+                            {upcomingRents.length > 0 ? upcomingRents.map((tenant) => {
+                                const isSoon = (Number(tenant.daysUntil) || 0) <= 3;
+                                const isOverdue = (Number(tenant.daysUntil) || 0) < 0;
+                                return (
+                                    <tr key={tenant.id} className="hover:bg-white/[0.02] transition-colors group">
+                                        <td className="px-8 py-6">
+                                            <div className="flex items-center gap-4">
+                                                <div className="w-9 h-9 rounded-xl bg-indigo-600/10 flex items-center justify-center border border-indigo-500/20 text-indigo-400 font-black text-xs uppercase italic tracking-tighter">
+                                                    {tenant.name?.charAt(0)}
+                                                </div>
+                                                <div>
+                                                    <div className="text-sm font-black text-white italic tracking-tight">{tenant.name}</div>
+                                                    <div className="text-[10px] text-slate-500 font-medium">Agreement ID: #{tenant.id?.slice(-4)}</div>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td className="px-8 py-6">
+                                            <span className="bg-slate-800/60 px-3 py-1.5 rounded-lg text-[10px] font-black text-slate-300 border border-white/5 italic">
+                                                {tenant.unit}
+                                            </span>
+                                        </td>
+                                        <td className="px-8 py-6 text-right">
+                                            <div className="text-sm font-black text-white font-mono-data opacity-90">{currency} {Number(tenant.baseRent || 0).toLocaleString()}</div>
+                                            <div className="text-[9px] text-slate-500 font-black uppercase tracking-widest mt-1">Standard Rate</div>
+                                        </td>
+                                        <td className="px-8 py-6">
+                                            <div className="flex items-center gap-3">
+                                                <div className={`w-1.5 h-1.5 rounded-full ${isOverdue ? 'bg-red-500 animate-pulse' : isSoon ? 'bg-amber-400 animate-pulse' : 'bg-slate-600'}`} />
+                                                <div>
+                                                    <div className={`text-[10px] font-black uppercase tracking-widest ${isOverdue ? 'text-red-400' : isSoon ? 'text-amber-400' : 'text-slate-500'}`}>
+                                                        {isOverdue ? 'OVERDUE' : isSoon ? 'DUE SOON' : 'UPCOMING'}
+                                                    </div>
+                                                    <div className="text-[10px] text-slate-500 font-bold mt-0.5">
+                                                        {isOverdue ? `Expired ${Math.abs(tenant.daysUntil)}d ago` : isSoon ? `In ${tenant.daysUntil} days` : `On ${fmtDate(tenant.dueDate)}`}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td className="px-8 py-6 text-right">
+                                            <button 
+                                                onClick={() => setConfirmTenant(tenant)}
+                                                className="bg-emerald-600/10 hover:bg-emerald-600 text-emerald-400 hover:text-white px-5 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all border border-emerald-500/20 active:scale-95 shadow-lg shadow-emerald-600/0 hover:shadow-emerald-600/20"
+                                            >
+                                                Mark Paid
+                                            </button>
+                                        </td>
+                                    </tr>
+                                );
+                            }) : (
+                                <tr>
+                                    <td colSpan="5" className="px-8 py-20 text-center text-slate-500 text-[10px] font-black uppercase tracking-[0.4em]">No Active Collections Found</td>
+                                </tr>
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+function PaymentConfirmModal({ tenant, currency, activeManager, onConfirm, onClose }) {
+    const bp = getBillingPeriod(tenant.leaseStart);
+    const totalDue = Number(tenant.baseRent || 0) + Number(tenant.utilityShare || 0);
+    return (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 sm:p-6 bg-slate-950/90 backdrop-blur-md">
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_10%,rgba(245,158,11,0.06),transparent_50%)]" />
+            <Motion.div
+                initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 20 }} transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+                className="relative z-10 w-full max-w-lg bg-slate-900 rounded-[2.5rem] border border-white/10 shadow-2xl shadow-black/50 overflow-hidden"
+            >
+                <div className="p-6 border-b border-white/5 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                        <div className="p-2.5 bg-amber-500/10 rounded-2xl border border-amber-500/20"><CreditCard className="w-5 h-5 text-amber-400" /></div>
+                        <div>
+                            <h2 className="text-base font-black text-white tracking-tight">Payment Review</h2>
+                            <p className="text-[9px] text-slate-500 font-black uppercase tracking-[0.2em] mt-0.5">{tenant?.unit} - {tenant?.name}</p>
+                        </div>
+                    </div>
+                    <button onClick={onClose} className="p-2 text-slate-500 hover:text-white bg-white/5 rounded-xl border border-white/5 transition-all"><X className="w-4 h-4" /></button>
+                </div>
+                <div className="px-6 py-4 bg-white/[0.02] border-b border-white/5 flex flex-wrap gap-4 items-center justify-between">
+                    <div>
+                        <p className="text-[8px] font-black uppercase tracking-widest text-slate-600 mb-1">Billing Period</p>
+                        <p className="text-[11px] font-black text-slate-300 flex items-center gap-1.5 font-mono-data">{bp.from ? formatDate(bp.from) : 'N/A'}<span className="text-indigo-400">/</span>{bp.to ? formatDate(bp.to) : 'N/A'}</p>
+                    </div>
+                    <div className="text-right">
+                        <p className="text-[8px] font-black uppercase tracking-widest text-slate-600 mb-1">Amount Due</p>
+                        <p className="text-xl font-black text-emerald-400 tracking-tighter font-mono-data">{currency} {totalDue.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+                    </div>
+                </div>
+                <div className="p-8 bg-slate-950/20 border-b border-white/5">
+                    <div className="flex items-center gap-4 py-6 border-2 border-dashed border-indigo-500/20 rounded-3xl bg-indigo-500/5 px-8">
+                        <div className="w-12 h-12 rounded-2xl bg-indigo-600/20 flex items-center justify-center border border-indigo-500/30"><ShieldCheck className="w-6 h-6 text-indigo-400" /></div>
+                        <div>
+                            <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Authenticated Admin</p>
+                            <p className="text-xs font-black text-white italic tracking-tight">{activeManager?.name || 'System Auto'}</p>
+                            <p className="text-[9px] text-indigo-400/60 font-medium mt-0.5">Authorization logged for audit trail</p>
+                        </div>
+                    </div>
+                </div>
+                <div className="p-6 border-t border-white/5 flex gap-3">
+                    <button onClick={onClose} className="flex-1 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest text-slate-400 bg-white/5 border border-white/5 hover:bg-white/10 transition-all">Cancel</button>
+                    <button onClick={onConfirm} className="flex-[2] py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest text-white bg-emerald-600 hover:bg-emerald-500 shadow-xl shadow-emerald-600/20 transition-all flex items-center justify-center gap-2 glow-emerald"><CheckCircle2 className="w-4 h-4" /> Confirm & Mark Paid</button>
+                </div>
+            </Motion.div>
+        </div>
+    );
+}
+
 // --- Helper Functions ---
 const cleanMobile = (str) => String(str || '').replace(/[^\d]/g, ''); // Digits Only for max compatibility
 
@@ -1416,7 +1853,7 @@ function App() {
                             <span className="text-white font-black text-base tracking-tight uppercase">
                                 MyDay OS
                             </span>
-                            <span className="hidden sm:inline text-[7px] text-indigo-400/60 font-black uppercase tracking-[0.2em] mt-0.5">v1.3.2 -?STATUS: OPTIMIZED</span>
+                            <span className="hidden sm:inline text-[7px] text-indigo-400/60 font-black uppercase tracking-[0.2em] mt-0.5">v1.3.3 -?STATUS: OPTIMIZED</span>
                         </div>
                     </div>
 
@@ -1669,9 +2106,6 @@ function MobileBottomNav({ activeTab, setActiveTab, tenantMessages, onLogout }) 
     );
 }
 
-// --- Manager Components ---
-
-function ManagerDashboard({ activeProperty, tenants, payments, propertyUnits, utilityBills, tasks, vendors, tenantMessages, currency = 'USD', onAddUnit, onEditUnit, onUpdateUnitPhotos, onDeleteUnit, onAddTenant, onEditTenant, onUpdateFittings, onAddBill, onAddTask, onAddVendor, onEditVendor, onDeleteVendor, onMarkPaid, onMarkUtilityPaid, onUpdateLeaseDoc, onMoveOut, onUpdateMessage, activeManager, activeTab: externalActiveTab, setActiveTab: setExternalActiveTab }) {
     const [viewingPhotos, setViewingPhotos] = useState(null);
     const [internalActiveTab, setInternalActiveTab] = useState('rents');
     const [editingCredentials, setEditingCredentials] = useState(null);
@@ -1990,184 +2424,6 @@ function ManagerDashboard({ activeProperty, tenants, payments, propertyUnits, ut
             )}
         </div>
     );
-}
-
-// --- Payment Confirmation Modal ---
-function PaymentConfirmModal({ tenant, currency, activeManager, onConfirm, onClose }) {
-    const bp = getBillingPeriod(tenant?.leaseStart);
-    const totalDue = (Number(tenant?.baseRent) || 0) + (Number(tenant?.utilityShare) || 0);
-
-    return (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 sm:p-6 bg-slate-950/90 backdrop-blur-md">
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_10%,rgba(245,158,11,0.06),transparent_50%)]" />
-            <Motion.div
-                initial={{ opacity: 0, scale: 0.95, y: 20 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                transition={{ type: 'spring', stiffness: 300, damping: 25 }}
-                className="relative z-10 w-full max-w-lg bg-slate-900 rounded-[2.5rem] border border-white/10 shadow-2xl shadow-black/50 overflow-hidden"
-            >
-                {/* Header */}
-                <div className="p-6 border-b border-white/5 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                        <div className="p-2.5 bg-amber-500/10 rounded-2xl border border-amber-500/20">
-                            <CreditCard className="w-5 h-5 text-amber-400" />
-                        </div>
-                        <div>
-                            <h2 className="text-base font-black text-white tracking-tight">Payment Review</h2>
-                            <p className="text-[9px] text-slate-500 font-black uppercase tracking-[0.2em] mt-0.5">{tenant?.unit} - {tenant?.name}</p>
-                        </div>
-                    </div>
-                    <Motion.button whileHover={{ scale: 1.1, rotate: 90 }} whileTap={{ scale: 0.9 }} onClick={onClose}
-                        className="p-2 text-slate-500 hover:text-white bg-white/5 rounded-xl border border-white/5 transition-all">
-                        <X className="w-4 h-4" />
-                    </Motion.button>
-                </div>
-
-                {/* Billing Info Row */}
-                <div className="px-6 py-4 bg-white/[0.02] border-b border-white/5 flex flex-wrap gap-4 items-center justify-between">
-                    <div>
-                        <p className="text-[8px] font-black uppercase tracking-widest text-slate-600 mb-1">Billing Period</p>
-                        <p className="text-[11px] font-black text-slate-300 flex items-center gap-1.5 font-mono-data">
-                            {bp.from ? formatDate(bp.from) : 'N/A'}
-                            <span className="text-indigo-400">/</span>
-                            {bp.to ? formatDate(bp.to) : 'N/A'}
-                        </p>
-                    </div>
-                    <div className="text-right">
-                        <p className="text-[8px] font-black uppercase tracking-widest text-slate-600 mb-1">Amount Due</p>
-                        <p className="text-xl font-black text-emerald-400 tracking-tighter font-mono-data">{currency} {totalDue.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
-                    </div>
-                </div>
-
-                {/* Admin Audit Trail */}
-                <div className="p-8 bg-slate-950/20 border-b border-white/5">
-                    <div className="flex items-center gap-4 py-6 border-2 border-dashed border-indigo-500/20 rounded-3xl bg-indigo-500/5 px-8">
-                        <div className="w-12 h-12 rounded-2xl bg-indigo-600/20 flex items-center justify-center border border-indigo-500/30">
-                            <ShieldCheck className="w-6 h-6 text-indigo-400" />
-                        </div>
-                        <div>
-                            <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Authenticated Admin</p>
-                            <p className="text-sm font-black text-white italic tracking-tight">{activeManager?.name || 'System Administrator'}</p>
-                            <p className="text-[9px] text-indigo-400/60 font-medium mt-0.5">Authorization logged for audit trail</p>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Footer */}
-                <div className="p-6 border-t border-white/5 flex gap-3">
-                    <Motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} onClick={onClose}
-                        className="flex-1 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest text-slate-400 bg-white/5 border border-white/5 hover:bg-white/10 transition-all">
-                        Cancel
-                    </Motion.button>
-                    <Motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} onClick={onConfirm}
-                        className="flex-[2] py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest text-white bg-emerald-600 hover:bg-emerald-500 shadow-xl shadow-emerald-600/20 transition-all flex items-center justify-center gap-2 glow-emerald">
-                        <CheckCircle2 className="w-4 h-4" /> Confirm & Mark Paid
-                    </Motion.button>
-                </div>
-            </Motion.div>
-        </div>
-    );
-}
-
-// --- Rent Summary Tab ---
-function RentSummaryTab({ tenants, payments, currency = 'USD', onMarkPaid, propertyName, tenantMessages = [], activeManager }) {
-    const [confirmTenant, setConfirmTenant] = useState(null); // tenant to confirm payment for
-    const downloadLedgerPDF = () => {
-        if (!window.jspdf) {
-            alert('PDF utility is initializing. Please wait a second.');
-            return;
-        }
-        const { jsPDF } = window.jspdf;
-        const doc = new jsPDF();
-        
-        // Branded Header
-        doc.setFontSize(22);
-        doc.setTextColor(40);
-        doc.text(`${propertyName} - Rent Ledger`, 14, 22);
-        
-        doc.setFontSize(10);
-        doc.setTextColor(100);
-        doc.text(`Transaction Statement Generated: ${formatDate(new Date())}`, 14, 30);
-
-        const tableColumn = ["Unit", "Tenant", "Payment Date", "Amount"];
-        const tableRows = payments.slice().reverse().map(pay => {
-            const t = tenants.find(ten => ten.id === pay.tenantId);
-            return [
-                t?.unit || 'N/A',
-                t?.name || 'Archived Tenant',
-                fmtDate(pay.date),
-                `${currency} ${Number(pay.amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`
-            ];
-        });
-
-        doc.autoTable({
-            head: [tableColumn],
-            body: tableRows,
-            startY: 40,
-            theme: 'grid',
-            headStyles: { fillColor: [79, 70, 229], textColor: [255, 255, 255] }, // Indigo-600
-            alternateRowStyles: { fillColor: [245, 247, 250] }
-        });
-
-        doc.save(`Ledger_${propertyName}_${toSheetDate(new Date())}.pdf`);
-    };
-
-    const today = getLocalDate() || new Date();
-    const currentMonthLabel = (today && typeof today.toLocaleString === 'function') ? today.toLocaleString(LOCALE, { month: 'long', year: 'numeric', timeZone: APP_TIMEZONE }) : 'Current Month';
-
-    const upcomingRents = useMemo(() => {
-        if (!Array.isArray(tenants)) return [];
-        return tenants.map(t => {
-            try {
-                if (!t.leaseStart) throw new Error();
-                const dueDate = calculateNextRentDue(t.leaseStart);
-                const daysUntil = getDaysUntilDue(t.leaseStart);
-                return { ...t, dueDate, daysUntil };
-            } catch (_ /* eslint-disable-line no-unused-vars */) {
-                return { ...t, dueDate: new Date(), daysUntil: 0 };
-            }
-        }).sort((a, b) => {
-            const da = (a.dueDate instanceof Date && !isNaN(a.dueDate)) ? a.dueDate.getTime() : 0;
-            const db = (b.dueDate instanceof Date && !isNaN(b.dueDate)) ? b.dueDate.getTime() : 0;
-            return da - db;
-        });
-    }, [tenants]);
-
-    const totalRevenueThisCycle = useMemo(() => upcomingRents.reduce((a, b) => a + (Number(b?.baseRent) || 0), 0), [upcomingRents]);
-    const soonDueCount = upcomingRents.filter(r => r && (Number(r?.daysUntil) || 0) <= 3).length;
-
-    return (
-        <div className="space-y-8">
-            {/* Payment Confirmation Modal */}
-            <AnimatePresence>
-            {confirmTenant && (
-                <PaymentConfirmModal
-                    tenant={confirmTenant}
-                    currency={currency}
-                    activeManager={activeManager}
-                    onConfirm={() => {
-                        onMarkPaid(confirmTenant.id, (Number(confirmTenant.baseRent) + Number(confirmTenant.utilityShare || 0)).toFixed(2), activeManager?.name);
-                        setConfirmTenant(null);
-                    }}
-                    onClose={() => setConfirmTenant(null)}
-                />
-            )}
-            </AnimatePresence>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <StatCard index={0} title="Expected Revenue" value={`${currency} ${totalRevenueThisCycle.toLocaleString()}`} icon={<DollarSign className="text-emerald-400" />} />
-                <StatCard index={1} title="Collections Due" value={upcomingRents.length} icon={<CalendarRange className="text-blue-400" />} />
-                <StatCard index={2} title="Action Required" value={soonDueCount} icon={<BellRing className={soonDueCount > 0 ? "text-orange-400 animate-bounce" : "text-slate-500"} />} />
-            </div>
-
-            <div className="premium-card rounded-[2.5rem] p-8">
-                <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 pb-6 border-b border-white/5 gap-4">
-                    <div>
-                        <h3 className="font-black text-2xl text-white italic tracking-tight flex items-center gap-3">
-                            <CreditCard className="w-7 h-7 text-indigo-400" />
-                            Rent Collection
-                            <span className="text-[8px] bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 px-2 py-0.5 rounded-md italic uppercase tracking-wider not-italic">v1.2.2 Final-Stabilized</span>
                         </h3>
                         <p className="text-[10px] text-slate-500 font-black uppercase tracking-[0.2em] mt-2">
                             {currentMonthLabel} - Direct Sync Active
