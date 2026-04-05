@@ -205,26 +205,25 @@ const fmtDate = (str) => {
     try {
         const strVal = String(str).trim();
         
-        // --- 1. Regex-based Zero-Shift Parser (The most reliable for YYYY-MM-DD) ---
-        // This extracts characters directly to avoid any timezone shifting.
-        const isoMatch = strVal.match(/^(\d{4})-(\d{2})-(\d{2})/);
-        if (isoMatch) {
-            const [_, y, m, d] = isoMatch;
+        // --- 1. Strict Regex Parser for Pure Calendar Days (YYYY-MM-DD only) ---
+        // If there's no time component, we grab the characters exactly as they are.
+        const pureDateMatch = strVal.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+        if (pureDateMatch) {
+            const [_, y, m, d] = pureDateMatch;
             const mIdx = parseInt(m, 10) - 1;
             if (mIdx >= 0 && mIdx < 12) {
                 return `${d.padStart(2, '0')}-${MONTHS_SHORT[mIdx]}-${y}`;
             }
         }
         
-        // --- 2. Fallback for other formats ---
+        // --- 2. Local Time Fallback (For ISO strings with T/Z or other formats) ---
         const d = new Date(strVal);
         if (!isNaN(d.getTime())) {
-            // Check if string contains 'Z' or 'T' - if so, it might be UTC
-            const isUtc = strVal.includes('Z') || (strVal.includes('T') && !strVal.includes('+'));
-            const day = isUtc ? d.getUTCDate() : d.getDate();
-            const month = isUtc ? d.getUTCMonth() : d.getMonth();
-            const year = isUtc ? d.getUTCFullYear() : d.getFullYear();
-            
+            // ALWAYS use local methods (getDate/getMonth/getFullYear) for display.
+            // This ensures that 2026-01-31T16:00:00Z becomes Feb 1st in Singapore (SGT).
+            const day = d.getDate();
+            const month = d.getMonth();
+            const year = d.getFullYear();
             return `${String(day).padStart(2, '0')}-${MONTHS_SHORT[month]}-${year}`;
         }
         return 'N/A';
