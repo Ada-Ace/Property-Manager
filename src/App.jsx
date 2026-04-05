@@ -1658,6 +1658,7 @@ function ManagerDashboard({ activeProperty, tenants, payments, propertyUnits, ut
                                         }}
                                         onUpdateFittings={onUpdateFittings}
                                         onEditUnit={() => setEditingUnit(unit)}
+                                        onViewPhotos={() => setViewingPhotos(unit.photos || [])}
                                         onUpdateUnitPhotos={onUpdateUnitPhotos}
                                         onDeleteUnit={() => onDeleteUnit(unit.id)}
                                         onAddLease={() => { setEditingTenant(null); setSelectedUnitForLease(unit); setShowLeaseModal(true); }}
@@ -3326,7 +3327,7 @@ function InventoryModal({ unit, onClose, onSave }) {
     );
 }
 
-function UnitCard({ unit, tenant, currency = 'USD', history, onUpdateFittings, onEditUnit, onDeleteUnit, onAddLease, onEditLease, onUpdateUnitPhotos, onEditCredentials, onUpdateLeaseDoc, onMoveOut }) {
+function UnitCard({ unit, tenant, currency = 'USD', history, onUpdateFittings, onEditUnit, onViewPhotos, onDeleteUnit, onAddLease, onEditLease, onUpdateUnitPhotos, onEditCredentials, onUpdateLeaseDoc, onMoveOut }) {
     const tenantName = tenant?.name;
     const actualRent = tenant?.baseRent;
     const isOccupied = unit.status === 'Occupied' && !!tenant;
@@ -3470,7 +3471,7 @@ function UnitCard({ unit, tenant, currency = 'USD', history, onUpdateFittings, o
 
                                         {unit.photos && unit.photos.length > 0 ? (
                                         <div 
-                                            onClick={(e) => { e.stopPropagation(); setViewingPhotos(unit.photos); }}
+                                            onClick={(e) => { e.stopPropagation(); onViewPhotos(unit.photos); }}
                                             className="bg-slate-900 border border-dashed border-white/10 p-3.5 rounded-2xl flex items-center justify-center gap-3 cursor-pointer hover:border-indigo-500/50 transition-all text-slate-400 hover:text-indigo-400 flex-1 group"
                                         >
                                             <Camera className="w-4 h-4 group-hover:scale-110 transition-transform" />
@@ -3548,7 +3549,7 @@ function UnitCard({ unit, tenant, currency = 'USD', history, onUpdateFittings, o
                                         </div>
 
                                         <div 
-                                            onClick={(e) => { e.stopPropagation(); setViewingPhotos(unit.photos); }}
+                                            onClick={(e) => { e.stopPropagation(); onViewPhotos(unit.photos); }}
                                             className="w-full h-18 py-4 flex items-center justify-center bg-slate-900 border border-dashed border-white/10 rounded-[1.5rem] cursor-pointer hover:border-indigo-500/50 transition-all text-slate-400 hover:text-indigo-400 mt-4 group"
                                         >
                                             <Camera className="w-5 h-5 mr-3 group-hover:scale-110 transition-transform" />
