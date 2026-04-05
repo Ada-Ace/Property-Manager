@@ -3241,7 +3241,7 @@ function TasksManager({ tenants, tasks, vendors, onAddTask, onAddVendor, onEditV
 
 // --- Tenant Dashboard (unchanged logic, showing for completeness) ---
 
-function TenantDashboard({ tenant, unit, tenantMessages = [], onSendMessage, onUpdateProfile, currency = 'USD' }) {
+export function TenantDashboard({ tenant, unit, tenantMessages = [], onSendMessage, onUpdateProfile, currency = 'USD' }) {
     const [profileForm, setProfileForm] = React.useState({ mobile: tenant?.mobile || '', password: tenant?.password || '' });
     const [showMsgModal, setShowMsgModal] = useState(false);
     if (!tenant) {
