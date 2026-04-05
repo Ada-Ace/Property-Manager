@@ -182,11 +182,12 @@ const toSheetDate = (val) => {
     const sheetMatch = s.match(/^(\d{2})-(\d{2})-(\d{4})$/);
     if (sheetMatch) return `${sheetMatch[3]}-${sheetMatch[2]}-${sheetMatch[1]}`;
 
-    // 3. Date object or complex string: Use UTC methods for safety
+    // 3. Date object or complex string: Use LOCAL components to avoid same-day UTC shift
     try {
         const d = (val instanceof Date) ? val : new Date(val);
         if (isNaN(d.getTime())) return s;
-        return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`;
+        // Assembly using local parts is safe for yyyy-mm-dd storage
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
     } catch { return s; }
 };
 
@@ -208,15 +209,18 @@ const formatDate = (date, includeTime = false) => {
     if (!date) return 'N/A';
     const s = String(date).trim().replace(/^'/, '');
     
+    // If it's already a clean string yyyy-mm-dd, return it directly to avoid any Date object pollution
     const isoMatch = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
     if (isoMatch && !includeTime) return s;
 
     try {
         const d = (date instanceof Date) ? date : new Date(fromSheetDate(s));
         if (isNaN(d.getTime())) return 'N/A';
-        const yyyy = d.getUTCFullYear();
-        const mm = String(d.getUTCMonth() + 1).padStart(2, '0');
-        const dd = String(d.getUTCDate()).padStart(2, '0');
+        // Always assemble using Local components. constructions with new Date(y, m, d) 
+        // are local, so getUTC* would shift it back 1 day in positive timezones (KL +8)
+        const yyyy = d.getFullYear();
+        const mm = String(d.getMonth() + 1).padStart(2, '0');
+        const dd = String(d.getDate()).padStart(2, '0');
         const base = `${yyyy}-${mm}-${dd}`;
         if (!includeTime) return base;
         const hh = String(d.getHours()).padStart(2, '0');
@@ -255,20 +259,20 @@ const calculateNextRentDue = (leaseStart) => {
     
     let day = 1;
     if (lStartStr) {
-        // Safe Extraction: Parse YYYY-MM-DD string directly to get the commencement day
-        const match = lStartStr.match(/-(\d{2})$/);
-        if (match) {
-            day = parseInt(match[1], 10);
+        // Robust Extraction: Use split or more precise regex to avoid any pollution
+        const parts = lStartStr.split('-');
+        if (parts.length === 3) {
+            day = parseInt(parts[2], 10);
         } else {
             const d = new Date(lStartStr);
-            if (!isNaN(d.getTime())) day = d.getUTCDate();
+            if (!isNaN(d.getTime())) day = d.getDate();
         }
     }
     
     if (isNaN(day) || day < 1) day = 1;
 
     // Construct the due date for the CURRENT month using the extracted day
-    // We use local constructor but handle day-overflow (e.g. 31st on a 30-day month)
+    // Construction is local. 
     let dueDate = new Date(today.getFullYear(), today.getMonth(), day);
     
     // If the due date for this month has passed, the next collection is next month
@@ -283,22 +287,20 @@ const getDaysUntilDue = (leaseStart) => {
     today.setHours(0, 0, 0, 0);
     const dueDate = calculateNextRentDue(leaseStart);
     if (!dueDate || isNaN(dueDate.getTime())) return 0;
+    // Calculation must be local for consistency
     const target = new Date(dueDate.getFullYear(), dueDate.getMonth(), dueDate.getDate());
     return Math.ceil((target - today) / (1000 * 60 * 60 * 24));
 };
 
-// Returns the current billing period { from, to } based on lease start day
+// Returns the billing period covering the cycle defined by the dueDate
 const getBillingPeriod = (leaseStart) => {
     const dueDate = calculateNextRentDue(leaseStart);
     if (!dueDate || isNaN(dueDate.getTime())) return { from: null, to: null };
     
-    // Period starts exactly on the calculated due date
+    // Correct logic: If dueDate is May 15, period is May 15 - Jun 14.
+    // Construction must stay LOCAL (same as calculateNextRentDue)
     const from = new Date(dueDate.getFullYear(), dueDate.getMonth(), dueDate.getDate());
-    
-    // Period ends on the day BEFORE the same day in the next month
-    // Using 0 as the date with the next month automatically rolls back to last day of current month
     const to = new Date(from.getFullYear(), from.getMonth() + 1, from.getDate() - 1);
-    
     return { from, to };
 };
 
