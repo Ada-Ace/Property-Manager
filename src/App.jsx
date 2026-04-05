@@ -3415,20 +3415,31 @@ function UnitCard({ unit, tenant, currency = 'USD', history, onUpdateFittings, o
                                         </div>
 
                                         {unit.photos && unit.photos.length > 0 ? (
-                                            <div 
-                                                onClick={(e) => { e.stopPropagation(); window.open(unit.photos[0], '_blank'); }}
-                                                className="bg-indigo-600/10 p-3.5 rounded-2xl border border-indigo-500/20 flex items-center justify-center gap-2 cursor-pointer hover:bg-indigo-600/20 transition-all group"
-                                            >
-                                                <div className="text-right">
-                                                    <p className="text-[8px] font-black text-indigo-400 uppercase tracking-widest">Photos</p>
-                                                    <p className="text-white font-bold text-xs mt-0.5 font-mono-data">{unit.photos.length}</p>
-                                                </div>
-                                                <Camera className="w-4 h-4 text-indigo-500 group-hover:scale-110 transition-transform" />
+                                            <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1 max-w-[140px] md:max-w-[160px] items-center">
+                                                {unit.photos.map((url, i) => (
+                                                    <img 
+                                                        key={i} 
+                                                        src={url} 
+                                                        onClick={(e) => { e.stopPropagation(); window.open(url, '_blank'); }}
+                                                        className="w-10 h-10 shrink-0 object-cover rounded-xl border border-white/10 cursor-pointer hover:border-indigo-500/50 transition-all" 
+                                                        alt=""
+                                                    />
+                                                ))}
+                                                <label className="w-10 h-10 shrink-0 flex items-center justify-center bg-slate-900 border border-dashed border-white/10 rounded-xl cursor-pointer hover:border-indigo-500/50 transition-all text-slate-700">
+                                                    <Plus className="w-3.5 h-3.5" />
+                                                    <input 
+                                                        type="file" 
+                                                        multiple 
+                                                        accept="image/*" 
+                                                        className="hidden" 
+                                                        onChange={(e) => onUpdateUnitPhotos(unit.id, e.target.files)} 
+                                                    />
+                                                </label>
                                             </div>
                                         ) : (
                                             <label className="bg-slate-900 border border-dashed border-white/10 p-3.5 rounded-2xl flex items-center justify-center gap-2 cursor-pointer hover:border-indigo-500/50 transition-all text-slate-600 hover:text-indigo-400">
                                                 <Camera className="w-4 h-4" />
-                                                <span className="text-[8px] font-black uppercase tracking-widest">Add Photos</span>
+                                                <span className="text-[8px] font-black uppercase tracking-widest">Photos</span>
                                                 <input 
                                                     type="file" 
                                                     multiple 
