@@ -150,7 +150,7 @@ const getLocalDate = () => {
 };
 
 const resolvePhotoUrl = (url) => {
-    if (!url || typeof url !== 'string') return '';
+    if (!url || typeof url !== 'string' || url === '[object Object]') return '';
     const cleanUrl = url.trim().replace(/^["']|["']$/g, '');
     if (!cleanUrl.startsWith('http')) return cleanUrl; 
     
@@ -161,8 +161,8 @@ const resolvePhotoUrl = (url) => {
         } else if (cleanUrl.includes('/d/')) {
             id = cleanUrl.split('/d/')[1].split('/')[0];
         }
-        // Use lh3 endpoint: significantly more reliable for mobile browsers & ignores most auth cookies
-        if (id) return `https://lh3.googleusercontent.com/d/${id}=s1200`;
+        // Using the drive.google.com/thumbnail endpoint - highly reliable for cross-origin mobile embeds (Safari/iOS)
+        if (id) return `https://drive.google.com/thumbnail?id=${id}&sz=w1200`;
     }
     return cleanUrl;
 };
@@ -588,7 +588,7 @@ function App() {
 
                 // Robustly Extract Collections (Keys are now lowercased & trimmed from GAS)
                 const keyMap={'unitnumber':'unitNumber','expectedrent':'expectedRent','propertyname':'propertyName','baserent':'baseRent','leasestart':'leaseStart','leaseend':'leaseEnd','leasedocument':'leaseDocument','utilityshare':'utilityShare','depositrefunded':'depositRefunded','depositdeducted':'depositDeducted','moveoutdate':'moveOutDate','lastpaymentdate':'lastPaymentDate','scheduledate':'scheduleDate','tenantid':'tenantId','photourl':'photoUrl','handledby':'handledBy','duedate':'dueDate','maintenanceselection':'maintenanceSelection','vacantsince':'vacantSince','lastupdated':'lastUpdated','image':'image','status':'status','size':'size','fittings':'fittings'};
-                const normalize=(arr)=>arr.map(item=>{const obj={...item};for(const key of Object.keys(item)){const lk=key.toLowerCase();if(lk==='image')obj.image=item[key];if(lk==='status')obj.status=item[key];if(lk==='size')obj.size=item[key];if(lk==='unitnumber')obj.unitNumber=item[key];if(keyMap[lk]&&key!==keyMap[lk]){obj[keyMap[lk]]=obj[key];delete obj[key];}}if(obj.propertyname&&!obj.propertyName){obj.propertyName=String(obj.propertyname);delete obj.propertyname;}return obj;});
+                const normalize=(arr)=>arr.map(item=>{const obj={...item};for(const key of Object.keys(item)){const lk=key.toLowerCase().trim();if(lk==='image'||lk==='img'||lk==='photo'||lk==='visual'||lk==='visuals')obj.image=item[key];if(lk==='status')obj.status=item[key];if(lk==='size')obj.size=item[key];if(lk==='unitnumber')obj.unitNumber=item[key];if(keyMap[lk]&&key!==keyMap[lk]){obj[keyMap[lk]]=obj[key];delete obj[key];}}if(obj.propertyname&&!obj.propertyName){obj.propertyName=String(obj.propertyname);delete obj.propertyname;}return obj;});
                 const rawUnits = normalize(findCollection(data, 'units'));
                 const rawTenants = normalize(findCollection(data, 'tenants'));
                 const rawBills = normalize(findCollection(data, 'bills'));
@@ -3160,25 +3160,25 @@ function InventoryModal({ unit, onClose, onSave }) {
 
 function UnitCard({ unit, tenant, currency = 'USD', history, onUpdateFittings, onEditUnit, onDeleteUnit, onAddLease, onEditLease, onUpdateLeaseDoc, onMoveOut, onViewGallery }) {
     const images = useMemo(() => {
-        const rawImage = unit.image || unit.IMAGE || unit.Image;
+        const rawImage = unit.image || unit.IMAGE || unit.photo || unit.PHOTO || unit.visuals || unit.Image;
         if (!rawImage) return [];
         const raw = String(rawImage).trim();
         
         // 1. Precise JSON Recovery
         try {
             const parsed = JSON.parse(raw);
-            if (Array.isArray(parsed)) return parsed.filter(Boolean).map(url => String(url).trim());
+            if (Array.isArray(parsed)) return parsed.filter(url => url && typeof url === 'string').map(url => String(url).trim());
             if (typeof parsed === 'string' && parsed.length > 5) return [parsed.trim()];
-        } catch (e) { /* fallback to direct string handling */ }
+        } catch (e) { /* fallback */ }
 
-        // 2. Direct String Recovery (handle extra quotes or fragments)
+        // 2. Direct Recognition
         const cleanRaw = raw.replace(/^["']|["']$/g, '').trim();
         if (cleanRaw.startsWith('http') || cleanRaw.startsWith('data:image') || cleanRaw.includes('drive.google.com')) {
             return [cleanRaw];
         }
         
         return [];
-    }, [unit.image]);
+    }, [unit]);
     const [activeSubTab, setActiveSubTab] = useState('info');
     const tenantName = tenant?.name;
     const actualRent = tenant?.baseRent;
