@@ -875,6 +875,35 @@ function App() {
         }
     };
 
+    const handleMarkUtilityPaid = async (tenantId, amount) => {
+        setProcessingMessage('PROCESSING_UTILITY_PAYMENT');
+        try {
+            const tenant = tenants.find(t => t.id === tenantId);
+            if (tenant) {
+                const updatedTenant = { ...tenant, utilityShare: 0, lastUtilityPaidDate: new Date().toISOString() };
+                const newPayment = {
+                    id: generateId('UTL'),
+                    tenantId: tenant.id,
+                    amount: amount,
+                    date: new Date().toISOString(),
+                    propertyName: activeProperty,
+                    confirmedBy: activeManager?.name || 'Admin',
+                    type: 'Utility'
+                };
+                setTenants(prev => prev.map(t => t.id === tenantId ? updatedTenant : t));
+                setPayments(prev => [newPayment, ...prev]);
+                setGlobalMessage({ type: 'success', text: `Utility payment for ${tenant.unit} verified!` });
+                await API.saveToSheet('UPDATE', 'Tenants', updatedTenant);
+                await API.saveToSheet('ADD', 'Payments', newPayment);
+                setTimeout(() => setGlobalMessage(null), 3000);
+                const msg = encodeURIComponent(`Hi ${tenant.name.split(' ')[0]},\n\nYour utility payment of ${activeCurrency} ${amount} has been received and verified. Thank you!\n\nBest regards,\nProperty Management`);
+                window.open(`https://wa.me/${String(tenant.mobile || '').replace(/\D/g, '')}?text=${msg}`, '_blank');
+            }
+        } finally {
+            setProcessingMessage(null);
+        }
+    };
+
     const handleAddTask = async (newTask) => {
         setProcessingMessage('DISPATCHING_WORK_ORDER');
         try {
@@ -1484,6 +1513,7 @@ function App() {
                                     onEditVendor={handleEditVendor}
                                     onDeleteVendor={handleDeleteVendor}
                                     onMarkPaid={handleMarkPaid}
+                                    onMarkUtilityPaid={handleMarkUtilityPaid}
                                     onUpdateLeaseDoc={handleLeaseDocUpload}
                                     onMoveOut={handleMoveOut}
                                     onUpdateMessage={handleUpdateMessage}
@@ -1558,7 +1588,7 @@ function MobileBottomNav({ activeTab, setActiveTab, tenantMessages, onLogout }) 
 
 // --- Manager Components ---
 
-function ManagerDashboard({ activeProperty, tenants, payments, propertyUnits, utilityBills, tasks, vendors, tenantMessages, currency = 'USD', onAddUnit, onEditUnit, onUpdateUnitPhotos, onDeleteUnit, onAddTenant, onEditTenant, onUpdateFittings, onAddBill, onAddTask, onAddVendor, onEditVendor, onDeleteVendor, onMarkPaid, onUpdateLeaseDoc, onMoveOut, onUpdateMessage, activeManager, activeTab: externalActiveTab, setActiveTab: setExternalActiveTab }) {
+function ManagerDashboard({ activeProperty, tenants, payments, propertyUnits, utilityBills, tasks, vendors, tenantMessages, currency = 'USD', onAddUnit, onEditUnit, onUpdateUnitPhotos, onDeleteUnit, onAddTenant, onEditTenant, onUpdateFittings, onAddBill, onAddTask, onAddVendor, onEditVendor, onDeleteVendor, onMarkPaid, onMarkUtilityPaid, onUpdateLeaseDoc, onMoveOut, onUpdateMessage, activeManager, activeTab: externalActiveTab, setActiveTab: setExternalActiveTab }) {
     const [viewingPhotos, setViewingPhotos] = useState(null);
     const [internalActiveTab, setInternalActiveTab] = useState('rents');
     const [editingCredentials, setEditingCredentials] = useState(null);
@@ -1703,7 +1733,7 @@ function ManagerDashboard({ activeProperty, tenants, payments, propertyUnits, ut
                         </div>
                     )}
                     {activeTab === 'utilities' && (
-                        <UtilityManager tenants={tenants} utilityBills={utilityBills} onAddBill={onAddBill} currency={currency} />
+                        <UtilityManager tenants={tenants} utilityBills={utilityBills} onAddBill={onAddBill} onMarkUtilityPaid={onMarkUtilityPaid} activeManager={activeManager} currency={currency} />
                     )}
                 </Motion.div>
             </AnimatePresence>
@@ -2504,8 +2534,9 @@ function WhatsAppRentButton({ tenant, mode = 'rent', currency = 'USD', fullWidth
 
 // --- Utility Components ---
 
-function UtilityManager({ tenants, utilityBills, onAddBill, currency = 'USD' }) {
+function UtilityManager({ tenants, utilityBills, onAddBill, onMarkUtilityPaid, activeManager, currency = 'USD' }) {
     const [activeTab, setActiveTab] = useState('new'); // 'new', 'monthly', or 'history'
+    const [confirmUtilityTenant, setConfirmUtilityTenant] = useState(null); // { tenant, totalOwed, breakdowns }
 
     const uniqueMonths = useMemo(() => {
         if (!Array.isArray(utilityBills)) return [new Date().toISOString().substring(0, 7)];
@@ -2782,19 +2813,34 @@ function UtilityManager({ tenants, utilityBills, onAddBill, currency = 'USD' }) 
                                             </p>
                                         </div>
                                         {t.mobile && totalOwed > 0 ? (
-                                            <Motion.a
-                                                whileHover={{ scale: 1.02 }}
-                                                whileTap={{ scale: 0.98 }}
-                                                href={`https://wa.me/${String(t.mobile || '').replace(/\D/g, '')}?text=${encodeURIComponent(`Hi ${String(t.name || 'Tenant').split(' ')[0]},\n\nYour utility bill summary for ${new Date(effectiveMonth + '-01').toLocaleString('default', { month: 'long', year: 'numeric' })} is:\n${breakdowns.map(b => `- ${b.type}: ${currency} ${b.amount.toFixed(2)}`).join('\n')}\n\n*Total Due: ${currency} ${totalOwed.toFixed(2)}*`)}`}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                className="flex items-center gap-2 px-5 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all bg-emerald-600/20 hover:bg-emerald-600 text-emerald-400 hover:text-white border border-emerald-500/30 glow-emerald"
-                                            >
-                                                <MessageSquare className="w-4 h-4" /> Send Alert
-                                            </Motion.a>
+                                            <div className="flex items-center gap-2">
+                                                <Motion.button
+                                                    whileHover={{ scale: 1.02 }}
+                                                    whileTap={{ scale: 0.98 }}
+                                                    onClick={() => setConfirmUtilityTenant({ 
+                                                        tenant: t, 
+                                                        totalOwed, 
+                                                        breakdowns,
+                                                        period: new Date(effectiveMonth + '-01').toLocaleString('default', { month: 'long', year: 'numeric' })
+                                                    })}
+                                                    className="flex items-center gap-2 px-5 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all bg-indigo-600/20 hover:bg-indigo-600 text-indigo-400 hover:text-white border border-indigo-500/30 glow-indigo"
+                                                >
+                                                    <CheckCircle2 className="w-4 h-4" /> Mark Paid
+                                                </Motion.button>
+                                                <Motion.a
+                                                    whileHover={{ scale: 1.02 }}
+                                                    whileTap={{ scale: 0.98 }}
+                                                    href={`https://wa.me/${String(t.mobile || '').replace(/\D/g, '')}?text=${encodeURIComponent(`Hi ${String(t.name || 'Tenant').split(' ')[0]},\n\nYour utility bill summary for ${new Date(effectiveMonth + '-01').toLocaleString('default', { month: 'long', year: 'numeric' })} is:\n${breakdowns.map(b => `- ${b.type}: ${currency} ${b.amount.toFixed(2)}`).join('\n')}\n\n*Total Due: ${currency} ${totalOwed.toFixed(2)}*`)}`}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="flex items-center gap-2 px-5 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all bg-emerald-600/20 hover:bg-emerald-600 text-emerald-400 hover:text-white border border-emerald-500/30 glow-emerald"
+                                                >
+                                                    <MessageSquare className="w-4 h-4" /> Send Alert
+                                                </Motion.a>
+                                            </div>
                                         ) : (
                                             <div className="flex items-center gap-2 px-5 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest bg-white/5 border border-white/5 text-slate-600">
-                                                <CheckCircle2 className="w-4 h-4" /> No Bill
+                                                <CheckCircle2 className="w-4 h-4" /> Paid
                                             </div>
                                         )}
                                     </div>
@@ -2804,6 +2850,83 @@ function UtilityManager({ tenants, utilityBills, onAddBill, currency = 'USD' }) 
                     </div>
                 </div>
             )}
+
+            {/* Utility Payment Confirmation Modal */}
+            <AnimatePresence>
+                {confirmUtilityTenant && (
+                    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+                        <Motion.div 
+                            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                            onClick={() => setConfirmUtilityTenant(null)}
+                            className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm"
+                        />
+                        <Motion.div
+                            initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.9, y: 20 }}
+                            className="relative w-full max-w-sm bg-slate-900 border border-white/10 rounded-[2.5rem] shadow-2xl p-8 overflow-hidden"
+                        >
+                            {/* Glow Effect */}
+                            <div className="absolute -top-24 -left-24 w-48 h-48 bg-indigo-500/20 rounded-full blur-[80px]" />
+                            
+                            <div className="relative text-center space-y-6">
+                                <div className="mx-auto w-16 h-16 bg-indigo-600/15 border border-indigo-500/20 rounded-2xl flex items-center justify-center">
+                                    <Receipt className="w-8 h-8 text-indigo-400" />
+                                </div>
+                                
+                                <div>
+                                    <h3 className="text-xl font-black text-white italic tracking-tight">Review Utility Payment</h3>
+                                    <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest mt-1">Verification Step</p>
+                                </div>
+
+                                <div className="bg-white/5 rounded-3xl p-6 border border-white/5 text-left space-y-4">
+                                    <div className="flex justify-between items-center pb-4 border-b border-white/5">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center font-black text-xs">{confirmUtilityTenant.tenant.unit}</div>
+                                            <div>
+                                                <p className="text-sm font-black text-white">{confirmUtilityTenant.tenant.name}</p>
+                                                <p className="text-[9px] text-slate-500 font-black uppercase tracking-widest">{confirmUtilityTenant.period}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        {confirmUtilityTenant.breakdowns.map((b, i) => (
+                                            <div key={i} className="flex justify-between items-center text-[10px] font-bold">
+                                                <span className="text-slate-500 uppercase tracking-widest">{b.type}</span>
+                                                <span className="text-white font-mono-data">{currency} {b.amount.toFixed(2)}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+
+                                    <div className="pt-4 border-t border-white/5 flex justify-between items-center">
+                                        <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Total Amount</span>
+                                        <span className="text-xl font-black text-emerald-400 tracking-tighter font-mono-data">{currency} {confirmUtilityTenant.totalOwed.toFixed(2)}</span>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-3 pt-2">
+                                    <button
+                                        onClick={async () => {
+                                            await onMarkUtilityPaid(confirmUtilityTenant.tenant.id, confirmUtilityTenant.totalOwed);
+                                            setConfirmUtilityTenant(null);
+                                        }}
+                                        className="w-full py-4 bg-indigo-600 hover:bg-indigo-500 text-white font-black rounded-2xl shadow-xl shadow-indigo-600/20 transition-all uppercase tracking-widest text-[10px] flex items-center justify-center gap-2 glow-indigo"
+                                    >
+                                        <CheckCircle2 className="w-4 h-4" /> Confirm & Verify Payment
+                                    </button>
+                                    <button
+                                        onClick={() => setConfirmUtilityTenant(null)}
+                                        className="w-full py-3 text-slate-500 hover:text-white font-black uppercase tracking-widest text-[9px] transition-all"
+                                    >
+                                        Go Back / Cancel
+                                    </button>
+                                </div>
+                            </div>
+                        </Motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
 
             {activeTab === 'history' && (
                 <div className="bg-slate-900/50 rounded-[2.5rem] border border-white/5 p-8 backdrop-blur-sm shadow-xl animate-in fade-in slide-in-from-top-4">
