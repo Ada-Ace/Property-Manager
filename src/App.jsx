@@ -3449,50 +3449,6 @@ function UnitModal({ initialData, onSubmit, onClose }) {
                 </div>
 
                 <form onSubmit={handleSubmit} className="space-y-10 flex-1">
-                    {/* Hero Image Upload Gallery */}
-                    <div className="section-animate" style={{ animationDelay: '0.1s' }}>
-                        <label className="text-[10px] text-slate-500 font-black uppercase tracking-[0.3em] ml-2 mb-4 flex items-center gap-2">
-                            <Camera className="w-3.5 h-3.5" /> Unit Visuals Catalog
-                        </label>
-                        
-                        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                            {images.map((url, idx) => (
-                                <div key={idx} className="relative group aspect-square rounded-[1.5rem] overflow-hidden border border-white/10 bg-slate-800 flex items-center justify-center">
-                                    <img 
-                                        src={resolvePhotoUrl(url)} 
-                                        alt="" 
-                                        className="w-full h-full object-cover group-hover:scale-105 transition-transform" 
-                                        onError={(e) => {
-                                            e.target.style.display = 'none';
-                                            e.target.nextSibling.style.display = 'flex';
-                                        }}
-                                    />
-                                    <div className="hidden flex-col items-center gap-2 text-slate-700">
-                                        <AlertCircle className="w-10 h-10 opacity-20" />
-                                        <span className="text-[8px] font-black uppercase">Source Missing</span>
-                                    </div>
-                                    <button 
-                                        type="button"
-                                        onClick={() => removeImage(idx)}
-                                        className="absolute top-2 right-2 p-2 bg-red-600/90 text-white rounded-xl opacity-0 group-hover:opacity-100 transition-all shadow-xl shadow-red-900/40 z-20"
-                                    >
-                                        <Trash2 className="w-4 h-4" />
-                                    </button>
-                                </div>
-                            ))}
-                            <label className="aspect-square rounded-[1.5rem] border-2 border-dashed border-white/10 hover:border-indigo-500/40 hover:bg-indigo-500/5 transition-all cursor-pointer flex flex-col items-center justify-center gap-2 group">
-                                <PlusCircle className="w-6 h-6 text-slate-600 group-hover:text-indigo-400 group-hover:scale-110 transition-all" />
-                                <span className="text-[8px] font-black uppercase tracking-widest text-slate-600">Add Photo</span>
-                                <input 
-                                    type="file" 
-                                    multiple
-                                    accept="image/*" 
-                                    onChange={handleFileChange} 
-                                    className="hidden" 
-                                />
-                            </label>
-                        </div>
-                    </div>
 
                     <div className="space-y-8">
                         <div className="space-y-2 section-animate" style={{ animationDelay: '0.2s' }}>
