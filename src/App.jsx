@@ -2812,11 +2812,19 @@ function UtilityManager({ tenants, utilityBills, payments, onAddBill, onMarkUtil
                                     </div>
 
                                     {/* Right: total box + alert button */}                                    <div className="flex flex-wrap items-center gap-4 md:gap-6 w-full md:w-auto">
-                                        <div className="bg-white/5 px-5 py-3 rounded-2xl border border-white/5 min-w-[120px]">
-                                            <p className="text-[9px] font-black text-slate-600 uppercase tracking-widest mb-1">Amount Due</p>
-                                            <p className={`text-xl font-black tracking-tighter font-mono-data ${totalOwed > 0 && !isPaid ? 'text-emerald-400' : 'text-slate-600'}`}>
-                                                {currency} {!isPaid ? totalOwed.toFixed(2) : '0.00'}
-                                            </p>
+                                        <div className="bg-white/5 px-6 py-3 rounded-2xl border border-white/5 flex gap-6 items-center">
+                                            <div>
+                                                <p className="text-[8px] font-black text-slate-600 uppercase tracking-widest mb-1">Total Amount</p>
+                                                <p className="text-sm font-black text-slate-400 font-mono-data">
+                                                    {currency} {totalOwed.toFixed(2)}
+                                                </p>
+                                            </div>
+                                            <div className="min-w-[100px] border-l border-white/10 pl-6">
+                                                <p className="text-[8px] font-black text-slate-600 uppercase tracking-widest mb-1">Amount Due</p>
+                                                <p className={`text-xl font-black tracking-tighter font-mono-data ${totalOwed > 0 && !isPaid ? 'text-emerald-400' : 'text-slate-600'}`}>
+                                                    {currency} {!isPaid ? totalOwed.toFixed(2) : '0.00'}
+                                                </p>
+                                            </div>
                                         </div>
 
                                         {!isPaid && totalOwed > 0 ? (
