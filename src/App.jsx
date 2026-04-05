@@ -149,27 +149,13 @@ const getLocalDate = () => {
     }
 };
 
-const resolvePhotoUrl = (url) => {
-    if (!url || typeof url !== 'string' || url === '[object Object]' || url === '[]') return '';
-    let cleanUrl = url.trim().replace(/^["']|["']$/g, '');
-    
-    // Attempt double JSON decode for escaped cloud strings
-    if (cleanUrl.startsWith('[') && cleanUrl.endsWith(']')) {
-        try { const p = JSON.parse(cleanUrl); if (Array.isArray(p)) cleanUrl = p[0]; } catch (e) { /* ignore */ }
+const generateId = (prefix) => {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; 
+    let result = '';
+    for (let i = 0; i < 4; i++) {
+        result += chars.charAt(Math.floor(Math.random() * chars.length));
     }
-    
-    if (!cleanUrl || !cleanUrl.startsWith('http')) return cleanUrl; 
-    
-    if (cleanUrl.includes('drive.google.com')) {
-        let id = '';
-        if (cleanUrl.includes('id=')) {
-            id = cleanUrl.split('id=')[1].split('&')[0];
-        } else if (cleanUrl.includes('/d/')) {
-            id = cleanUrl.split('/d/')[1].split('/')[0];
-        }
-        if (id) return `https://drive.google.com/thumbnail?id=${id}&sz=w1200`;
-    }
-    return cleanUrl;
+    return `${prefix}-${result}`;
 };
 
 // Standardised date formatter -?dd-MMM-yyyy (e.g. 19-Mar-2026)
@@ -225,16 +211,6 @@ const fmtDate = (str) => {
         return 'N/A';
     }
 };
-
-const generateId = (prefix) => {
-    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // Avoid ambiguous 0,1,I,O
-    let result = '';
-    for (let i = 0; i < 4; i++) {
-        result += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    return `${prefix}-${result}`;
-};
-
 
 const calculateNextRentDue = (leaseStart) => {
     const today = getLocalDate();
@@ -609,7 +585,7 @@ function App() {
 
                 // Robustly Extract Collections (Keys are now lowercased & trimmed from GAS)
                 const keyMap={'unitnumber':'unitNumber','expectedrent':'expectedRent','propertyname':'propertyName','baserent':'baseRent','leasestart':'leaseStart','leaseend':'leaseEnd','leasedocument':'leaseDocument','utilityshare':'utilityShare','depositrefunded':'depositRefunded','depositdeducted':'depositDeducted','moveoutdate':'moveOutDate','lastpaymentdate':'lastPaymentDate','scheduledate':'scheduleDate','tenantid':'tenantId','photourl':'photoUrl','handledby':'handledBy','duedate':'dueDate','maintenanceselection':'maintenanceSelection','vacantsince':'vacantSince','lastupdated':'lastUpdated','image':'image','status':'status','size':'size','fittings':'fittings'};
-                const normalize=(arr)=>{if(arr.length>0)console.log('SYNC_KEYS:', Object.keys(arr[0]).join(',')); return arr.map(item=>{const obj={...item};for(const key of Object.keys(item)){const lk=key.toLowerCase().replace(/[^a-z]/g,'');const val=item[key];if(lk.includes('image')||lk.includes('photo')||lk.includes('visual')||lk.includes('img'))obj.image=val;if(lk==='status')obj.status=val;if(lk==='size')obj.size=val;if(lk.includes('unitnumber')||lk==='unitno')obj.unitNumber=val;if(lk.includes('expectedrent')||lk==='rent')obj.expectedRent=val;if(keyMap[lk]&&key!==keyMap[lk]){obj[keyMap[lk]]=val;delete obj[key];}if(!obj.image&&typeof val==='string'&&val.includes('drive.google.com'))obj.image=val;}if(obj.propertyname&&!obj.propertyName){obj.propertyName=String(obj.propertyname);delete obj.propertyname;}return obj;});};
+                const normalize=(arr)=>{if(arr.length>0)console.log('SYNC_KEYS:', Object.keys(arr[0]).join(',')); return arr.map(item=>{const obj={...item};for(const key of Object.keys(item)){const lk=key.toLowerCase().replace(/[^a-z]/g,'');const val=item[key];if(lk==='status')obj.status=val;if(lk==='size')obj.size=val;if(lk.includes('unitnumber')||lk==='unitno')obj.unitNumber=val;if(lk.includes('expectedrent')||lk==='rent')obj.expectedRent=val;if(keyMap[lk]&&key!==keyMap[lk]){obj[keyMap[lk]]=val;delete obj[key];}}if(obj.propertyname&&!obj.propertyName){obj.propertyName=String(obj.propertyname);delete obj.propertyname;}return obj;});};
                 const rawUnits = normalize(findCollection(data, 'units'));
                 const rawTenants = normalize(findCollection(data, 'tenants'));
                 const rawBills = normalize(findCollection(data, 'bills'));
@@ -1450,8 +1426,6 @@ function ManagerDashboard({ activeProperty, tenants, payments, propertyUnits, ut
     const [editingUnit, setEditingUnit] = useState(null);
     const [selectedUnitForLease, setSelectedUnitForLease] = useState(null);
     const [offboardingSession, setOffboardingSession] = useState(null);
-    const [viewerGallery, setViewerGallery] = useState(null); // { images: [], index: 0 }
-    const [viewerIndex, setViewerIndex] = useState(0);
 
     const [showVendorModal, setShowVendorModal] = useState(false);
     const [editingVendor, setEditingVendor] = useState(null);
@@ -1484,74 +1458,6 @@ function ManagerDashboard({ activeProperty, tenants, payments, propertyUnits, ut
                 onSubmit={editingVendor ? handleUpdateVendor : handleAddVendor} 
                 editingVendor={editingVendor} 
             />
-            {viewerGallery && (
-                <div className="fixed inset-0 z-[250] bg-slate-950/98 backdrop-blur-3xl flex flex-col items-center justify-center animate-in fade-in transition-all duration-500">
-                    {/* Background Tap Surface */}
-                    <div className="absolute inset-0 z-0" onClick={() => setViewerGallery(null)} />
-                    
-                    {/* Header: Progress & Close */}
-                    <div className="absolute top-0 left-0 right-0 p-8 flex items-center justify-between z-20 pointer-events-none">
-                        <div className="px-6 py-2 bg-white/5 backdrop-blur-xl rounded-2xl border border-white/10 text-[10px] font-black uppercase tracking-widest text-white ring-1 ring-white/5">
-                            Visual {viewerIndex + 1} <span className="opacity-30 mx-2">/</span> {viewerGallery.length}
-                        </div>
-                        <button 
-                            className="p-4 bg-red-600/10 hover:bg-red-600 text-red-500 hover:text-white rounded-3xl border border-red-600/20 shadow-2xl transition-all active:scale-95 pointer-events-auto"
-                            onClick={() => setViewerGallery(null)}
-                        >
-                            <X className="w-8 h-8" />
-                        </button>
-                    </div>
-
-                    {/* Main Image Container */}
-                    <div className="relative w-full h-[70vh] flex items-center justify-center p-4 z-10">
-                        <AnimatePresence mode="wait">
-                            <Motion.img 
-                                key={viewerIndex}
-                                src={resolvePhotoUrl(viewerGallery[viewerIndex])} 
-                                alt={`View ${viewerIndex + 1}`}
-                                initial={{ opacity: 0, x: 20, scale: 0.95 }}
-                                animate={{ opacity: 1, x: 0, scale: 1 }}
-                                exit={{ opacity: 0, x: -20, scale: 0.95 }}
-                                transition={{ duration: 0.3, ease: 'easeOut' }}
-                                className="max-w-full max-h-full object-contain rounded-[2rem] shadow-[0_40px_100px_rgba(0,0,0,0.8)] border border-white/10 ring-1 ring-white/5" 
-                            />
-                        </AnimatePresence>
-                    </div>
-
-                    {/* Navigation Controls */}
-                    {viewerGallery.length > 1 && (
-                        <>
-                            {/* Left/Right Floating Arrows */}
-                            <button 
-                                onClick={(e) => { e.stopPropagation(); setViewerIndex(prev => (prev > 0 ? prev - 1 : viewerGallery.length - 1)); }}
-                                className="absolute left-8 top-1/2 -translate-y-1/2 p-6 bg-white/5 hover:bg-white/10 text-white rounded-full border border-white/10 shadow-2xl transition-all z-20"
-                            >
-                                <ChevronLeft className="w-10 h-10" />
-                            </button>
-                            <button 
-                                onClick={(e) => { e.stopPropagation(); setViewerIndex(prev => (prev < viewerGallery.length - 1 ? prev + 1 : 0)); }}
-                                className="absolute right-8 top-1/2 -translate-y-1/2 p-6 bg-white/5 hover:bg-white/10 text-white rounded-full border border-white/10 shadow-2xl transition-all z-20"
-                            >
-                                <ChevronRight className="w-10 h-10" />
-                            </button>
-
-                            {/* Dot Indicators */}
-                            <div className="absolute bottom-12 flex gap-3 p-4 bg-white/5 backdrop-blur-2xl rounded-3xl border border-white/5 z-20">
-                                {viewerGallery.map((_, idx) => (
-                                    <button 
-                                        key={idx}
-                                        onClick={() => setViewerIndex(idx)}
-                                        className={`h-2.5 rounded-full transition-all duration-500 ${idx === viewerIndex ? 'bg-indigo-500 w-10 shadow-[0_0_15px_rgba(99,102,241,0.5)]' : 'bg-white/20 w-2.5 hover:bg-white/40'}`}
-                                    />
-                                ))}
-                            </div>
-                        </>
-                    )}
-
-                    {/* Mobile Tip */}
-                    <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-[8px] font-black uppercase tracking-[0.3em] text-slate-500 animate-pulse z-0">Keyboard Left / Right to cycle</div>
-                </div>
-            )}
             <CompactStatsBar 
                 stats={[
                     { title: "Revenue", value: cur(totalRevenue), icon: <CreditCard className="text-emerald-400" /> },
@@ -1633,7 +1539,6 @@ function ManagerDashboard({ activeProperty, tenants, payments, propertyUnits, ut
                                         onEditLease={() => { setEditingTenant(tenant); setSelectedUnitForLease(unit); setShowLeaseModal(true); }}
                                         onUpdateLeaseDoc={onUpdateLeaseDoc}
                                         onMoveOut={() => setOffboardingSession({ unit, tenant })}
-                                        onViewGallery={(gallery, idx) => { setViewerGallery(gallery); setViewerIndex(idx || 0); }}
                                     />
                                 );
                             })}
@@ -3179,32 +3084,11 @@ function InventoryModal({ unit, onClose, onSave }) {
     );
 }
 
-function UnitCard({ unit, tenant, currency = 'USD', history, onUpdateFittings, onEditUnit, onDeleteUnit, onAddLease, onEditLease, onUpdateLeaseDoc, onMoveOut, onViewGallery }) {
-    const images = useMemo(() => {
-        const keys = ['image', 'IMAGE', 'photo', 'PHOTO', 'visuals', 'Image', 'photoUrl', 'photo_url', 'unitImage', 'unitPhoto'];
-        const rawImage = keys.reduce((acc, key) => acc || unit[key], null);
-        if (!rawImage) return [];
-        const raw = String(rawImage).trim();
-        
-        // 1. Precise JSON Recovery
-        try {
-            const parsed = JSON.parse(raw);
-            if (Array.isArray(parsed)) return parsed.filter(url => url && typeof url === 'string').map(url => String(url).trim());
-            if (typeof parsed === 'string' && parsed.length > 5) return [parsed.trim()];
-        } catch (e) { /* fallback */ }
-
-        // 2. Direct Recognition
-        const cleanRaw = raw.replace(/^["']|["']$/g, '').trim();
-        if (cleanRaw.startsWith('http') || cleanRaw.startsWith('data:image') || cleanRaw.includes('drive.google.com')) {
-            return [cleanRaw];
-        }
-        
-        return [];
-    }, [unit]);
+function UnitCard({ unit, tenant, currency = 'USD', history, onUpdateFittings, onEditUnit, onDeleteUnit, onAddLease, onEditLease, onUpdateLeaseDoc, onMoveOut }) {
     const [activeSubTab, setActiveSubTab] = useState('info');
+    const [showInventoryModal, setShowInventoryModal] = useState(false);
     const tenantName = tenant?.name;
     const actualRent = tenant?.baseRent;
-    const [showInventoryModal, setShowInventoryModal] = useState(false);
     const isOccupied = unit.status === 'Occupied' && !!tenant;
 
     // Financial Intelligence: Yield & Vacancy
@@ -3240,31 +3124,6 @@ function UnitCard({ unit, tenant, currency = 'USD', history, onUpdateFittings, o
             <div className={`h-32 md:h-36 relative flex items-center justify-center overflow-hidden bg-slate-950/40 border-b border-white/5`}>
                 <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(79,70,229,0.05),transparent_70%)]" />
                 
-                <div className="relative group/thumb cursor-pointer" onClick={() => images.length > 0 && onViewGallery(images, 0)}>
-                    {images.length > 0 ? (
-                        <div className="relative">
-                            <img src={resolvePhotoUrl(images[0])} alt="" className="w-24 h-24 md:w-28 md:h-28 object-cover rounded-3xl border-2 border-white/10 group-hover/thumb:border-indigo-500/50 group-hover/thumb:scale-105 transition-all duration-500 shadow-2xl" />
-                            {images.length > 1 && (
-                                <div className="absolute -bottom-2 -right-2 bg-indigo-600 text-white text-[8px] font-black px-2 py-1 rounded-lg border border-white/10 shadow-lg">
-                                    +{images.length - 1} MORE
-                                </div>
-                            )}
-                            <div className="absolute inset-0 bg-indigo-600/20 opacity-0 group-hover/thumb:opacity-100 transition-opacity rounded-3xl flex items-center justify-center">
-                                <Maximize className="w-5 h-5 text-white" />
-                            </div>
-                        </div>
-                    ) : (
-                        <div className="w-24 h-24 md:w-28 md:h-28 rounded-3xl border-2 border-dashed border-white/10 flex flex-col items-center justify-center text-slate-800 transition-colors group-hover/thumb:border-white/20">
-                            <ImageIcon className="w-8 h-8 opacity-20" />
-                            <span className="text-[7px] font-black uppercase tracking-widest mt-1 opacity-20">NO VISUALS</span>
-                            {/* Diagnostic Helper for Manager (Debug Only) */}
-                            <span className="absolute bottom-2 inset-x-0 text-[5px] text-white/10 font-mono text-center overflow-auto px-2 max-h-[20px]">
-                                ALL_KEYS: {Object.keys(unit).join(', ')}
-                            </span>
-                        </div>
-                    )}
-                </div>
-
                 {/* Quick Actions (Floating) */}
                 <div className="absolute top-6 left-6 flex flex-col gap-2 z-20">
                     <button 
@@ -3543,51 +3402,15 @@ function UnitCard({ unit, tenant, currency = 'USD', history, onUpdateFittings, o
 }
 
 function UnitModal({ initialData, onSubmit, onClose }) {
-    const parseInitialImages = () => {
-        const rawImage = initialData?.image || initialData?.IMAGE || initialData?.Image;
-        if (!rawImage) return [];
-        const raw = String(rawImage).trim();
-        try {
-            const parsed = JSON.parse(raw);
-            return Array.isArray(parsed) ? parsed : [raw];
-        } catch (e) {
-            return [raw];
-        }
-    };
-
-    const [form, setForm] = useState(initialData || { unitNumber: '', size: '', expectedRent: '', status: 'Available', image: '[]' });
-    const [images, setImages] = useState(parseInitialImages());
+    const [form, setForm] = useState(initialData || { unitNumber: '', size: '', expectedRent: '', status: 'Available' });
     const [isSubmitting, setIsSubmitting] = useState(false);
-
-    const handleFileChange = async (e) => {
-        const files = Array.from(e.target.files);
-        setIsSubmitting(true);
-        try {
-            for (const file of files) {
-                const res = await API.uploadFile(file);
-                if (res && res.success) {
-                    setImages(prev => [...prev, res.url]);
-                }
-            }
-        } finally {
-            setIsSubmitting(false);
-        }
-    };
-
-    const removeImage = async (index) => {
-        const targetUrl = images[index];
-        setImages(images.filter((_, i) => i !== index));
-        if (targetUrl && targetUrl.includes('drive.google.com')) {
-            await API.deleteFile(targetUrl);
-        }
-    };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         setIsSubmitting(true);
         try {
-            // Save as JSON string
-            await onSubmit({ ...form, image: JSON.stringify(images) });
+            await onSubmit({ ...form });
+            onClose();
         } finally {
             setIsSubmitting(false);
         }
