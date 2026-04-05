@@ -2565,18 +2565,22 @@ const extractYearMonth = (dateStr) => {
     if (!dateStr) return null;
     const s = String(dateStr).trim();
     
-    // 1. Strict YYYY-MM-DD (No Time) -> Extract characters exactly
+    // 1. Strict YYYY-MM-DD (No Time)
     const pureMatch = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
     if (pureMatch) return `${pureMatch[1]}-${pureMatch[2]}`;
+
+    // 2. Format DD-MMM-YYYY (e.g., 01-Feb-2026)
+    const displayMatch = s.match(/^(\d{1,2})-([A-Za-z]{3})-(\d{4})$/);
+    if (displayMatch) {
+        const [_, d, mmm, yyyy] = displayMatch;
+        const mIdx = MONTHS_SHORT.indexOf(mmm.substring(0, 3).charAt(0).toUpperCase() + mmm.substring(1).toLowerCase());
+        if (mIdx !== -1) return `${yyyy}-${String(mIdx + 1).padStart(2, '0')}`;
+    }
     
-    // 2. Full Timestamp (ISO or other) -> Align to Midday then get Local
+    // 3. Fallback for ISO strings or other formats
     try {
         const d = new Date(s);
         if (isNaN(d.getTime())) return s.substring(0, 7);
-        // Force evaluation via Midday to safely un-shift any midnight-offset UTC strings
-        const middayOffset = 12 * 60 * 60 * 1000;
-        const buffered = new Date(d.getTime() + (d.toISOString().endsWith('Z') ? 0 : 0)); 
-        // Actually, just local methods are the gold standard for your timezone.
         const y = d.getFullYear();
         const m = String(d.getMonth() + 1).padStart(2, '0');
         return `${y}-${m}`;
