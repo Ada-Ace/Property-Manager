@@ -2560,6 +2560,19 @@ const getTodayString = () => {
     }
 };
 
+// --- Helper: Extract Year-Month (YYYY-MM) stably ---
+const extractYearMonth = (dateStr) => {
+    if (!dateStr) return null;
+    const s = String(dateStr);
+    const m = s.match(/^(\d{4})-(\d{2})/);
+    if (m) return m[0];
+    try {
+        const d = new Date(s);
+        if (isNaN(d.getTime())) return s.substring(0, 7);
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    } catch { return s.substring(0, 7); }
+};
+
 // --- Utility Components ---
 
 function UtilityManager({ tenants, utilityBills, payments, onAddBill, onMarkUtilityPaid, activeManager, currency = 'USD' }) {
@@ -2571,7 +2584,7 @@ function UtilityManager({ tenants, utilityBills, payments, onAddBill, onMarkUtil
         const currentMonth = todayStr.substring(0, 7);
         let months = [currentMonth];
         if (Array.isArray(utilityBills)) {
-            const billMonths = utilityBills.filter(b => b && typeof b.date === 'string').map(b => b.date.substring(0, 7));
+            const billMonths = utilityBills.filter(b => b && b.date).map(b => extractYearMonth(b.date));
             months = Array.from(new Set([...months, ...billMonths]));
         }
         return months.sort().reverse();
@@ -2791,16 +2804,16 @@ function UtilityManager({ tenants, utilityBills, payments, onAddBill, onMarkUtil
                         </div>
                     </div>
 
-                    <div className="space-y-4">
+                     <div className="space-y-4">
                         {Array.isArray(tenants) && tenants.map((t, idx) => {
-                            const billsInMonth = (Array.isArray(utilityBills) ? utilityBills.filter(b => b && typeof b.date === 'string' && b.date.startsWith(effectiveMonth)) : []);
+                            const billsInMonth = (Array.isArray(utilityBills) ? utilityBills.filter(b => b && extractYearMonth(b.date) === effectiveMonth) : []);
                             const breakdowns = billsInMonth.reduce((acc, bill) => {
-                                const alloc = bill.allocations.find(a => a.tenantId === t.id);
+                                const alloc = bill.allocations?.find(a => a.tenantId === t.id);
                                 if (alloc && alloc.amount > 0) acc.push({ type: bill.type, amount: alloc.amount });
                                 return acc;
                             }, []);
                             const totalOwed = breakdowns.reduce((sum, item) => sum + item.amount, 0);
-                            const isPaid = Array.isArray(payments) && payments.some(p => p.tenantId === t.id && p.type === 'Utility' && p.date && typeof p.date === 'string' && p.date.substring(0, 7) === effectiveMonth);
+                            const isPaid = Array.isArray(payments) && payments.some(p => p.tenantId === t.id && p.type === 'Utility' && extractYearMonth(p.date) === effectiveMonth);
 
                             return (
                                 <Motion.div
