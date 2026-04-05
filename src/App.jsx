@@ -3428,67 +3428,54 @@ function UnitCard({ unit, tenant, currency = 'USD', history, onUpdateFittings, o
             layout
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className={`premium-card rounded-[2rem] md:rounded-[2.5rem] overflow-hidden group flex flex-col h-full bg-slate-900 shadow-2xl shadow-black/50 border transition-colors duration-500 ${
-                leaseStatus?.pulse ? 'border-red-500/30' : 'border-white/5'
-            }`}
+            className={`premium-card rounded-[2rem] overflow-hidden group flex flex-col h-full shadow-2xl shadow-black/50 border transition-all duration-500 ${isOccupied ? 'bg-gradient-to-b from-slate-900 to-slate-950 border-white/8' : 'bg-slate-900 border-white/5'} ${leaseStatus?.pulse ? 'border-red-500/30' : ''}`}
         >
-            <div className={`h-24 md:h-28 relative flex items-center justify-center overflow-hidden bg-slate-950/40 border-b border-white/5`}>
-                <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(79,70,229,0.05),transparent_70%)]" />
-                
-                {/* Floating Badges */}
-                <div className="absolute top-4 left-4 flex flex-col gap-2 z-20">
-                    {!isOccupied && (
-                        <button 
-                            onClick={(e) => { e.stopPropagation(); onDeleteUnit(unit.id); }}
-                            className="p-2.5 bg-red-900/20 backdrop-blur-xl border border-red-500/20 rounded-2xl text-red-400 hover:bg-red-600 hover:text-white transition-all hover:scale-110"
-                            title="Decommission Unit"
-                        >
-                            <Trash2 className="w-4 h-4" />
-                        </button>
-                    )}
-                    {isOccupied && (
-                        <div className={`px-4 py-2 rounded-2xl text-[9px] font-black uppercase tracking-tight flex items-center gap-2 border backdrop-blur-xl shadow-xl ${
-                            yieldGap >= 0 ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' : 
-                            'bg-amber-500/20 text-amber-400 border-amber-500/30'
-                        }`}>
-                            <TrendingUp className="w-3.5 h-3.5" />
-                            {yieldGap >= 0 ? `+${yieldGap} Yield` : `${yieldGap} Below Mkt`}
-                        </div>
-                    )}
-                    {vacancyDays > 0 && (
-                        <div className="px-4 py-2 rounded-2xl text-[9px] font-black uppercase tracking-tight flex items-center gap-2 border bg-red-500/20 text-red-400 border-red-500/30 backdrop-blur-xl shadow-xl">
-                            <AlertCircle className="w-3.5 h-3.5 animate-pulse" />
-                            -{vacancyDays}d / ${Math.round(lostRevenue)} Loss
-                        </div>
+            {/* Compact Top Bar — status + metric in one line */}
+            <div className={`flex items-center justify-between px-5 py-3 border-b ${isOccupied ? 'border-white/5 bg-slate-950/50' : 'border-emerald-500/10 bg-emerald-950/20'}`}>
+                <div className="flex items-center gap-2">
+                    <div className={`w-2 h-2 rounded-full ${isOccupied ? 'bg-indigo-500' : 'bg-emerald-400 animate-pulse'}`} />
+                    <span className={`text-[9px] font-black uppercase tracking-[0.2em] ${isOccupied ? 'text-indigo-400' : 'text-emerald-400'}`}>
+                        {isOccupied ? 'Occupied' : 'Available'}
+                    </span>
+                    {leaseStatus && (
+                        <span className={`px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-tight ${leaseStatus.color}`}>
+                            {leaseStatus.label}
+                        </span>
                     )}
                 </div>
-
-                <div className="absolute top-4 right-4 flex flex-col items-end gap-2 z-20">
-                    <div className={`px-4 py-2 rounded-2xl text-[10px] font-black uppercase tracking-widest border backdrop-blur-xl shadow-2xl ${
-                        !isOccupied 
-                        ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30 glow-emerald' 
-                        : 'bg-indigo-600/30 text-indigo-400 border-indigo-500/30 glow-indigo'
-                    }`}>
-                        {isOccupied ? 'Occupied' : 'Available'}
-                    </div>
+                <div className="flex items-center gap-2">
+                    {isOccupied && yieldGap !== 0 && (
+                        <span className={`text-[9px] font-black uppercase tracking-tight flex items-center gap-1 ${yieldGap >= 0 ? 'text-emerald-400' : 'text-amber-400'}`}>
+                            <TrendingUp className="w-3 h-3" />
+                            {yieldGap >= 0 ? `+${yieldGap}` : yieldGap}
+                        </span>
+                    )}
+                    {vacancyDays > 0 && (
+                        <span className="text-[9px] font-black text-red-400 uppercase tracking-tight flex items-center gap-1">
+                            <AlertCircle className="w-3 h-3 animate-pulse" />
+                            -{vacancyDays}d
+                        </span>
+                    )}
+                    {!isOccupied && (
+                        <button onClick={(e) => { e.stopPropagation(); onDeleteUnit(unit.id); }} className="p-1.5 bg-red-900/20 border border-red-500/20 rounded-lg text-red-500 hover:bg-red-600 hover:text-white transition-all hover:scale-110" title="Decommission Unit">
+                            <Trash2 className="w-3 h-3" />
+                        </button>
+                    )}
                 </div>
             </div>
 
-            <div className="p-5 md:p-6 flex-1 flex flex-col relative">
-                <div className="flex justify-between items-start mb-6">
+            <div className="p-5 flex-1 flex flex-col relative">
+                {/* Unit Title Row */}
+                <div className="flex justify-between items-start mb-4">
                     <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-3">
-                            <h4 className="text-xl md:text-2xl font-black text-white tracking-tighter italic truncate">Unit {unit.unitNumber}</h4>
-                            <button 
-                                onClick={(e) => { e.stopPropagation(); onEditUnit(); }}
-                                className="p-2 bg-slate-800/50 hover:bg-slate-700/80 border border-white/10 rounded-xl text-slate-500 hover:text-indigo-400 transition-all active:scale-95 shrink-0"
-                                title="Edit Unit Details"
-                            >
-                                <Settings className="w-3.5 h-3.5" />
+                        <div className="flex items-center gap-2">
+                            <h4 className="text-lg font-black text-white tracking-tight italic truncate">Unit {unit.unitNumber}</h4>
+                            <button onClick={(e) => { e.stopPropagation(); onEditUnit(); }} className="p-1.5 bg-slate-800/50 hover:bg-slate-700/80 border border-white/10 rounded-lg text-slate-600 hover:text-indigo-400 transition-all active:scale-95 shrink-0" title="Edit Unit Details">
+                                <Settings className="w-3 h-3" />
                             </button>
                         </div>
-                        <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest flex items-center gap-1.5 mt-1.5 opacity-60">
-                            <Maximize className="w-3.5 h-3.5" /> {unit.size} SQFT Space
+                        <p className="text-[9px] text-slate-600 font-bold uppercase tracking-widest flex items-center gap-1 mt-0.5">
+                            <Maximize className="w-3 h-3" /> {unit.size} sqft
                         </p>
                     </div>
                 </div>
