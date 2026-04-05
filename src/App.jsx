@@ -150,18 +150,20 @@ const getLocalDate = () => {
 };
 
 const resolvePhotoUrl = (url) => {
-    if (!url || typeof url !== 'string' || !url.startsWith('http')) return url;
-    if (url.includes('drive.google.com')) {
+    if (!url || typeof url !== 'string') return '';
+    const cleanUrl = url.trim().replace(/^["']|["']$/g, '');
+    if (!cleanUrl.startsWith('http')) return cleanUrl; 
+    
+    if (cleanUrl.includes('drive.google.com')) {
         let id = '';
-        if (url.includes('id=')) {
-            id = url.split('id=')[1].split('&')[0];
-        } else if (url.includes('/d/')) {
-            id = url.split('/d/')[1].split('/')[0];
+        if (cleanUrl.includes('id=')) {
+            id = cleanUrl.split('id=')[1].split('&')[0];
+        } else if (cleanUrl.includes('/d/')) {
+            id = cleanUrl.split('/d/')[1].split('/')[0];
         }
-        // Use the high-res thumbnail endpoint which is more reliable for direct embedding
         if (id) return `https://drive.google.com/thumbnail?id=${id}&sz=w1200`;
     }
-    return url;
+    return cleanUrl;
 };
 
 // Standardised date formatter -?dd-MMM-yyyy (e.g. 19-Mar-2026)
@@ -585,7 +587,7 @@ function App() {
 
                 // Robustly Extract Collections (Keys are now lowercased & trimmed from GAS)
                 const keyMap={'unitnumber':'unitNumber','expectedrent':'expectedRent','propertyname':'propertyName','baserent':'baseRent','leasestart':'leaseStart','leaseend':'leaseEnd','leasedocument':'leaseDocument','utilityshare':'utilityShare','depositrefunded':'depositRefunded','depositdeducted':'depositDeducted','moveoutdate':'moveOutDate','lastpaymentdate':'lastPaymentDate','scheduledate':'scheduleDate','tenantid':'tenantId','photourl':'photoUrl','handledby':'handledBy','duedate':'dueDate','maintenanceselection':'maintenanceSelection','vacantsince':'vacantSince','lastupdated':'lastUpdated','image':'image','status':'status','size':'size','fittings':'fittings'};
-                const normalize=(arr)=>arr.map(item=>{const obj={...item};for(const key of Object.keys(item)){const lk=key.toLowerCase();if(keyMap[lk]&&key!==keyMap[lk]){obj[keyMap[lk]]=obj[key];delete obj[key];}}if(obj.propertyname&&!obj.propertyName){obj.propertyName=String(obj.propertyname);delete obj.propertyname;}return obj;});
+                const normalize=(arr)=>arr.map(item=>{const obj={...item};for(const key of Object.keys(item)){const lk=key.toLowerCase();if(lk==='image')obj.image=item[key];if(lk==='status')obj.status=item[key];if(lk==='size')obj.size=item[key];if(lk==='unitnumber')obj.unitNumber=item[key];if(keyMap[lk]&&key!==keyMap[lk]){obj[keyMap[lk]]=obj[key];delete obj[key];}}if(obj.propertyname&&!obj.propertyName){obj.propertyName=String(obj.propertyname);delete obj.propertyname;}return obj;});
                 const rawUnits = normalize(findCollection(data, 'units'));
                 const rawTenants = normalize(findCollection(data, 'tenants'));
                 const rawBills = normalize(findCollection(data, 'bills'));
@@ -3157,8 +3159,9 @@ function InventoryModal({ unit, onClose, onSave }) {
 
 function UnitCard({ unit, tenant, currency = 'USD', history, onUpdateFittings, onEditUnit, onDeleteUnit, onAddLease, onEditLease, onUpdateLeaseDoc, onMoveOut, onViewGallery }) {
     const images = useMemo(() => {
-        if (!unit.image) return [];
-        const raw = String(unit.image).trim();
+        const rawImage = unit.image || unit.IMAGE || unit.Image;
+        if (!rawImage) return [];
+        const raw = String(rawImage).trim();
         
         // 1. Precise JSON Recovery
         try {
@@ -3514,12 +3517,14 @@ function UnitCard({ unit, tenant, currency = 'USD', history, onUpdateFittings, o
 
 function UnitModal({ initialData, onSubmit, onClose }) {
     const parseInitialImages = () => {
-        if (!initialData?.image) return [];
+        const rawImage = initialData?.image || initialData?.IMAGE || initialData?.Image;
+        if (!rawImage) return [];
+        const raw = String(rawImage).trim();
         try {
-            const parsed = JSON.parse(initialData.image);
-            return Array.isArray(parsed) ? parsed : [String(initialData.image)];
+            const parsed = JSON.parse(raw);
+            return Array.isArray(parsed) ? parsed : [raw];
         } catch (e) {
-            return [String(initialData.image)];
+            return [raw];
         }
     };
 
