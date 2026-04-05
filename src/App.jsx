@@ -2545,9 +2545,13 @@ function UtilityManager({ tenants, utilityBills, payments, onAddBill, onMarkUtil
     const [confirmUtilityTenant, setConfirmUtilityTenant] = useState(null); // { tenant, totalOwed, breakdowns }
 
     const uniqueMonths = useMemo(() => {
-        if (!Array.isArray(utilityBills)) return [new Date().toISOString().substring(0, 7)];
-        const months = Array.from(new Set(utilityBills.filter(b => b && typeof b.date === 'string').map(b => b.date.substring(0, 7)))).sort().reverse();
-        return months.length > 0 ? months : [new Date().toISOString().substring(0, 7)];
+        const currentMonth = new Date().toISOString().substring(0, 7);
+        let months = [currentMonth];
+        if (Array.isArray(utilityBills)) {
+            const billMonths = utilityBills.filter(b => b && typeof b.date === 'string').map(b => b.date.substring(0, 7));
+            months = Array.from(new Set([...months, ...billMonths]));
+        }
+        return months.sort().reverse();
     }, [utilityBills]);
 
     const [selectedMonth, setSelectedMonth] = useState(uniqueMonths[0]);
