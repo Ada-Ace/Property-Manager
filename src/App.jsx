@@ -3495,14 +3495,26 @@ function UnitModal({ initialData, onSubmit, onClose }) {
                         
                         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                             {images.map((url, idx) => (
-                                <div key={idx} className="relative group aspect-square rounded-[1.5rem] overflow-hidden border border-white/10 bg-slate-800">
-                                    <img src={url} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                                <div key={idx} className="relative group aspect-square rounded-[1.5rem] overflow-hidden border border-white/10 bg-slate-800 flex items-center justify-center">
+                                    <img 
+                                        src={url} 
+                                        alt="" 
+                                        className="w-full h-full object-cover group-hover:scale-105 transition-transform" 
+                                        onError={(e) => {
+                                            e.target.style.display = 'none';
+                                            e.target.nextSibling.style.display = 'flex';
+                                        }}
+                                    />
+                                    <div className="hidden flex-col items-center gap-2 text-slate-700">
+                                        <AlertCircle className="w-10 h-10 opacity-20" />
+                                        <span className="text-[8px] font-black uppercase">Source Missing</span>
+                                    </div>
                                     <button 
                                         type="button"
                                         onClick={() => removeImage(idx)}
-                                        className="absolute top-2 right-2 p-1.5 bg-red-600/80 text-white rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                                        className="absolute top-2 right-2 p-2 bg-red-600/90 text-white rounded-xl opacity-0 group-hover:opacity-100 transition-all shadow-xl shadow-red-900/40 z-20"
                                     >
-                                        <Trash2 className="w-3.5 h-3.5" />
+                                        <Trash2 className="w-4 h-4" />
                                     </button>
                                 </div>
                             ))}
