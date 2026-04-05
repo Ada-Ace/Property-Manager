@@ -1734,15 +1734,16 @@ function ManagerDashboard({ activeProperty, tenants, payments, propertyUnits, ut
                         initial={{ opacity: 0, scale: 0.9, y: 30 }}
                         animate={{ opacity: 1, scale: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.9, y: 30 }}
-                        className="bg-slate-900 border border-white/10 w-full max-w-4xl rounded-[3rem] md:rounded-[4rem] p-8 md:p-12 shadow-[0_0_100px_rgba(0,0,0,0.8)] relative overflow-hidden"
+                        className="bg-slate-900 border border-white/10 w-full max-w-4xl rounded-[3rem] md:rounded-[4rem] shadow-[0_0_100px_rgba(0,0,0,0.8)] relative"
                     >
-                        <div className="flex justify-between items-center mb-12 shrink-0">
+                        {/* Header */}
+                        <div className="flex justify-between items-center px-8 md:px-12 pt-8 md:pt-12 pb-8">
                             <div className="space-y-1">
-                                <h3 className="text-3xl md:text-4xl font-black text-white italic flex items-center gap-4 tracking-tighter uppercase grayscale hover:grayscale-0 transition-all cursor-default">
+                                <h3 className="text-3xl md:text-4xl font-black text-white italic flex items-center gap-4 tracking-tighter uppercase">
                                     <Camera className="w-8 h-8 text-indigo-500" />
                                     Visual catalog
                                 </h3>
-                                <p className="text-[10px] text-slate-500 font-black uppercase tracking-[0.3em] ml-1 opacity-60">Asset Inventory Check</p>
+                                <p className="text-[10px] text-slate-500 font-black uppercase tracking-[0.3em] ml-1 opacity-60">Asset Inventory Check · {viewingPhotos.length} items</p>
                             </div>
                             <Motion.button 
                                 whileHover={{ rotate: 90, scale: 1.1 }}
@@ -1754,25 +1755,38 @@ function ManagerDashboard({ activeProperty, tenants, payments, propertyUnits, ut
                             </Motion.button>
                         </div>
 
-                        <div className="flex flex-nowrap gap-8 overflow-x-auto pb-10 no-scrollbar snap-x snap-mandatory px-2 items-center">
+                        {/* Scrollable Gallery — lives outside padded area to use full width */}
+                        <div 
+                            className="flex overflow-x-auto snap-x snap-mandatory gap-4 pb-4 px-8 md:px-12"
+                            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none', WebkitOverflowScrolling: 'touch' }}
+                        >
                             {viewingPhotos.map((url, i) => (
-                                <div key={i} className="shrink-0 w-[85vw] md:w-[620px] aspect-video bg-slate-950 rounded-[2.5rem] border border-white/10 overflow-hidden snap-center relative group shadow-2xl">
-                                    <img src={toDirectImageUrl(url)} alt="" className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105" />
-                                    <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent pointer-events-none" />
-                                    <div className="absolute bottom-8 left-8 flex items-center gap-4">
-                                        <div className="bg-indigo-600/90 backdrop-blur-xl px-5 py-2.5 rounded-2xl border border-white/10 shadow-2xl flex items-center gap-3">
-                                            <div className="w-2 h-2 rounded-full bg-white animate-pulse" />
-                                            <p className="text-[11px] font-black text-white tracking-widest uppercase italic font-mono-data">Asset Point {i + 1}</p>
+                                <div 
+                                    key={i} 
+                                    className="shrink-0 snap-center rounded-[2rem] overflow-hidden bg-slate-950 border border-white/10 relative group shadow-2xl"
+                                    style={{ width: 'min(75vw, 560px)', aspectRatio: '16/10' }}
+                                >
+                                    <img 
+                                        src={toDirectImageUrl(url)} 
+                                        alt="" 
+                                        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" 
+                                    />
+                                    <div className="absolute inset-0 bg-gradient-to-t from-slate-950/70 via-transparent to-transparent pointer-events-none" />
+                                    <div className="absolute bottom-6 left-6">
+                                        <div className="bg-indigo-600/90 backdrop-blur-xl px-4 py-2 rounded-xl border border-white/10 shadow-xl flex items-center gap-2.5">
+                                            <div className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+                                            <p className="text-[10px] font-black text-white tracking-widest uppercase font-mono-data">Point {i + 1} / {viewingPhotos.length}</p>
                                         </div>
                                     </div>
                                 </div>
                             ))}
                         </div>
-                        
-                        <div className="flex justify-center gap-2 mt-2">
-                             {viewingPhotos.map((_, i) => (
-                                <div key={i} className="w-1 h-1 rounded-full bg-slate-800" />
-                             ))}
+
+                        {/* Dot Indicators */}
+                        <div className="flex justify-center gap-2 py-6">
+                            {viewingPhotos.map((_, i) => (
+                                <div key={i} className="w-1.5 h-1.5 rounded-full bg-indigo-600/50" />
+                            ))}
                         </div>
                     </Motion.div>
                 </div>
