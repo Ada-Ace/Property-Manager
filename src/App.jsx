@@ -158,6 +158,18 @@ const generateId = (prefix) => {
     return `${prefix}-${result}`;
 };
 
+// --- Drive URL Converter: Converts share links to embeddable direct image URLs ---
+const toDirectImageUrl = (url) => {
+    if (!url || typeof url !== 'string') return '';
+    const trimmed = url.trim();
+    if (trimmed.includes('lh3.googleusercontent.com')) return trimmed;
+    const fileMatch = trimmed.match(/\/d\/([a-zA-Z0-9_-]+)/);
+    if (fileMatch) return `https://lh3.googleusercontent.com/d/${fileMatch[1]}`;
+    const idMatch = trimmed.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+    if (idMatch) return `https://lh3.googleusercontent.com/d/${idMatch[1]}`;
+    return trimmed;
+};
+
 // Standardised date formatter -?dd-MMM-yyyy (e.g. 19-Mar-2026)
 const MONTHS_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
@@ -1745,7 +1757,7 @@ function ManagerDashboard({ activeProperty, tenants, payments, propertyUnits, ut
                         <div className="flex flex-nowrap gap-8 overflow-x-auto pb-10 no-scrollbar snap-x snap-mandatory px-2 items-center">
                             {viewingPhotos.map((url, i) => (
                                 <div key={i} className="shrink-0 w-[85vw] md:w-[620px] aspect-video bg-slate-950 rounded-[2.5rem] border border-white/10 overflow-hidden snap-center relative group shadow-2xl">
-                                    <img src={url} alt="" className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105" />
+                                    <img src={toDirectImageUrl(url)} alt="" className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105" />
                                     <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent pointer-events-none" />
                                     <div className="absolute bottom-8 left-8 flex items-center gap-4">
                                         <div className="bg-indigo-600/90 backdrop-blur-xl px-5 py-2.5 rounded-2xl border border-white/10 shadow-2xl flex items-center gap-3">
@@ -3731,7 +3743,7 @@ function UnitModal({ initialData, onSubmit, onClose }) {
                                                 <ImageIcon className="w-6 h-6 text-indigo-400" />
                                             </div>
                                             <img 
-                                                src={url} 
+                                                src={toDirectImageUrl(url)} 
                                                 alt="" 
                                                 className="w-full h-full object-cover cursor-pointer hover:scale-110 transition-transform relative z-10"
                                                 onClick={() => window.open(url, '_blank')}
