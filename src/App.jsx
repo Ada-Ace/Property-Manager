@@ -875,7 +875,7 @@ function App() {
         }
     };
 
-    const handleMarkUtilityPaid = async (tenantId, amount) => {
+    const handleMarkUtilityPaid = async (tenantId, amount, billingCycle) => {
         setProcessingMessage('PROCESSING_UTILITY_PAYMENT');
         try {
             const tenant = tenants.find(t => t.id === tenantId);
@@ -885,7 +885,7 @@ function App() {
                     id: generateId('UTL'),
                     tenantId: tenant.id,
                     amount: amount,
-                    date: new Date().toISOString(),
+                    date: billingCycle ? (billingCycle + '-01T12:00:00.000Z') : new Date().toISOString(),
                     propertyName: activeProperty,
                     confirmedBy: activeManager?.name || 'Admin',
                     type: 'Utility'
@@ -896,8 +896,6 @@ function App() {
                 await API.saveToSheet('UPDATE', 'Tenants', updatedTenant);
                 await API.saveToSheet('ADD', 'Payments', newPayment);
                 setTimeout(() => setGlobalMessage(null), 3000);
-                const msg = encodeURIComponent(`Hi ${tenant.name.split(' ')[0]},\n\nYour utility payment of ${activeCurrency} ${amount} has been received and verified. Thank you!\n\nBest regards,\nProperty Management`);
-                window.open(`https://wa.me/${String(tenant.mobile || '').replace(/\D/g, '')}?text=${msg}`, '_blank');
             }
         } finally {
             setProcessingMessage(null);
@@ -2830,7 +2828,8 @@ function UtilityManager({ tenants, utilityBills, payments, onAddBill, onMarkUtil
                                                         tenant: t, 
                                                         totalOwed, 
                                                         breakdowns,
-                                                        period: new Date(effectiveMonth + '-01').toLocaleString('default', { month: 'long', year: 'numeric' })
+                                                        period: new Date(effectiveMonth + '-01').toLocaleString('default', { month: 'long', year: 'numeric' }),
+                                                        effectiveMonth
                                                     })}
                                                     className="flex items-center gap-2 px-5 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all bg-indigo-600/20 hover:bg-indigo-600 text-indigo-400 hover:text-white border border-indigo-500/30 glow-indigo"
                                                 >
@@ -2953,7 +2952,7 @@ function UtilityManager({ tenants, utilityBills, payments, onAddBill, onMarkUtil
                                 </button>
                                 <button
                                     onClick={async () => {
-                                        await onMarkUtilityPaid(confirmUtilityTenant.tenant.id, confirmUtilityTenant.totalOwed);
+                                        await onMarkUtilityPaid(confirmUtilityTenant.tenant.id, confirmUtilityTenant.totalOwed, confirmUtilityTenant.effectiveMonth);
                                         setConfirmUtilityTenant(null);
                                     }}
                                     className="flex-[2] py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-black rounded-xl shadow-xl shadow-indigo-600/20 transition-all uppercase tracking-widest text-[9px] flex items-center justify-center gap-2 glow-indigo"
