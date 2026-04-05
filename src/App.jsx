@@ -1482,6 +1482,7 @@ function MobileBottomNav({ activeTab, setActiveTab, tenantMessages, onLogout }) 
 
 function ManagerDashboard({ activeProperty, tenants, payments, propertyUnits, utilityBills, tasks, vendors, tenantMessages, currency = 'USD', onAddUnit, onEditUnit, onDeleteUnit, onAddTenant, onEditTenant, onUpdateFittings, onAddBill, onAddTask, onAddVendor, onEditVendor, onDeleteVendor, onMarkPaid, onUpdateLeaseDoc, onMoveOut, onUpdateMessage, activeManager, activeTab: externalActiveTab, setActiveTab: setExternalActiveTab }) {
     const [internalActiveTab, setInternalActiveTab] = useState('rents');
+    const [editingCredentials, setEditingCredentials] = useState(null);
     const activeTab = externalActiveTab || internalActiveTab;
     const setActiveTab = setExternalActiveTab || setInternalActiveTab;
     const [showLeaseModal, setShowLeaseModal] = useState(false);
@@ -1601,6 +1602,7 @@ function ManagerDashboard({ activeProperty, tenants, payments, propertyUnits, ut
                                         onDeleteUnit={() => onDeleteUnit(unit.id)}
                                         onAddLease={() => { setEditingTenant(null); setSelectedUnitForLease(unit); setShowLeaseModal(true); }}
                                         onEditLease={() => { setEditingTenant(tenant); setSelectedUnitForLease(unit); setShowLeaseModal(true); }}
+                                        onEditCredentials={() => setEditingCredentials(tenant)}
                                         onUpdateLeaseDoc={onUpdateLeaseDoc}
                                         onMoveOut={() => setOffboardingSession({ unit, tenant })}
                                     />
@@ -1647,6 +1649,16 @@ function ManagerDashboard({ activeProperty, tenants, payments, propertyUnits, ut
                         onMoveOut(offboardingSession.unit, offboardingSession.tenant, data);
                         setOffboardingSession(null);
                     }}
+                />
+            )}
+            {editingCredentials && (
+                <CredentialModal 
+                    tenant={editingCredentials} 
+                    onClose={() => setEditingCredentials(null)} 
+                    onSubmit={async (data) => { 
+                        await onEditTenant(data); 
+                        setEditingCredentials(null); 
+                    }} 
                 />
             )}
             {showLeaseModal && (
@@ -3201,7 +3213,7 @@ function InventoryModal({ unit, onClose, onSave }) {
     );
 }
 
-function UnitCard({ unit, tenant, currency = 'USD', history, onUpdateFittings, onEditUnit, onDeleteUnit, onAddLease, onEditLease, onUpdateLeaseDoc, onMoveOut }) {
+function UnitCard({ unit, tenant, currency = 'USD', history, onUpdateFittings, onEditUnit, onDeleteUnit, onAddLease, onEditLease, onEditCredentials, onUpdateLeaseDoc, onMoveOut }) {
     const tenantName = tenant?.name;
     const actualRent = tenant?.baseRent;
     const isOccupied = unit.status === 'Occupied' && !!tenant;
@@ -3312,8 +3324,14 @@ function UnitCard({ unit, tenant, currency = 'USD', history, onUpdateFittings, o
                             {isOccupied ? (
                                 <div className="flex flex-col gap-5 pt-2">
                                     <div className="grid grid-cols-2 gap-3">
-                                        <div className="bg-slate-950/40 p-4 rounded-2xl border border-white/5 space-y-1.5">
-                                            <p className="text-[8px] font-black text-slate-600 uppercase tracking-widest">Resident</p>
+                                        <div 
+                                            onClick={(e) => { e.stopPropagation(); onEditCredentials(); }}
+                                            className="bg-slate-950/40 p-4 rounded-2xl border border-white/5 space-y-1.5 cursor-pointer hover:bg-white/[0.02] hover:border-indigo-500/30 transition-all active:scale-95 group"
+                                        >
+                                            <p className="text-[8px] font-black text-slate-600 uppercase tracking-widest flex justify-between items-center">
+                                                Resident
+                                                <Settings className="w-2 h-2 opacity-0 group-hover:opacity-100" />
+                                            </p>
                                             <p className="text-white font-black text-sm truncate uppercase tracking-tight">{tenantName}</p>
                                             <div className="flex items-center gap-1.5 mt-2 opacity-50">
                                                 <Phone className="w-2.5 h-2.5" />
@@ -3559,6 +3577,64 @@ function UnitModal({ initialData, onSubmit, onClose }) {
                         </Motion.button>
                     </div>
                 </form>
+            </Motion.div>
+        </div>
+    );
+}
+
+function CredentialModal({ tenant, onClose, onSubmit }) {
+    const [form, setForm] = useState({ mobile: tenant?.mobile || '', password: tenant?.password || '' });
+    if (!tenant) return null;
+
+    return (
+        <div className="fixed inset-0 z-[160] flex items-end md:items-center justify-center bg-slate-950/90 backdrop-blur-md overflow-hidden">
+            <Motion.div 
+                initial={{ y: "100%" }}
+                animate={{ y: 0 }}
+                exit={{ y: "100%" }}
+                transition={{ type: "spring", damping: 25, stiffness: 200 }}
+                className="bg-slate-900 border-t md:border border-white/10 w-full max-w-md rounded-t-[2.5rem] md:rounded-[3rem] p-8 md:p-10 shadow-2xl relative"
+            >
+                <div className="flex justify-between items-center mb-8">
+                    <div>
+                        <h2 className="text-xl font-black text-white italic flex items-center gap-3">
+                            <Shield className="w-6 h-6 text-indigo-500" />
+                            Access Credentials
+                        </h2>
+                        <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest mt-1 ml-1">Resident Identity Update</p>
+                    </div>
+                    <button onClick={onClose} className="p-2 text-slate-500 hover:text-white transition-colors"><X className="w-5 h-5" /></button>
+                </div>
+
+                <div className="space-y-6">
+                    <div className="space-y-2">
+                        <label className="text-[10px] text-slate-500 font-black uppercase tracking-widest ml-1">WhatsApp Number</label>
+                        <input 
+                            required 
+                            type="tel" 
+                            className="w-full bg-slate-800/50 border border-white/5 focus:border-indigo-500/50 rounded-2xl p-4 text-white text-base font-bold outline-none transition-all" 
+                            value={form.mobile} 
+                            onChange={e => setForm({ ...form, mobile: e.target.value })} 
+                        />
+                    </div>
+                    <div className="space-y-2">
+                        <label className="text-[10px] text-slate-500 font-black uppercase tracking-widest ml-1">Resident Portal Password</label>
+                        <input 
+                            required 
+                            type="text" 
+                            className="w-full bg-slate-800/50 border border-white/5 focus:border-indigo-500/50 rounded-2xl p-4 text-white text-base font-bold outline-none transition-all" 
+                            value={form.password} 
+                            onChange={e => setForm({ ...form, password: e.target.value })} 
+                        />
+                    </div>
+                </div>
+
+                <button 
+                    onClick={() => onSubmit({ ...tenant, ...form })}
+                    className="w-full mt-10 py-5 bg-indigo-600 hover:bg-indigo-500 text-white font-black rounded-2xl uppercase tracking-[0.2em] text-[10px] transition-all shadow-xl shadow-indigo-600/20"
+                >
+                    Apply New Credentials
+                </button>
             </Motion.div>
         </div>
     );
