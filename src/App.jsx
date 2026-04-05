@@ -3233,7 +3233,7 @@ function UnitCard({ unit, tenant, currency = 'USD', history, onUpdateFittings, o
         if (diffDays < 0) return { label: 'Expired', color: 'bg-red-600 text-white shadow-red-500/50', icon: AlertCircle, pulse: true };
         if (diffDays <= 30) return { label: 'Urgent: Renew Now', color: 'bg-red-500 text-white shadow-red-500/20', icon: Clock, pulse: true };
         if (diffDays <= 60) return { label: 'Action Required: Renew Soon', color: 'bg-amber-500 text-white shadow-amber-500/20', icon: Calendar, pulse: false };
-        return { label: 'Tenure Secure', color: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20', icon: CheckCircle2, pulse: false };
+        return null; // Compact: Removed 'Tenure Secure' label as requested
     };
     const leaseStatus = getLeaseStatus();
 
@@ -3248,18 +3248,11 @@ function UnitCard({ unit, tenant, currency = 'USD', history, onUpdateFittings, o
                 leaseStatus?.pulse ? 'border-red-500/30' : 'border-white/5'
             }`}
         >
-            <div className={`h-32 md:h-36 relative flex items-center justify-center overflow-hidden bg-slate-950/40 border-b border-white/5`}>
+            <div className={`h-24 md:h-28 relative flex items-center justify-center overflow-hidden bg-slate-950/40 border-b border-white/5`}>
                 <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(79,70,229,0.05),transparent_70%)]" />
                 
-                {/* Quick Actions (Floating) */}
-                <div className="absolute top-6 left-6 flex flex-col gap-2 z-20">
-                    <button 
-                        onClick={(e) => { e.stopPropagation(); onEditUnit(); }}
-                        className="p-2.5 bg-slate-900/60 backdrop-blur-xl border border-white/5 rounded-2xl text-slate-400 hover:text-white hover:border-indigo-500/50 transition-all hover:scale-110"
-                        title="Edit Unit Details"
-                    >
-                        <Settings className="w-4 h-4" />
-                    </button>
+                {/* Floating Badges */}
+                <div className="absolute top-4 left-4 flex flex-col gap-2 z-20">
                     {!isOccupied && (
                         <button 
                             onClick={(e) => { e.stopPropagation(); onDeleteUnit(unit.id); }}
@@ -3286,8 +3279,7 @@ function UnitCard({ unit, tenant, currency = 'USD', history, onUpdateFittings, o
                     )}
                 </div>
 
-                {/* Status Badges */}
-                <div className="absolute top-6 right-6 flex flex-col items-end gap-2 z-20">
+                <div className="absolute top-4 right-4 flex flex-col items-end gap-2 z-20">
                     <div className={`px-4 py-2 rounded-2xl text-[10px] font-black uppercase tracking-widest border backdrop-blur-xl shadow-2xl ${
                         !isOccupied 
                         ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30 glow-emerald' 
@@ -3295,21 +3287,24 @@ function UnitCard({ unit, tenant, currency = 'USD', history, onUpdateFittings, o
                     }`}>
                         {isOccupied ? 'Occupied' : 'Available'}
                     </div>
-                    {leaseStatus && (
-                        <div className={`px-4 py-2 rounded-2xl text-[9px] font-black uppercase tracking-tight flex items-center gap-2 border border-white/10 backdrop-blur-xl shadow-xl animate-in fade-in slide-in-from-right-4 transition-all ${leaseStatus.color} ${leaseStatus.pulse ? 'animate-pulse' : ''}`}>
-                            <leaseStatus.icon className="w-3 h-3" />
-                            {leaseStatus.label}
-                        </div>
-                    )}
                 </div>
             </div>
 
-            <div className="p-6 md:p-8 flex-1 flex flex-col relative">
-                <div className="flex justify-between items-start mb-8">
-                    <div>
-                        <h4 className="text-xl md:text-2xl font-black text-white tracking-tighter italic">Unit {unit.unitNumber}</h4>
-                        <p className="text-xs text-slate-500 font-black uppercase tracking-widest flex items-center gap-2 mt-2 opacity-60">
-                            <Maximize className="w-4 h-4" /> {unit.size} SQFT Space
+            <div className="p-5 md:p-6 flex-1 flex flex-col relative">
+                <div className="flex justify-between items-start mb-6">
+                    <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-3">
+                            <h4 className="text-xl md:text-2xl font-black text-white tracking-tighter italic truncate">Unit {unit.unitNumber}</h4>
+                            <button 
+                                onClick={(e) => { e.stopPropagation(); onEditUnit(); }}
+                                className="p-2 bg-slate-800/50 hover:bg-slate-700/80 border border-white/10 rounded-xl text-slate-500 hover:text-indigo-400 transition-all active:scale-95 shrink-0"
+                                title="Edit Unit Details"
+                            >
+                                <Settings className="w-3.5 h-3.5" />
+                            </button>
+                        </div>
+                        <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest flex items-center gap-1.5 mt-1.5 opacity-60">
+                            <Maximize className="w-3.5 h-3.5" /> {unit.size} SQFT Space
                         </p>
                     </div>
                 </div>
@@ -3317,31 +3312,33 @@ function UnitCard({ unit, tenant, currency = 'USD', history, onUpdateFittings, o
                 <div className="flex-1 min-h-[160px]">
                     <AnimatePresence mode="wait">
                         <Motion.div
+                            key={isOccupied ? 'occupied' : 'vacant'}
                             initial={{ opacity: 0, y: 10 }}
                             animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -10 }}
                             className="h-full"
                         >
                             {isOccupied ? (
-                                <div className="flex flex-col gap-5 pt-2">
+                                <div className="flex flex-col gap-4 pt-1">
                                     <div className="grid grid-cols-2 gap-3">
                                         <div 
                                             onClick={(e) => { e.stopPropagation(); onEditCredentials(); }}
-                                            className="bg-slate-950/40 p-4 rounded-2xl border border-white/5 space-y-1.5 cursor-pointer hover:bg-white/[0.02] hover:border-indigo-500/30 transition-all active:scale-95 group"
+                                            className="bg-slate-950/40 p-3.5 rounded-2xl border border-white/5 space-y-1 cursor-pointer hover:bg-white/[0.02] hover:border-indigo-500/30 transition-all active:scale-95 group"
                                         >
                                             <p className="text-[8px] font-black text-slate-600 uppercase tracking-widest flex justify-between items-center">
                                                 Resident
                                                 <Settings className="w-2 h-2 opacity-0 group-hover:opacity-100" />
                                             </p>
                                             <p className="text-white font-black text-sm truncate uppercase tracking-tight">{tenantName}</p>
-                                            <div className="flex items-center gap-1.5 mt-2 opacity-50">
+                                            <div className="flex items-center gap-1 mt-1.5 opacity-50">
                                                 <Phone className="w-2.5 h-2.5" />
-                                                <span className="text-[9px] font-bold">+{String(tenant.mobile || '').replace(/\D/g, '')}</span>
-                                                <span className="mx-1 text-slate-800">|</span>
+                                                <span className="text-[8px] font-bold">+{String(tenant.mobile || '').replace(/\D/g, '')}</span>
+                                                <span className="mx-1 text-slate-800 text-[8px]">|</span>
                                                 <Lock className="w-2.5 h-2.5" />
-                                                <span className="text-[9px] font-bold">{tenant.password}</span>
+                                                <span className="text-[8px] font-bold">{tenant.password}</span>
                                             </div>
                                         </div>
-                                        <div className="bg-indigo-600/10 p-4 rounded-2xl border border-indigo-500/20 space-y-1.5 glow-indigo">
+                                        <div className="bg-indigo-600/10 p-3.5 rounded-2xl border border-indigo-500/20 space-y-1 glow-indigo">
                                             <p className="text-[8px] font-black text-indigo-400 uppercase tracking-widest">Base Rent</p>
                                             <p className="text-white font-black text-lg tracking-tighter font-mono-data">
                                                 <span className="text-xs text-indigo-500 mr-0.5">{currency}</span>{Number(actualRent).toLocaleString()}
@@ -3349,25 +3346,31 @@ function UnitCard({ unit, tenant, currency = 'USD', history, onUpdateFittings, o
                                         </div>
                                     </div>
 
-                                    <div className="grid grid-cols-2 gap-3">
-                                        <div className="bg-slate-950/20 p-4 rounded-2xl border border-white/5 flex items-center justify-between">
+                                    <div className="flex gap-3">
+                                        <div className="bg-slate-950/20 p-3.5 rounded-2xl border border-white/5 flex items-center justify-between flex-1">
                                             <div>
                                                 <p className="text-[8px] font-black text-slate-600 uppercase tracking-widest">Security Deposit</p>
                                                 <p className="text-white font-bold text-xs mt-0.5 font-mono-data">{currency} {Number(tenant.deposit || 0).toLocaleString()}</p>
                                             </div>
                                             <Lock className="w-3.5 h-3.5 text-slate-700" />
                                         </div>
-                                        <div className="bg-slate-950/20 p-4 rounded-2xl border border-white/5 flex items-center justify-between">
-                                            <div>
-                                                <p className="text-[8px] font-black text-slate-600 uppercase tracking-widest">Utilities Allocation</p>
-                                                <p className="text-white font-bold text-xs mt-0.5 font-mono-data">{currency} {Number(tenant.utilityShare || 0).toLocaleString()}</p>
+
+                                        {unit.photos && unit.photos.length > 0 && (
+                                            <div 
+                                                onClick={(e) => { e.stopPropagation(); window.open(unit.photos[0], '_blank'); }}
+                                                className="bg-indigo-600/10 p-3.5 rounded-2xl border border-indigo-500/20 flex items-center justify-center gap-2 cursor-pointer hover:bg-indigo-600/20 transition-all group"
+                                            >
+                                                <div className="text-right">
+                                                    <p className="text-[8px] font-black text-indigo-400 uppercase tracking-widest">Photos</p>
+                                                    <p className="text-white font-bold text-xs mt-0.5 font-mono-data">{unit.photos.length}</p>
+                                                </div>
+                                                <Camera className="w-4 h-4 text-indigo-500 group-hover:scale-110 transition-transform" />
                                             </div>
-                                            <Droplets className="w-3.5 h-3.5 text-blue-500/50" />
-                                        </div>
+                                        )}
                                     </div>
 
-                                    <div className="bg-slate-950/20 rounded-2xl border border-white/5 p-4 space-y-4">
-                                        <div className="flex items-center justify-between text-[9px] font-bold uppercase text-slate-500 border-b border-white/5 pb-3">
+                                    <div className="bg-slate-950/20 rounded-2xl border border-white/5 p-3.5 space-y-3.5">
+                                        <div className="flex items-center justify-between text-[9px] font-bold uppercase text-slate-500 border-b border-white/5 pb-2.5">
                                             <span className="flex items-center gap-2 font-mono-data"><Calendar className="w-3 h-3" /> Tenure</span>
                                             <span className="text-indigo-400 font-mono-data">{fmtDate(tenant.leaseStart)} - {fmtDate(tenant.leaseEnd)}</span>
                                         </div>
@@ -3421,17 +3424,20 @@ function UnitCard({ unit, tenant, currency = 'USD', history, onUpdateFittings, o
                                                 </p>
                                             </div>
                                         </div>
-                                        
-                                        <div className="grid grid-cols-2 gap-4 border-t border-white/5 pt-6">
-                                            <div className="space-y-1">
-                                                <p className="text-[8px] font-black text-slate-600 uppercase tracking-widest">Projected Yield</p>
-                                                <p className="text-emerald-400 font-black text-sm">8.4% APY</p>
+
+                                        {unit.photos && unit.photos.length > 0 && (
+                                            <div className="flex gap-2 mt-4 overflow-x-auto no-scrollbar pb-1">
+                                                {unit.photos.map((url, i) => (
+                                                    <img 
+                                                        key={i} 
+                                                        src={url} 
+                                                        onClick={(e) => { e.stopPropagation(); window.open(url, '_blank'); }}
+                                                        className="w-12 h-12 object-cover rounded-lg border border-white/10 cursor-pointer hover:scale-105 transition-transform" 
+                                                        alt="Unit"
+                                                    />
+                                                ))}
                                             </div>
-                                            <div className="space-y-1 text-right">
-                                                <p className="text-[8px] font-black text-slate-600 uppercase tracking-widest">Estimated Vacancy</p>
-                                                <p className="text-slate-400 font-black text-sm">Low Demand</p>
-                                            </div>
-                                        </div>
+                                        )}
                                     </div>
 
                                     <button onClick={onAddLease} className="w-full py-5 bg-indigo-600 hover:bg-indigo-500 text-white font-black rounded-[2rem] shadow-2xl shadow-indigo-600/30 uppercase tracking-[0.2em] text-[11px] flex items-center justify-center gap-3 transition-all transform hover:scale-[1.02] active:scale-[0.98]">
@@ -3450,14 +3456,45 @@ function UnitCard({ unit, tenant, currency = 'USD', history, onUpdateFittings, o
 function UnitModal({ initialData, onSubmit, onClose }) {
     const [form, setForm] = useState(initialData ? {
         ...initialData,
-        fittings: Array.isArray(initialData.fittings) ? initialData.fittings.join(', ') : (initialData.fittings || '')
-    } : { unitNumber: '', size: '', expectedRent: '', status: 'Available', fittings: '' });
+        fittings: Array.isArray(initialData.fittings) ? initialData.fittings.join(', ') : (initialData.fittings || ''),
+        photos: Array.isArray(initialData.photos) ? initialData.photos : (typeof initialData.photos === 'string' ? initialData.photos.split(',').filter(Boolean) : [])
+    } : { unitNumber: '', size: '', expectedRent: '', status: 'Available', fittings: '', photos: [] });
     const [isSubmitting, setIsSubmitting] = useState(false);
+
+    const handlePhotoUpload = async (files) => {
+        if (!files || files.length === 0) return;
+        
+        setIsSubmitting(true);
+        const uploadedUrls = [...(form.photos || [])];
+        
+        for (let i = 0; i < files.length; i++) {
+            try {
+                // Similar logic as lease agreement upload
+                const file = files[i];
+                const uploadRes = await API.uploadFile(file);
+                if (uploadRes && uploadRes.success) {
+                    uploadedUrls.push(uploadRes.url);
+                }
+            } catch (err) {
+                console.error('Photo upload failed:', err);
+            }
+        }
+        
+        setForm({ ...form, photos: uploadedUrls });
+        setIsSubmitting(false);
+    };
+
+    const removePhoto = (index) => {
+        const newPhotos = [...form.photos];
+        newPhotos.splice(index, 1);
+        setForm({ ...form, photos: newPhotos });
+    };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         setIsSubmitting(true);
         try {
+            // Stringify photos for storage compatibility if needed, though form onSubmit usually handles the object
             await onSubmit({ ...form });
             onClose();
         } finally {
@@ -3558,6 +3595,45 @@ function UnitModal({ initialData, onSubmit, onClose }) {
                             onChange={e => setForm({ ...form, fittings: e.target.value })} 
                         />
                         <p className="text-[8px] text-slate-600 font-black uppercase tracking-widest ml-3 opacity-60">* Separate items with commas</p>
+                    </div>
+
+                    {/* Asset Photos - New Section */}
+                    <div className="space-y-3 section-animate" style={{ animationDelay: '0.45s' }}>
+                        <label className="text-[10px] text-slate-500 font-black uppercase tracking-[0.3em] ml-2 flex items-center gap-2">
+                            <Camera className="w-3.5 h-3.5" /> Asset Photos
+                        </label>
+                        
+                        <div className="flex flex-wrap gap-3">
+                            {form.photos && form.photos.map((url, idx) => (
+                                <div key={idx} className="relative group w-20 h-20">
+                                    <img 
+                                        src={url} 
+                                        alt="Asset" 
+                                        className="w-full h-full object-cover rounded-xl border border-white/10 cursor-pointer hover:opacity-80 transition-opacity"
+                                        onClick={() => window.open(url, '_blank')}
+                                    />
+                                    <button 
+                                        type="button"
+                                        onClick={() => removePhoto(idx)}
+                                        className="absolute -top-1.5 -right-1.5 bg-red-600 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                                    >
+                                        <X className="w-3 h-3" />
+                                    </button>
+                                </div>
+                            ))}
+                            
+                            <label className="w-20 h-20 flex flex-col items-center justify-center bg-slate-950/50 border border-dashed border-white/10 rounded-xl cursor-pointer hover:border-indigo-500/50 hover:bg-slate-900/50 transition-all">
+                                <Plus className="w-5 h-5 text-slate-500" />
+                                <span className="text-[8px] font-black text-slate-600 mt-1 uppercase tracking-tighter">Add</span>
+                                <input 
+                                    type="file" 
+                                    multiple 
+                                    accept="image/*" 
+                                    className="hidden" 
+                                    onChange={(e) => handlePhotoUpload(e.target.files)} 
+                                />
+                            </label>
+                        </div>
                     </div>
 
                     <div className="pt-8 pb-4 md:pb-0 section-animate" style={{ animationDelay: '0.5s' }}>
