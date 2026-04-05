@@ -1490,7 +1490,7 @@ function ManagerDashboard({ activeProperty, tenants, payments, propertyUnits, ut
                     exit={{ opacity: 0, y: -10 }}
                     transition={{ duration: 0.2 }}
                 >
-                    {activeTab === 'rents' && <RentSummaryTab tenants={tenants} payments={payments.filter(p => !p.propertyName || p.propertyName === activeProperty)} currency={currency} onMarkPaid={onMarkPaid} propertyName={activeProperty} tenantMessages={tenantMessages} />}
+                    {activeTab === 'rents' && <RentSummaryTab tenants={tenants} payments={payments.filter(p => !p.propertyName || p.propertyName === activeProperty)} currency={currency} onMarkPaid={onMarkPaid} propertyName={activeProperty} tenantMessages={tenantMessages} activeManager={activeManager} />}
                     {activeTab === 'messages' && <MessagesManager tenants={tenants} messages={tenantMessages} onUpdateMessage={onUpdateMessage} activeManager={activeManager} />}
                     {activeTab === 'tasks' && (
                         <TasksManager 
@@ -1668,7 +1668,7 @@ function PaymentConfirmModal({ tenant, currency, activeManager, onConfirm, onClo
 }
 
 // --- Rent Summary Tab ---
-function RentSummaryTab({ tenants, payments, currency = 'USD', onMarkPaid, propertyName, tenantMessages = [] }) {
+function RentSummaryTab({ tenants, payments, currency = 'USD', onMarkPaid, propertyName, tenantMessages = [], activeManager }) {
     const [confirmTenant, setConfirmTenant] = useState(null); // tenant to confirm payment for
     const downloadLedgerPDF = () => {
         if (!window.jspdf) {
