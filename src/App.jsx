@@ -170,66 +170,69 @@ const toDirectImageUrl = (url) => {
     return trimmed;
 };
 
-// Standardised date formatter -?dd-MMM-yyyy (e.g. 19-Mar-2026)
-const MONTHS_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+// Standardised date handlers for dd-mm-yyyy consistency
+const toSheetDate = (val) => {
+    if (!val) return '';
+    try {
+        const d = (val instanceof Date) ? val : new Date(val);
+        if (isNaN(d.getTime())) {
+            if (/^\d{2}-\d{2}-\d{4}$/.test(String(val).trim())) return val.trim();
+            return val;
+        }
+        return `${String(d.getDate()).padStart(2, '0')}-${String(d.getMonth() + 1).padStart(2, '0')}-${d.getFullYear()}`;
+    } catch { return val; }
+};
 
-const isPaidThisMonth = (lastPaymentDate) => {
-    if (!lastPaymentDate) return false;
-    const last = new Date(lastPaymentDate);
-    const now = getLocalDate();
-    return last.getMonth() === now.getMonth() && last.getFullYear() === now.getFullYear();
+const fromSheetDate = (val) => {
+    if (!val || typeof val !== 'string') return val;
+    const trimmed = val.trim();
+    // Convert dd-mm-yyyy or dd/mm/yyyy to yyyy-mm-dd for internal App use
+    const match = trimmed.match(/^(\d{2})[-\/](\d{2})[-\/](\d{4})/);
+    if (match) {
+        const [_, d, m, y] = match;
+        return `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+    }
+    return val;
 };
 
 const formatDate = (date, includeTime = false) => {
     if (!date) return 'N/A';
     try {
-        const d = typeof date === 'string' ? new Date(date) : date;
+        const d = typeof date === 'string' ? new Date(fromSheetDate(date)) : date;
         if (isNaN(d.getTime())) return 'N/A';
         
         const dd   = String(d.getDate()).padStart(2, '0');
-        const mmm  = MONTHS_SHORT[d.getMonth()];
+        const mm   = String(d.getMonth() + 1).padStart(2, '0');
         const yyyy = d.getFullYear();
-        const base = `${dd}-${mmm}-${yyyy}`;
+        const base = `${dd}-${mm}-${yyyy}`;
         if (!includeTime) return base;
         
         const hh = String(d.getHours()).padStart(2, '0');
         const mi = String(d.getMinutes()).padStart(2, '0');
         return `${base} ${hh}:${mi}`;
-    } catch (_) { // eslint-disable-line no-unused-vars
-        return 'N/A';
-    }
+    } catch { return 'N/A'; }
 };
 
 const fmtDate = (str) => {
     if (!str) return 'N/A';
     try {
         const strVal = String(str).trim();
-        
-        // --- 1. Strict Regex Parser for Pure Calendar Days (YYYY-MM-DD only) ---
-        // If there's no time component, we grab the characters exactly as they are.
-        const pureDateMatch = strVal.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-        if (pureDateMatch) {
-            const [_, y, m, d] = pureDateMatch;
-            const mIdx = parseInt(m, 10) - 1;
-            if (mIdx >= 0 && mIdx < 12) {
-                return `${d.padStart(2, '0')}-${MONTHS_SHORT[mIdx]}-${y}`;
-            }
-        }
-        
-        // --- 2. Local Time Fallback (For ISO strings with T/Z or other formats) ---
-        const d = new Date(strVal);
+        const d = new Date(fromSheetDate(strVal));
         if (!isNaN(d.getTime())) {
-            // ALWAYS use local methods (getDate/getMonth/getFullYear) for display.
-            // This ensures that 2026-01-31T16:00:00Z becomes Feb 1st in Singapore (SGT).
-            const day = d.getDate();
-            const month = d.getMonth();
+            const day = String(d.getDate()).padStart(2, '0');
+            const month = String(d.getMonth() + 1).padStart(2, '0');
             const year = d.getFullYear();
-            return `${String(day).padStart(2, '0')}-${MONTHS_SHORT[month]}-${year}`;
+            return `${day}-${month}-${year}`;
         }
         return 'N/A';
-    } catch (_) { // eslint-disable-line no-unused-vars
-        return 'N/A';
-    }
+    } catch { return 'N/A'; }
+};
+
+const isPaidThisMonth = (lastPaymentDate) => {
+    if (!lastPaymentDate) return false;
+    const last = new Date(fromSheetDate(lastPaymentDate));
+    const now = getLocalDate();
+    return last.getMonth() === now.getMonth() && last.getFullYear() === now.getFullYear();
 };
 
 const calculateNextRentDue = (leaseStart) => {
@@ -237,7 +240,7 @@ const calculateNextRentDue = (leaseStart) => {
     
     let day = 1;
     try {
-        const d = new Date(leaseStart);
+        const d = new Date(fromSheetDate(leaseStart));
         if (!isNaN(d.getTime())) {
             // Extract the day of the month using the target timezone consistently
             const lStartStr = d.toLocaleString("en-US", { day: 'numeric', timeZone: APP_TIMEZONE });
@@ -362,10 +365,17 @@ const API = {
         if (!this.isValid()) return { success: false, message: 'Invalid API URL' };
         
         // Ensure compatibility with diverse Spreadsheet headers (Case-Insensitive Mapping)
+        const dateKeys = ['leasestart', 'leaseend', 'date', 'timestamp', 'scheduledate', 'duedate', 'moveoutdate', 'lastpaymentdate', 'vacantsince', 'lastupdated', 'resolvedat'];
         const dataToSave = { ...data };
         if (data && typeof data === 'object' && !Array.isArray(data)) {
             Object.keys(data).forEach(key => {
-                const val = data[key];
+                let val = data[key];
+                
+                // --- NEW: Format dates to dd-mm-yyyy for Google Sheet readiness ---
+                if (dateKeys.includes(key.toLowerCase().replace(/[^a-z]/g, ''))) {
+                    val = toSheetDate(val);
+                }
+
                 // Ensure arrays (like fittings) are stringified for Google Sheet cell compatibility
                 const processedVal = Array.isArray(val) ? val.join(', ') : val;
                 
@@ -616,6 +626,7 @@ function App() {
                 });
 
                 // Robustly Extract Collections (Keys are now lowercased & trimmed from GAS)
+                const dateFields = ['leasestart', 'leaseend', 'date', 'timestamp', 'scheduledate', 'duedate', 'moveoutdate', 'lastpaymentdate', 'vacantsince', 'lastupdated', 'resolvedat'];
                 const keyMap={'unitnumber':'unitNumber','expectedrent':'expectedRent','propertyname':'propertyName','baserent':'baseRent','leasestart':'leaseStart','leaseend':'leaseEnd','leasedocument':'leaseDocument','leaseextensiondoc':'leaseExtensionDoc','mobile':'mobile','password':'password','utilityshare':'utilityShare','depositrefunded':'depositRefunded','depositdeducted':'depositDeducted','moveoutdate':'moveOutDate','lastpaymentdate':'lastPaymentDate','scheduledate':'scheduleDate','tenantid':'tenantId','photourl':'photoUrl','photos':'photos','assetphotos':'photos','handledby':'handledBy','duedate':'dueDate','maintenanceselection':'maintenanceSelection','vacantsince':'vacantSince','lastupdated':'lastUpdated','image':'image','status':'status','size':'size','fittings':'fittings'};
                 const normalize = (arr) => {
                     if (arr.length > 0) console.log('SYNC_KEYS:', Object.keys(arr[0]).join(','));
@@ -623,14 +634,27 @@ function App() {
                         const obj = { ...item };
                         for (const key of Object.keys(item)) {
                             const lk = key.toLowerCase().replace(/[^a-z]/g, '');
-                            const val = item[key];
+                            let val = item[key];
+
+                            // --- NEW: Convert dd-mm-yyyy from Sheet back to yyyy-mm-dd for App state ---
+                            if (dateFields.includes(lk)) {
+                                val = fromSheetDate(val);
+                            }
+
                             if (lk === 'status') obj.status = val;
                             if (lk === 'size') obj.size = val;
                             if (lk.includes('unitnumber') || lk === 'unitno') obj.unitNumber = val;
                             if (lk.includes('expectedrent') || lk === 'rent') obj.expectedRent = val;
                             if (keyMap[lk] && key !== keyMap[lk]) {
                                 obj[keyMap[lk]] = val;
+                                // If the mapped key is a date field, ensure it was already transformed
+                                if (dateFields.includes(keyMap[lk].toLowerCase())) {
+                                    obj[keyMap[lk]] = fromSheetDate(val);
+                                }
                                 delete obj[key];
+                            } else {
+                                // For direct matches or unmapped keys
+                                obj[key] = val;
                             }
                         }
 
