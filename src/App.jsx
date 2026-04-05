@@ -2108,6 +2108,11 @@ function RentSummaryTab({ tenants, payments, currency = 'USD', onMarkPaid, prope
                         const isUrgent = rent.daysUntil <= 3;
                         const isOverdue = rent.daysUntil < 0;
                         const dueDateStr = (rent.dueDate instanceof Date && !isNaN(rent.dueDate)) ? formatDate(rent.dueDate) : 'N/A';
+                        const isPaid = isPaidThisMonth(rent.lastPaymentDate);
+                        const baseRent = Number(rent.baseRent) || 0;
+                        const utilityShare = Number(rent.utilityShare) || 0;
+                        const totalRentDue = baseRent + utilityShare;
+
                         return (
                             <Motion.div 
                                 key={rent.id} 
@@ -2115,85 +2120,95 @@ function RentSummaryTab({ tenants, payments, currency = 'USD', onMarkPaid, prope
                                 animate={{ opacity: 1, x: 0 }}
                                 transition={{ delay: idx * 0.05 }}
                                 className={`rounded-3xl p-6 border flex flex-col md:flex-row items-start md:items-center justify-between gap-5 transition-all ${
-                                    isPaidThisMonth(rent.lastPaymentDate) ? 'bg-emerald-500/5 border-emerald-500/20 shadow-lg shadow-emerald-600/5 glow-emerald' :
+                                    isPaid ? 'bg-emerald-500/5 border-emerald-500/20' :
                                     isOverdue ? 'bg-red-500/5 border-red-500/20 hover:bg-red-500/10' :
                                     isUrgent ? 'bg-orange-500/5 border-orange-500/20 hover:bg-orange-500/10' :
                                     'bg-white/[0.03] border-white/5 hover:bg-white/[0.06]'
                                 }`}
                             >
-                                {/* Left: avatar + info */}
+                                {/* Left: unit badge + name */}
                                 <div className="flex items-center gap-5">
                                     <div className={`w-14 h-14 rounded-2xl flex items-center justify-center font-black text-xs shadow-lg shrink-0 ${
-                                        isPaidThisMonth(rent.lastPaymentDate) ? 'bg-emerald-600 shadow-emerald-600/20' :
+                                        isPaid ? 'bg-emerald-600 shadow-emerald-600/20' :
                                         isOverdue ? 'bg-red-600 shadow-red-600/20' :
                                         isUrgent ? 'bg-orange-500 shadow-orange-500/20' :
                                         'bg-indigo-600 shadow-indigo-600/20'
-                                    }`}>{rent.unit}</div>
+                                    } text-white text-center leading-tight px-1`}>
+                                        {rent.unit}
+                                    </div>
                                     <div>
                                         <p className="text-base font-black text-white tracking-tight flex items-center gap-2">
                                             {rent.name}
-                                            {/* Proof of payment badge */}
                                             {(() => {
                                                 const hasProof = tenantMessages.some(m => m.tenantId === rent.id && m.photoUrl);
-                                                return hasProof && !isPaidThisMonth(rent.lastPaymentDate) ? (
+                                                return hasProof && !isPaid ? (
                                                     <span className="text-[8px] font-black uppercase tracking-widest bg-amber-500/20 text-amber-400 border border-amber-500/30 px-2 py-0.5 rounded-full flex items-center gap-1">
                                                         <ImageIcon className="w-2.5 h-2.5" /> Proof Submitted
                                                     </span>
                                                 ) : null;
                                             })()}
                                         </p>
-                                        {(() => {
-                                            const bp = getBillingPeriod(rent.leaseStart);
-                                            return bp.from && bp.to ? (
-                                                <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest mt-0.5 flex items-center gap-1.5 font-mono-data">
-                                                    <CalendarRange className="w-3 h-3 text-indigo-400/60 shrink-0" />
-                                                    {formatDate(bp.from)}
-                                                    <span className="text-indigo-400/60">/</span>
-                                                    {formatDate(bp.to)}
-                                                </p>
-                                            ) : (
-                                                <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest mt-0.5 font-mono-data">Lease Start: {fmtDate(rent.leaseStart)}</p>
-                                            );
-                                        })()}
+                                        <div className="flex items-center gap-3 mt-1 flex-wrap">
+                                            {(() => {
+                                                const bp = getBillingPeriod(rent.leaseStart);
+                                                return bp.from && bp.to ? (
+                                                    <span className="bg-white/5 border border-white/10 px-2 py-0.5 rounded-lg text-[9px] text-slate-400 font-bold tracking-widest uppercase flex items-center gap-1.5 font-mono-data">
+                                                        <CalendarRange className="w-2.5 h-2.5 text-indigo-400/50" />
+                                                        {formatDate(bp.from)} - {formatDate(bp.to)}
+                                                    </span>
+                                                ) : null;
+                                            })()}
+                                            <span className={`text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-lg border flex items-center gap-1.5 ${
+                                                isPaid ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' :
+                                                isOverdue ? 'bg-red-500/10 border-red-500/20 text-red-400' :
+                                                isUrgent ? 'bg-orange-500/10 border-orange-500/20 text-orange-400' :
+                                                'bg-white/5 border-white/10 text-slate-500'
+                                            }`}>
+                                                {isPaid ? 'Verified' : isOverdue ? 'Overdue' : isUrgent ? 'Due Soon' : 'Active'}
+                                            </span>
+                                        </div>
                                     </div>
                                 </div>
 
-                                {/* Right: info + action */}
-                                <div className="flex flex-wrap items-center gap-4 md:gap-6 w-full md:w-auto">
-                                    <div className="text-left md:text-right">
-                                        <p className="text-[9px] font-black text-slate-600 uppercase tracking-widest mb-1">Due</p>
-                                        <p className={`text-sm font-black tracking-tight font-mono-data ${
-                                            isOverdue ? 'text-red-400' : isUrgent ? 'text-orange-400' : 'text-slate-300'
-                                        }`}>{dueDateStr}</p>
-                                        <p className={`text-[9px] font-black uppercase mt-0.5 ${
-                                            isPaidThisMonth(rent.lastPaymentDate) ? 'text-emerald-500' :
-                                            isOverdue ? 'text-red-500' : isUrgent ? 'text-orange-500' : 'text-slate-600'
-                                        }`}>
-                                            {isPaidThisMonth(rent.lastPaymentDate) ? '-?Paid & Verified' : rent.daysUntil === 0 ? '-- Due Today' : isOverdue ? `${Math.abs(rent.daysUntil)}d overdue` : `${rent.daysUntil}d left`}
-                                        </p>
+                                {/* Right: financials + action */}
+                                <div className="flex flex-wrap items-center gap-5 md:gap-7 w-full md:w-auto">
+                                    <div className="flex items-center bg-slate-950/40 rounded-2xl overflow-hidden border border-white/5 shadow-inner">
+                                        <div className="px-5 py-3 border-r border-white/5">
+                                            <p className="text-[8px] font-black text-slate-600 uppercase tracking-widest mb-1">Total Amount</p>
+                                            <p className="text-sm font-black text-slate-300 font-mono-data opacity-60 line-through decoration-slate-700/50">
+                                                {currency} {totalRentDue.toLocaleString()}
+                                            </p>
+                                            {isPaid && <p className="text-[7px] text-emerald-500/60 font-black uppercase tracking-tighter -mt-0.5 italic">Fully Received</p>}
+                                        </div>
+                                        <div className="px-6 py-3 bg-white/[0.02]">
+                                            <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest mb-1">Amount Due</p>
+                                            <p className={`text-xl font-black tracking-tighter font-mono-data ${isPaid ? 'text-slate-700 opacity-40' : (isOverdue ? 'text-red-400' : (isUrgent ? 'text-orange-400' : 'text-emerald-400'))}`}>
+                                                {currency} {isPaid ? '0.00' : totalRentDue.toLocaleString()}
+                                            </p>
+                                        </div>
                                     </div>
 
-                                    <div className="bg-white/5 px-5 py-3 rounded-2xl border border-white/5">
-                                        <p className="text-[9px] font-black text-slate-600 uppercase tracking-widest mb-1">Monthly Rent</p>
-                                        <p className="text-xl font-black text-emerald-400 tracking-tighter font-mono-data">{currency} {Number(rent.baseRent).toLocaleString()}</p>
-                                    </div>
-
-                                    {isPaidThisMonth(rent.lastPaymentDate) ? (
-                                        <div className="bg-emerald-600/10 border border-emerald-500/20 text-emerald-500 px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2">
-                                            <CheckCircle2 className="w-4 h-4" /> Received
+                                    {isPaid ? (
+                                        <div className="bg-emerald-600/10 border border-emerald-500/20 text-emerald-500 px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 transition-all glow-emerald shadow-lg shadow-emerald-500/5">
+                                            <CheckCircle2 className="w-4 h-4" /> PAID
                                         </div>
                                     ) : (
-                                        <button
-                                            onClick={() => setConfirmTenant(rent)}
-                                            className={`flex items-center gap-2 px-5 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${
-                                                tenantMessages.some(m => m.tenantId === rent.id && m.photoUrl)
-                                                    ? 'bg-amber-500 hover:bg-amber-400 text-slate-900 shadow-lg shadow-amber-500/30'
-                                                    : 'bg-emerald-600/20 hover:bg-emerald-600 text-emerald-400 hover:text-white border border-emerald-500/30 glow-emerald'
-                                            }`}
-                                        >
-                                            <CheckCircle2 className="w-4 h-4" />
-                                            {tenantMessages.some(m => m.tenantId === rent.id && m.photoUrl) ? 'Review & Verify' : 'Mark Paid'}
-                                        </button>
+                                        <div className="flex items-center gap-3">
+                                            <button
+                                                onClick={() => setConfirmTenant(rent)}
+                                                className={`flex items-center gap-2.5 px-6 py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${
+                                                    tenantMessages.some(m => m.tenantId === rent.id && m.photoUrl)
+                                                        ? 'bg-amber-500 hover:bg-amber-400 text-slate-900 shadow-xl shadow-amber-500/30'
+                                                        : 'bg-indigo-600/10 hover:bg-indigo-500 text-indigo-400 hover:text-white border border-indigo-500/20 hover:border-indigo-500/50 shadow-lg shadow-indigo-600/5'
+                                                }`}
+                                            >
+                                                {tenantMessages.some(m => m.tenantId === rent.id && m.photoUrl) ? (
+                                                    <><ShieldCheck className="w-4 h-4" /> Verify Proof</>
+                                                ) : (
+                                                    <><CheckCircle2 className="w-4 h-4" /> Mark Paid</>
+                                                )}
+                                            </button>
+                                        </div>
                                     )}
                                 </div>
                             </Motion.div>
