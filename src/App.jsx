@@ -897,7 +897,7 @@ function App() {
                     id: generateId('UTL'),
                     tenantId: tenant.id,
                     amount: amount,
-                    date: billingCycle ? (billingCycle + '-01T12:00:00.000Z') : new Date().toISOString(),
+                    date: billingCycle ? (billingCycle + '-01T12:00:00.000Z') : getTodayString(),
                     propertyName: activeProperty,
                     confirmedBy: activeManager?.name || 'Admin',
                     type: 'Utility'
@@ -1152,7 +1152,7 @@ function App() {
             const updatedUnit = { 
                 ...unit, 
                 status: 'Available',
-                vacantSince: new Date().toISOString().split('T')[0] // Track when lost revenue starts
+                vacantSince: getTodayString() // Track when lost revenue starts
             };
             await editUnitInCatalog(updatedUnit);
 
@@ -1164,7 +1164,7 @@ function App() {
                 password: '', // Revoke portal access permanently
                 depositRefunded: offboardingData.refundAmount,
                 depositDeducted: offboardingData.deductionAmount,
-                moveOutDate: new Date().toISOString().split('T')[0]
+                moveOutDate: getTodayString()
             };
             await editTenant(updatedTenant);
 
@@ -1178,7 +1178,7 @@ function App() {
                 type: 'Maintenance',
                 status: 'Pending',
                 propertyName: activeProperty,
-                scheduleDate: new Date().toISOString().split('T')[0],
+                scheduleDate: getTodayString(),
                 title: taskDesc,
                 description: 'Generated automatically from Offboarding workflow.'
             };
@@ -2550,6 +2550,20 @@ function WhatsAppRentButton({ tenant, mode = 'rent', currency = 'USD', fullWidth
     );
 }
 
+// --- Helper: Get Today's Date String (YYYY-MM-DD) in Property's Timezone ---
+const getTodayString = () => {
+    try {
+        // Use the local system date but formatted as YYYY-MM-DD in a stable way
+        const d = getLocalDate();
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${y}-${m}-${day}`;
+    } catch {
+        return new Date().toISOString().split('T')[0];
+    }
+};
+
 // --- Utility Components ---
 
 function UtilityManager({ tenants, utilityBills, payments, onAddBill, onMarkUtilityPaid, activeManager, currency = 'USD' }) {
@@ -2557,7 +2571,8 @@ function UtilityManager({ tenants, utilityBills, payments, onAddBill, onMarkUtil
     const [confirmUtilityTenant, setConfirmUtilityTenant] = useState(null); // { tenant, totalOwed, breakdowns }
 
     const uniqueMonths = useMemo(() => {
-        const currentMonth = new Date().toISOString().substring(0, 7);
+        const todayStr = getTodayString();
+        const currentMonth = todayStr.substring(0, 7);
         let months = [currentMonth];
         if (Array.isArray(utilityBills)) {
             const billMonths = utilityBills.filter(b => b && typeof b.date === 'string').map(b => b.date.substring(0, 7));
@@ -2574,7 +2589,7 @@ function UtilityManager({ tenants, utilityBills, payments, onAddBill, onMarkUtil
 
     // New Bill State
     const [billType, setBillType] = useState('Electricity');
-    const [billDate, setBillDate] = useState(new Date().toISOString().split('T')[0]);
+    const [billDate, setBillDate] = useState(getTodayString());
     const [billAmount, setBillAmount] = useState('');
     const [billFile, setBillFile] = useState(null);
     const [mode, setMode] = useState('equal');
@@ -2610,7 +2625,7 @@ function UtilityManager({ tenants, utilityBills, payments, onAddBill, onMarkUtil
         const newBill = {
             id: `B${Date.now()}`,
             type: billType,
-            date: billDate || new Date().toISOString().split('T')[0],
+            date: billDate || getTodayString(),
             amount: totalBill,
             mode,
             allocations,
@@ -2626,7 +2641,7 @@ function UtilityManager({ tenants, utilityBills, payments, onAddBill, onMarkUtil
         onAddBill(newBill, updatedTenants);
 
         setBillAmount('');
-        setBillDate(new Date().toISOString().split('T')[0]);
+        setBillDate(getTodayString());
         setBillFile(null);
         setTenantDates(tenants.reduce((acc, t) => ({ ...acc, [t.id]: { start: '', end: '' } }), {}));
         setActiveTab('history');
