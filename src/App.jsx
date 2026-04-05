@@ -604,7 +604,7 @@ function App() {
 
                 // Robustly Extract Collections (Keys are now lowercased & trimmed from GAS)
                 const keyMap={'unitnumber':'unitNumber','expectedrent':'expectedRent','propertyname':'propertyName','baserent':'baseRent','leasestart':'leaseStart','leaseend':'leaseEnd','leasedocument':'leaseDocument','utilityshare':'utilityShare','depositrefunded':'depositRefunded','depositdeducted':'depositDeducted','moveoutdate':'moveOutDate','lastpaymentdate':'lastPaymentDate','scheduledate':'scheduleDate','tenantid':'tenantId','photourl':'photoUrl','handledby':'handledBy','duedate':'dueDate','maintenanceselection':'maintenanceSelection','vacantsince':'vacantSince','lastupdated':'lastUpdated','image':'image','status':'status','size':'size','fittings':'fittings'};
-                const normalize=(arr)=>arr.map(item=>{const obj={...item};for(const key of Object.keys(item)){const lk=key.toLowerCase().trim().replace(/_/g,'');if(['image','img','photo','visual','visuals','unitimage','unitphoto','photourl'].includes(lk))obj.image=item[key];if(lk==='status')obj.status=item[key];if(lk==='size')obj.size=item[key];if(lk==='unitnumber')obj.unitNumber=item[key];if(keyMap[lk]&&key!==keyMap[lk]){obj[keyMap[lk]]=obj[key];delete obj[key];}}if(obj.propertyname&&!obj.propertyName){obj.propertyName=String(obj.propertyname);delete obj.propertyname;}return obj;});
+                const normalize=(arr)=>{if(arr.length>0)console.log('SYNC_DATA_SAMPLE:', Object.keys(arr[0]).join(',')); return arr.map(item=>{const obj={...item};for(const key of Object.keys(item)){const lk=key.toLowerCase().trim().replace(/_/g,'');if(['image','img','photo','visual','visuals','unitimage','unitphoto','photourl'].includes(lk))obj.image=item[key];if(lk==='status')obj.status=item[key];if(lk==='size')obj.size=item[key];if(lk==='unitnumber')obj.unitNumber=item[key];if(keyMap[lk]&&key!==keyMap[lk]){obj[keyMap[lk]]=obj[key];delete obj[key];}}if(obj.propertyname&&!obj.propertyName){obj.propertyName=String(obj.propertyname);delete obj.propertyname;}return obj;});};
                 const rawUnits = normalize(findCollection(data, 'units'));
                 const rawTenants = normalize(findCollection(data, 'tenants'));
                 const rawBills = normalize(findCollection(data, 'bills'));
@@ -3253,8 +3253,8 @@ function UnitCard({ unit, tenant, currency = 'USD', history, onUpdateFittings, o
                             <ImageIcon className="w-8 h-8 opacity-20" />
                             <span className="text-[7px] font-black uppercase tracking-widest mt-1 opacity-20">NO VISUALS</span>
                             {/* Diagnostic Helper for Manager (Debug Only) */}
-                            <span className="absolute bottom-2 inset-x-0 text-[5px] text-white/5 font-mono text-center truncate px-2">
-                                KEYS: {Object.keys(unit).slice(0, 4).join(',')} | V: {String(unit.image || 'X').slice(0, 5)}
+                            <span className="absolute bottom-2 inset-x-0 text-[5px] text-white/10 font-mono text-center overflow-auto px-2 max-h-[20px]">
+                                ALL_KEYS: {Object.keys(unit).join(', ')}
                             </span>
                         </div>
                     )}
