@@ -216,26 +216,26 @@ const generateId = (prefix) => {
 const calculateNextRentDue = (leaseStart) => {
     const today = getLocalDate();
     
-    // Robust parsing using APP_TIMEZONE
     let day = 1;
     try {
         const d = new Date(leaseStart);
         if (!isNaN(d.getTime())) {
-            const lStart = new Date(d.toLocaleString("en-US", { timeZone: APP_TIMEZONE }));
-            day = lStart.getDate();
+            // Extract the day of the month using the target timezone consistently
+            const lStartStr = d.toLocaleString("en-US", { day: 'numeric', timeZone: APP_TIMEZONE });
+            day = parseInt(lStartStr, 10);
         }
     } catch (e) {
         day = 1;
     }
     
-    // Fallback if NaN
     if (isNaN(day)) day = 1;
 
-    // Current billing cycle ends on (Day - 1) of the month
-    let dueDate = new Date(today.getFullYear(), today.getMonth(), day - 1);
+    // Rent is now due EXACTLY on the lease commencement day of the month
+    let dueDate = new Date(today.getFullYear(), today.getMonth(), day);
     
+    // If the due date for this month has passed, the next collection is next month
     if (dueDate < today) {
-        dueDate = new Date(today.getFullYear(), today.getMonth() + 1, day - 1);
+        dueDate = new Date(today.getFullYear(), today.getMonth() + 1, day);
     }
     return dueDate;
 };
@@ -252,11 +252,14 @@ const getDaysUntilDue = (leaseStart) => {
 // Returns the current billing period { from, to } based on lease start day
 const getBillingPeriod = (leaseStart) => {
     const dueDate = calculateNextRentDue(leaseStart);
-    if (isNaN(dueDate.getTime())) return { from: null, to: null };
+    if (!dueDate || isNaN(dueDate.getTime())) return { from: null, to: null };
     
-    // Rent is paid IN ADVANCE. A due date of e.g. 14 March pays for the period 15 March to 14 April.
-    const from = new Date(dueDate.getFullYear(), dueDate.getMonth(), dueDate.getDate() + 1);
+    // Rent period starts EXACTLY on the lease commencement day (aligned with the due date)
+    const from = new Date(dueDate.getFullYear(), dueDate.getMonth(), dueDate.getDate());
+    
+    // Rent period ends on the day before the same day in the next month
     const to = new Date(from.getFullYear(), from.getMonth() + 1, from.getDate() - 1);
+    
     return { from, to };
 };
 
