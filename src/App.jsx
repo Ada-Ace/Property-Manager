@@ -490,18 +490,18 @@ function App() {
         return tasks.filter(t => t && String(t.propertyName || '').trim().toLowerCase() === normActive);
     }, [tasks, activeProperty]);
 
+    const [lastSyncTime, setLastSyncTime] = useState(null);
+    const [isRefreshing, setIsRefreshing] = useState(false);
+    const [processingMessage, setProcessingMessage] = useState(null);
+
+    const [vendors, setVendors] = useState(INITIAL_VENDORS);
+    
     const filteredVendors = useMemo(() => {
         if (!activeProperty || !Array.isArray(vendors)) return [];
         const normActive = String(activeProperty).trim().toLowerCase();
         return vendors.filter(v => v && String(v.propertyName || '').trim().toLowerCase() === normActive);
     }, [vendors, activeProperty]);
 
-    const [lastSyncTime, setLastSyncTime] = useState(null);
-    const [isRefreshing, setIsRefreshing] = useState(false);
-    const [processingMessage, setProcessingMessage] = useState(null);
-
-
-    const [vendors, setVendors] = useState(INITIAL_VENDORS);
     const [payments, setPayments] = useState(INITIAL_PAYMENTS);
     const [managers, setManagers] = useState(INITIAL_MANAGERS);
 
