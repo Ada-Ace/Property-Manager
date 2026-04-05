@@ -1654,7 +1654,7 @@ function ManagerDashboard({ activeProperty, tenants, payments, propertyUnits, ut
                         <TasksManager 
                             tenants={tenants} 
                             tasks={tasks} 
-                            vendors={filteredVendors}
+                            vendors={vendors}
                             onAddTask={onAddTask} 
                             onAddVendor={() => { setEditingVendor(null); setShowVendorModal(true); }}
                             onEditVendor={(v) => { setEditingVendor(v); setShowVendorModal(true); }}
