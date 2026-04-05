@@ -490,6 +490,12 @@ function App() {
         return tasks.filter(t => t && String(t.propertyName || '').trim().toLowerCase() === normActive);
     }, [tasks, activeProperty]);
 
+    const filteredVendors = useMemo(() => {
+        if (!activeProperty || !Array.isArray(vendors)) return [];
+        const normActive = String(activeProperty).trim().toLowerCase();
+        return vendors.filter(v => v && String(v.propertyName || '').trim().toLowerCase() === normActive);
+    }, [vendors, activeProperty]);
+
     const [lastSyncTime, setLastSyncTime] = useState(null);
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [processingMessage, setProcessingMessage] = useState(null);
@@ -675,6 +681,7 @@ function App() {
                 const rawMessages = normalize(findCollection(data, 'messages'));
                 const rawPayments = normalize(findCollection(data, 'payments'));
                 const rawManagers = normalize(findCollection(data, 'managers'));
+                const rawVendors = normalize(findCollection(data, 'vendors'));
 
                 // Update Local UI States
                 setTenants(rawTenants);
@@ -682,6 +689,7 @@ function App() {
                 setUtilityBills(rawBills);
                 setTasks(rawTasks);
                 setTenantMessages(rawMessages);
+                setVendors(rawVendors);
                 setPayments(prev => rawPayments.length > 0 ? rawPayments : prev);
                 setManagers(prev => rawManagers.length > 0 ? rawManagers : prev);
 
@@ -1646,7 +1654,7 @@ function ManagerDashboard({ activeProperty, tenants, payments, propertyUnits, ut
                         <TasksManager 
                             tenants={tenants} 
                             tasks={tasks} 
-                            vendors={vendors}
+                            vendors={filteredVendors}
                             onAddTask={onAddTask} 
                             onAddVendor={() => { setEditingVendor(null); setShowVendorModal(true); }}
                             onEditVendor={(v) => { setEditingVendor(v); setShowVendorModal(true); }}
