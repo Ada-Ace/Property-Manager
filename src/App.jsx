@@ -150,9 +150,15 @@ const getLocalDate = () => {
 };
 
 const resolvePhotoUrl = (url) => {
-    if (!url || typeof url !== 'string' || url === '[object Object]') return '';
-    const cleanUrl = url.trim().replace(/^["']|["']$/g, '');
-    if (!cleanUrl.startsWith('http')) return cleanUrl; 
+    if (!url || typeof url !== 'string' || url === '[object Object]' || url === '[]') return '';
+    let cleanUrl = url.trim().replace(/^["']|["']$/g, '');
+    
+    // Attempt double JSON decode for escaped cloud strings
+    if (cleanUrl.startsWith('[') && cleanUrl.endsWith(']')) {
+        try { const p = JSON.parse(cleanUrl); if (Array.isArray(p)) cleanUrl = p[0]; } catch (e) { /* ignore */ }
+    }
+    
+    if (!cleanUrl || !cleanUrl.startsWith('http')) return cleanUrl; 
     
     if (cleanUrl.includes('drive.google.com')) {
         let id = '';
@@ -161,7 +167,6 @@ const resolvePhotoUrl = (url) => {
         } else if (cleanUrl.includes('/d/')) {
             id = cleanUrl.split('/d/')[1].split('/')[0];
         }
-        // Using the drive.google.com/thumbnail endpoint - highly reliable for cross-origin mobile embeds (Safari/iOS)
         if (id) return `https://drive.google.com/thumbnail?id=${id}&sz=w1200`;
     }
     return cleanUrl;
@@ -604,7 +609,8 @@ function App() {
 
                 // Robustly Extract Collections (Keys are now lowercased & trimmed from GAS)
                 const keyMap={'unitnumber':'unitNumber','expectedrent':'expectedRent','propertyname':'propertyName','baserent':'baseRent','leasestart':'leaseStart','leaseend':'leaseEnd','leasedocument':'leaseDocument','utilityshare':'utilityShare','depositrefunded':'depositRefunded','depositdeducted':'depositDeducted','moveoutdate':'moveOutDate','lastpaymentdate':'lastPaymentDate','scheduledate':'scheduleDate','tenantid':'tenantId','photourl':'photoUrl','handledby':'handledBy','duedate':'dueDate','maintenanceselection':'maintenanceSelection','vacantsince':'vacantSince','lastupdated':'lastUpdated','image':'image','status':'status','size':'size','fittings':'fittings'};
-                const normalize=(arr)=>{if(arr.length>0)console.log('SYNC_DATA_SAMPLE:', Object.keys(arr[0]).join(',')); return arr.map(item=>{const obj={...item};for(const key of Object.keys(item)){const lk=key.toLowerCase().trim().replace(/_/g,'');if(['image','img','photo','visual','visuals','unitimage','unitphoto','photourl'].includes(lk))obj.image=item[key];if(lk==='status')obj.status=item[key];if(lk==='size')obj.size=item[key];if(lk==='unitnumber')obj.unitNumber=item[key];if(keyMap[lk]&&key!==keyMap[lk]){obj[keyMap[lk]]=obj[key];delete obj[key];}}if(obj.propertyname&&!obj.propertyName){obj.propertyName=String(obj.propertyname);delete obj.propertyname;}return obj;});};
+                const keyMap={'unitnumber':'unitNumber','expectedrent':'expectedRent','propertyname':'propertyName','baserent':'baseRent','leasestart':'leaseStart','leaseend':'leaseEnd','leasedocument':'leaseDocument','utilityshare':'utilityShare','depositrefunded':'depositRefunded','depositdeducted':'depositDeducted','moveoutdate':'moveOutDate','lastpaymentdate':'lastPaymentDate','scheduledate':'scheduleDate','tenantid':'tenantId','photourl':'photoUrl','handledby':'handledBy','duedate':'dueDate','maintenanceselection':'maintenanceSelection','vacantsince':'vacantSince','lastupdated':'lastUpdated','image':'image','status':'status','size':'size','fittings':'fittings'};
+                const normalize=(arr)=>{if(arr.length>0)console.log('SYNC_KEYS:', Object.keys(arr[0]).join(',')); return arr.map(item=>{const obj={...item};for(const key of Object.keys(item)){const lk=key.toLowerCase().replace(/[^a-z]/g,'');if(['image','img','photo','visual','visuals','unitimage','unitphoto','photourl'].includes(lk))obj.image=item[key];if(lk==='status')obj.status=item[key];if(lk==='size')obj.size=item[key];if(['unitnumber','unitno','unit'].includes(lk))obj.unitNumber=item[key];if(['expectedrent','rent'].includes(lk))obj.expectedRent=item[key];if(keyMap[lk]&&key!==keyMap[lk]){obj[keyMap[lk]]=obj[key];delete obj[key];}}if(obj.propertyname&&!obj.propertyName){obj.propertyName=String(obj.propertyname);delete obj.propertyname;}return obj;});};
                 const rawUnits = normalize(findCollection(data, 'units'));
                 const rawTenants = normalize(findCollection(data, 'tenants'));
                 const rawBills = normalize(findCollection(data, 'bills'));
