@@ -3699,69 +3699,69 @@ function UnitModal({ initialData, onSubmit, onClose }) {
                 animate={{ y: 0, opacity: 1 }}
                 exit={{ y: "100%", opacity: 0 }}
                 transition={{ type: "spring", damping: 28, stiffness: 220 }}
-                className="bg-slate-900 border-t md:border border-white/10 w-full max-w-lg rounded-t-[3rem] md:rounded-[3.5rem] p-8 pb-32 md:p-12 shadow-2xl relative max-h-[92vh] overflow-y-auto no-scrollbar flex flex-col"
+                className="bg-slate-900 border-t md:border border-white/10 w-full max-w-lg rounded-t-[2.5rem] md:rounded-[2.5rem] p-5 pb-24 md:p-8 shadow-2xl relative max-h-[92vh] overflow-y-auto no-scrollbar flex flex-col"
             >
                 {/* Drag Handle for Mobile */}
-                <div className="w-16 h-1.5 bg-white/10 rounded-full mx-auto mb-10 md:hidden shrink-0" />
+                <div className="w-10 h-1 bg-white/10 rounded-full mx-auto mb-5 md:hidden shrink-0" />
                 
-                <div className="flex justify-between items-center mb-12 shrink-0">
-                    <div className="space-y-1">
-                        <h2 className="text-3xl md:text-4xl font-black text-white italic flex items-center gap-4 tracking-tighter">
-                            {initialData ? <Settings className="w-8 h-8 text-indigo-500" /> : <PlusCircle className="w-8 h-8 text-indigo-500" />}
+                <div className="flex justify-between items-center mb-6 shrink-0">
+                    <div className="space-y-0.5">
+                        <h2 className="text-xl font-black text-white italic flex items-center gap-3 tracking-tighter">
+                            {initialData ? <Settings className="w-5 h-5 text-indigo-500" /> : <PlusCircle className="w-5 h-5 text-indigo-500" />}
                             {initialData ? 'Edit Asset' : 'New Unit'}
                         </h2>
-                        <p className="text-[10px] text-slate-500 font-black uppercase tracking-[0.3em] ml-1 opacity-60">Inventory Cataloging</p>
+                        <p className="text-[9px] text-slate-500 font-black uppercase tracking-[0.3em] ml-0.5 opacity-60">Inventory Cataloging</p>
                     </div>
                     <Motion.button 
                         whileHover={{ rotate: 90, scale: 1.1 }}
                         whileTap={{ scale: 0.9 }}
                         onClick={onClose} 
-                        className="p-3 text-slate-500 hover:text-white bg-white/5 rounded-2xl border border-white/5 transition-all"
+                        className="p-2.5 text-slate-500 hover:text-white bg-white/5 rounded-xl border border-white/5 transition-all"
                     >
-                        <X className="w-6 h-6" />
+                        <X className="w-4 h-4" />
                     </Motion.button>
                 </div>
 
-                <form onSubmit={handleSubmit} className="space-y-10 flex-1">
+                <form onSubmit={handleSubmit} className="space-y-4 flex-1">
 
-                    <div className="space-y-8">
-                        <div className="space-y-2 section-animate" style={{ animationDelay: '0.2s' }}>
-                            <label className="text-[10px] text-slate-500 font-black uppercase tracking-[0.3em] ml-2 flex items-center gap-2">
-                                <LayoutGrid className="w-3.5 h-3.5" /> Reference Label
+                    <div className="space-y-4">
+                        <div className="space-y-1.5 section-animate" style={{ animationDelay: '0.2s' }}>
+                            <label className="text-[9px] text-slate-500 font-black uppercase tracking-[0.3em] ml-1 flex items-center gap-1.5">
+                                <LayoutGrid className="w-3 h-3" /> Reference Label
                             </label>
                             <input 
                                 required 
-                                className="w-full bg-slate-950/50 border border-white/5 focus:border-indigo-500/40 rounded-[1.5rem] p-5 md:p-6 text-white text-base md:text-lg font-bold outline-none transition-all placeholder:text-slate-800 shadow-inner" 
+                                className="w-full bg-slate-950/50 border border-white/5 focus:border-indigo-500/40 rounded-2xl p-3.5 text-white text-sm font-bold outline-none transition-all placeholder:text-slate-800 shadow-inner" 
                                 placeholder="Unit 402, Penthouse A..." 
                                 value={form.unitNumber} 
                                 onChange={e => setForm({ ...form, unitNumber: e.target.value })} 
                             />
                         </div>
 
-                        <div className="grid grid-cols-2 gap-5 md:gap-8 section-animate" style={{ animationDelay: '0.3s' }}>
-                            <div className="space-y-2">
-                                <label className="text-[10px] text-slate-500 font-black uppercase tracking-[0.3em] ml-2 flex items-center gap-2">
-                                    <Maximize className="w-3.5 h-3.5" /> Total SQFT
+                        <div className="grid grid-cols-2 gap-3 section-animate" style={{ animationDelay: '0.3s' }}>
+                            <div className="space-y-1.5">
+                                <label className="text-[9px] text-slate-500 font-black uppercase tracking-[0.3em] ml-1 flex items-center gap-1.5">
+                                    <Maximize className="w-3 h-3" /> Total SQFT
                                 </label>
                                 <input 
                                     required 
                                     type="number" 
-                                    className="w-full bg-slate-950/50 border border-white/5 focus:border-indigo-500/40 rounded-[1.5rem] p-5 md:p-6 text-white text-base md:text-lg font-bold outline-none transition-all placeholder:text-slate-800 shadow-inner" 
+                                    className="w-full bg-slate-950/50 border border-white/5 focus:border-indigo-500/40 rounded-2xl p-3.5 text-white text-sm font-bold outline-none transition-all placeholder:text-slate-800 shadow-inner" 
                                     placeholder="850" 
                                     value={form.size} 
                                     onChange={e => setForm({ ...form, size: e.target.value })} 
                                 />
                             </div>
-                            <div className="space-y-2">
-                                <label className="text-[10px] text-slate-500 font-black uppercase tracking-[0.3em] ml-2 flex items-center gap-2">
-                                    <DollarSign className="w-3.5 h-3.5" /> Target Rent
+                            <div className="space-y-1.5">
+                                <label className="text-[9px] text-slate-500 font-black uppercase tracking-[0.3em] ml-1 flex items-center gap-1.5">
+                                    <DollarSign className="w-3 h-3" /> Target Rent
                                 </label>
                                 <div className="relative">
-                                    <span className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-600 font-black text-lg">$</span>
+                                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-600 font-black text-sm">$</span>
                                     <input 
                                         required 
                                         type="number" 
-                                        className="w-full bg-slate-950/50 border border-white/5 focus:border-indigo-500/40 rounded-[1.5rem] p-5 md:p-6 pl-12 text-white text-base md:text-lg font-bold outline-none transition-all placeholder:text-slate-800 shadow-inner" 
+                                        className="w-full bg-slate-950/50 border border-white/5 focus:border-indigo-500/40 rounded-2xl p-3.5 pl-8 text-white text-sm font-bold outline-none transition-all placeholder:text-slate-800 shadow-inner" 
                                         placeholder="2000" 
                                         value={form.expectedRent} 
                                         onChange={e => setForm({ ...form, expectedRent: e.target.value })} 
@@ -3771,34 +3771,34 @@ function UnitModal({ initialData, onSubmit, onClose }) {
                         </div>
                     </div>
                     
-                    <div className="space-y-2 section-animate" style={{ animationDelay: '0.4s' }}>
-                        <label className="text-[10px] text-slate-500 font-black uppercase tracking-[0.3em] ml-2 flex items-center gap-2">
-                            <Package className="w-3.5 h-3.5" /> Fittings & Inventory
+                    <div className="space-y-1.5 section-animate" style={{ animationDelay: '0.4s' }}>
+                        <label className="text-[9px] text-slate-500 font-black uppercase tracking-[0.3em] ml-1 flex items-center gap-1.5">
+                            <Package className="w-3 h-3" /> Fittings & Inventory
                         </label>
                         <textarea 
-                            className="w-full bg-slate-950/50 border border-white/5 focus:border-indigo-500/40 rounded-[1.5rem] p-5 md:p-6 text-white text-base font-bold outline-none transition-all placeholder:text-slate-800 shadow-inner no-scrollbar" 
-                            rows={3}
+                            className="w-full bg-slate-950/50 border border-white/5 focus:border-indigo-500/40 rounded-2xl p-3.5 text-white text-sm font-bold outline-none transition-all placeholder:text-slate-800 shadow-inner no-scrollbar" 
+                            rows={2}
                             placeholder="E.g. Smart TV, AC Unit, Queen Bed..." 
                             value={form.fittings} 
                             onChange={e => setForm({ ...form, fittings: e.target.value })} 
                         />
-                        <p className="text-[8px] text-slate-600 font-black uppercase tracking-widest ml-3 opacity-60">* Separate items with commas</p>
+                        <p className="text-[8px] text-slate-600 font-black uppercase tracking-widest ml-1 opacity-60">* Separate items with commas</p>
                     </div>
 
                     {/* Asset Photos - New Section */}
-                    <div className="space-y-3 section-animate" style={{ animationDelay: '0.45s' }}>
-                        <label className="text-[10px] text-slate-500 font-black uppercase tracking-[0.3em] ml-2 flex items-center gap-2">
-                            <Camera className="w-3.5 h-3.5" /> Asset Photos
+                    <div className="space-y-1.5 section-animate" style={{ animationDelay: '0.45s' }}>
+                        <label className="text-[9px] text-slate-500 font-black uppercase tracking-[0.3em] ml-1 flex items-center gap-1.5">
+                            <Camera className="w-3 h-3" /> Asset Photos
                         </label>
                         
-                        <div className="flex flex-nowrap gap-4 overflow-x-auto pb-4 no-scrollbar">
+                        <div className="flex flex-nowrap gap-2.5 overflow-x-auto pb-2 no-scrollbar">
                             {form.photos && form.photos.map((url, idx) => {
                                 const unitPrefix = (form.unitNumber || '').replace(/[^a-zA-Z]/g, '').slice(0, 2).toUpperCase() || 'UN';
                                 return (
-                                    <div key={idx} className="relative group shrink-0 w-32 h-32">
-                                        <div className="w-full h-full bg-slate-950 rounded-2xl border border-white/5 overflow-hidden ring-1 ring-white/5 ring-inset relative group-hover:border-indigo-500/30 transition-colors">
+                                    <div key={idx} className="relative group shrink-0 w-20 h-20">
+                                        <div className="w-full h-full bg-slate-950 rounded-xl border border-white/5 overflow-hidden ring-1 ring-white/5 ring-inset relative group-hover:border-indigo-500/30 transition-colors">
                                             <div className="absolute inset-0 flex items-center justify-center opacity-20">
-                                                <ImageIcon className="w-6 h-6 text-indigo-400" />
+                                                <ImageIcon className="w-5 h-5 text-indigo-400" />
                                             </div>
                                             <img 
                                                 src={toDirectImageUrl(url)} 
