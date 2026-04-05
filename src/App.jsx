@@ -2141,7 +2141,7 @@ function RentSummaryTab({ tenants, payments, currency = 'USD', onMarkPaid, prope
                         <h3 className="font-black text-2xl text-white italic tracking-tight flex items-center gap-3">
                             <CreditCard className="w-7 h-7 text-indigo-400" />
                             Rent Collection
-                            <span className="text-[8px] bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 px-2 py-0.5 rounded-md italic uppercase tracking-wider not-italic">v1.2.1 Stable</span>
+                            <span className="text-[8px] bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 px-2 py-0.5 rounded-md italic uppercase tracking-wider not-italic">v1.2.2 Final-Stabilized</span>
                         </h3>
                         <p className="text-[10px] text-slate-500 font-black uppercase tracking-[0.2em] mt-2">
                             {currentMonthLabel} - Direct Sync Active
