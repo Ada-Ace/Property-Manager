@@ -2532,6 +2532,252 @@ const extractYearMonth = (dateStr) => {
 
 // --- Utility Components ---
 
+function MaintenanceModal({ onClose, onSubmit, tenants = [] }) {
+    const [form, setForm] = useState({ title: '', description: '', category: 'Plumbing', priority: 'NORMAL', tenantId: '', dateOptions: [] });
+    const categories = ['Plumbing', 'Electrical', 'Structural', 'Appliance', 'General', 'Common Area'];
+    const priorities = ['NORMAL', 'HIGH', 'URGENT'];
+
+    return (
+        <div className="space-y-8">
+            <div className="flex justify-between items-center">
+                <h3 className="text-3xl font-black text-white italic tracking-tighter">LOG NEW SERVICE TICKET</h3>
+                <button onClick={onClose} className="p-3 text-slate-500 hover:text-white bg-white/5 rounded-xl transition-all"><X className="w-6 h-6" /></button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Service Title</label>
+                    <input 
+                        className="w-full bg-slate-950/60 border border-white/5 p-4 rounded-2xl text-white text-sm font-bold outline-none focus:border-indigo-500/50 transition-all font-mono-data" 
+                        placeholder="e.g. Master Bedroom Leak"
+                        value={form.title} onChange={e => setForm({...form, title: e.target.value})}
+                    />
+                </div>
+                <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Asset Category</label>
+                    <select 
+                        className="w-full bg-slate-950/60 border border-white/5 p-4 rounded-2xl text-white text-sm font-black outline-none focus:border-indigo-500/50 transition-all cursor-pointer"
+                        value={form.category} onChange={e => setForm({...form, category: e.target.value})}
+                    >
+                        {categories.map(c => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                </div>
+            </div>
+
+            <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Strategic Description</label>
+                <textarea 
+                    className="w-full bg-slate-950/60 border border-white/5 p-5 rounded-3xl text-white text-sm font-medium outline-none focus:border-indigo-500/50 transition-all min-h-[120px] resize-none"
+                    placeholder="Provide full technical context for the vendor..."
+                    value={form.description} onChange={e => setForm({...form, description: e.target.value})}
+                />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Priority Level</label>
+                    <select 
+                        className="w-full bg-slate-950/60 border border-white/5 p-4 rounded-2xl text-white text-sm font-black outline-none focus:border-indigo-500/50 transition-all"
+                        value={form.priority} onChange={e => setForm({...form, priority: e.target.value})}
+                    >
+                        {priorities.map(p => <option key={p} value={p}>{p}</option>)}
+                    </select>
+                </div>
+                <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Associated Unit</label>
+                    <select 
+                        className="w-full bg-slate-950/60 border border-white/5 p-4 rounded-2xl text-white text-sm font-black outline-none focus:border-indigo-500/50 transition-all"
+                        value={form.tenantId} onChange={e => setForm({...form, tenantId: e.target.value})}
+                    >
+                        <option value="">General Property Maintenance</option>
+                        {tenants.map(t => <option key={t.id} value={t.id}>{t.name} ({t.unit})</option>)}
+                    </select>
+                </div>
+            </div>
+
+            <div className="pt-6 border-t border-white/5">
+                <button 
+                    onClick={() => onSubmit(form)}
+                    className="w-full bg-indigo-600 hover:bg-indigo-500 text-white p-5 rounded-[2rem] text-xs font-black uppercase tracking-widest shadow-2xl shadow-indigo-600/20 transition-all flex items-center justify-center gap-3 active:scale-95"
+                >
+                    <Send className="w-4 h-4" /> Finalize Technical Ticket
+                </button>
+            </div>
+        </div>
+    );
+}
+
+function MaintenanceManager({ tasks = [], tenants = [], onAddTask, currency = 'USD' }) {
+    const [showAdd, setShowAdd] = useState(false);
+    return (
+        <div className="premium-card rounded-[2.5rem] p-8 mt-12 animate-in fade-in slide-in-from-bottom-5">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-12 pb-6 border-b border-white/5">
+                <div>
+                    <h3 className="font-black text-2xl text-white italic tracking-tight flex items-center gap-3">
+                        <Hammer className="w-7 h-7 text-indigo-400" />
+                        Maintenance Strategy Desk
+                    </h3>
+                    <p className="text-[10px] text-slate-500 font-black uppercase tracking-[0.2em] mt-2">Active Service Tickets & Planning</p>
+                </div>
+                <button 
+                    onClick={() => setShowAdd(true)}
+                    className="bg-indigo-600 hover:bg-indigo-500 text-white px-8 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 transition-all shadow-xl shadow-indigo-600/20"
+                >
+                    <Plus className="w-4 h-4" /> Log New Service Ticket
+                </button>
+            </div>
+
+            {tasks?.length === 0 ? (
+                <div className="text-center py-24 text-slate-600 border-2 border-dashed border-white/5 rounded-[3rem]">
+                    <Package className="w-12 h-12 mx-auto mb-4 opacity-10" />
+                    <p className="text-[10px] uppercase font-black tracking-widest leading-loose">No active tickets requiring strategy</p>
+                </div>
+            ) : (
+                <div className="space-y-6">
+                    {tasks?.slice().reverse()?.map(task => {
+                        const t = tenants?.find(ten => ten.id === task.tenantId);
+                        return (
+                            <div key={task.id} className="bg-white/[0.03] border border-white/5 rounded-[2rem] p-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-6 group hover:bg-white/[0.06] transition-all">
+                                <div className="flex-1">
+                                    <div className="flex items-center gap-3 mb-3">
+                                        <span className={`text-[9px] font-black uppercase tracking-widest px-3 py-1 rounded-lg border ${
+                                            task.priority === 'HIGH' ? 'bg-red-500/10 border-red-500/20 text-red-400' : 
+                                            'bg-indigo-500/10 border-indigo-500/20 text-indigo-400'
+                                        }`}>{task.priority}</span>
+                                        <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-1"><Clock className="w-3 h-3" /> {task.category}</span>
+                                    </div>
+                                    <h4 className="text-xl font-bold text-white tracking-tight mb-2">{task.title}</h4>
+                                    <p className="text-xs text-slate-400 leading-relaxed max-w-2xl">{task.description}</p>
+                                    <div className="flex items-center gap-5 mt-6 border-t border-white/5 pt-5">
+                                        <div className="flex items-center gap-2 bg-indigo-500/5 px-4 py-2 rounded-xl border border-indigo-500/10">
+                                            <Home className="w-3.5 h-3.5 text-indigo-400" />
+                                            <span className="text-xs font-bold text-slate-300 font-mono-data">{t?.unit || 'General'}</span>
+                                        </div>
+                                        <div className="flex gap-2">
+                                            {task.dateOptions?.map((d, idx) => <span key={idx} className="bg-slate-800/60 text-slate-400 text-[9px] font-bold px-2.5 py-1.5 rounded-lg border border-white/5 font-mono-data tracking-tighter">{d}</span>)}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className={`px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest border transition-all ${
+                                    task.status === 'RESOLVED' ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' : 'bg-orange-500/10 border-orange-500/20 text-orange-400 animate-pulse'
+                                }`}>
+                                    {task.status || 'ACTIVE'}
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+            )}
+            {showAdd && (
+                <div className="fixed inset-0 z-[300] flex items-center justify-center p-6 sm:p-12 animate-in fade-in duration-300">
+                    <div className="absolute inset-0 bg-slate-950/90 backdrop-blur-3xl" onClick={() => setShowAdd(false)} />
+                    <div className="relative bg-slate-900 border border-white/5 rounded-[3rem] p-10 max-w-2xl w-full shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)]">
+                        <MaintenanceModal onClose={() => setShowAdd(false)} onSubmit={onAddTask} tenants={tenants} />
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+}
+
+function VendorManager({ vendors = [] }) {
+    return (
+        <div className="premium-card rounded-[2.5rem] p-8 mt-12 animate-in fade-in slide-in-from-bottom-5">
+            <div className="flex justify-between items-center mb-12 pb-6 border-b border-white/5">
+                <div>
+                    <h3 className="font-black text-2xl text-white italic tracking-tight flex items-center gap-3">
+                        <Users className="w-7 h-7 text-indigo-400" />
+                        My Service Network
+                    </h3>
+                    <p className="text-[10px] text-slate-500 font-black uppercase tracking-[0.2em] mt-2">Verified Professional Partners</p>
+                </div>
+            </div>
+
+            {vendors?.length === 0 ? (
+                <div className="text-center py-20 text-slate-600 border-2 border-dashed border-white/5 rounded-[2rem]">
+                    <Briefcase className="w-12 h-12 mx-auto mb-4 opacity-10" />
+                    <p className="text-[10px] uppercase font-black tracking-widest">Network is currently private</p>
+                </div>
+            ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {vendors?.slice().reverse()?.map((v, i) => (
+                        <Motion.div key={i} whileHover={{ y: -5 }} className="bg-white/[0.03] border border-white/5 p-8 rounded-[2rem] group transition-all hover:bg-white/[0.06]">
+                            <div className="flex items-center gap-5 mb-8">
+                                <div className="w-16 h-16 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-2xl flex items-center justify-center text-2xl font-black italic shadow-lg shadow-indigo-600/20">
+                                    {v.name?.[0]}
+                                </div>
+                                <div className="overflow-hidden">
+                                    <h4 className="text-lg font-black text-white tracking-tight truncate">{v.name}</h4>
+                                    <p className="text-[9px] font-black text-indigo-400 uppercase tracking-widest mt-1.5 flex items-center gap-1.5"><Shield className="w-3 h-3" /> {v.type}</p>
+                                </div>
+                            </div>
+                            <div className="space-y-3 mb-8">
+                                <div className="flex items-center gap-3 text-xs text-slate-400 font-bold font-mono-data opacity-60"><Phone className="w-3.5 h-3.5 text-indigo-400/50" /> {v.mobile}</div>
+                                <div className="flex items-center gap-3 text-xs text-slate-400 font-bold font-mono-data opacity-60"><Mail className="w-3.5 h-3.5 text-indigo-400/50" /> {v.email}</div>
+                            </div>
+                            <div className="flex items-center gap-1.5 bg-slate-950/40 p-3 rounded-xl border border-white/5">
+                                {[...Array(5)].map((_, idx) => (
+                                    <Zap key={idx} className={`w-3.5 h-3.5 ${idx < (v.rating || 5) ? 'text-amber-400 fill-amber-400/20' : 'text-slate-800'}`} />
+                                ))}
+                                <span className="ml-auto text-[9px] font-black text-slate-500 uppercase tracking-widest">Verified Badge</span>
+                            </div>
+                        </Motion.div>
+                    ))}
+                </div>
+            )}
+        </div>
+    );
+}
+
+function CredentialManager({ onEditManager, activeManager }) {
+    const [showModal, setShowModal] = useState(false);
+    return (
+        <div className="premium-card rounded-[2.5rem] p-8 mt-12 animate-in fade-in slide-in-from-bottom-5">
+            <div className="flex justify-between items-center mb-10 pb-6 border-b border-white/5">
+                <div>
+                    <h3 className="font-black text-2xl text-white italic tracking-tight flex items-center gap-3">
+                        <Lock className="w-7 h-7 text-indigo-400" />
+                        System Security Hub
+                    </h3>
+                    <p className="text-[10px] text-slate-500 font-black uppercase tracking-[0.2em] mt-2">Administrative Credential Center</p>
+                </div>
+            </div>
+            <div className="bg-white/[0.03] border border-white/5 p-8 rounded-[2rem] flex flex-col md:flex-row items-center justify-between gap-8">
+                <div className="flex items-center gap-6">
+                    <div className="w-20 h-20 bg-slate-900 border border-white/10 rounded-3xl flex items-center justify-center">
+                        <User className="w-10 h-10 text-indigo-400" />
+                    </div>
+                    <div>
+                        <p className="text-xl font-black text-white tracking-tight">{activeManager?.name || 'Primary Admin'}</p>
+                        <p className="text-xs text-slate-500 font-bold font-mono-data mt-1">{activeManager?.mobile}</p>
+                        <div className="flex items-center gap-2 mt-3">
+                            <span className="text-[9px] font-black text-emerald-400 uppercase tracking-widest bg-emerald-500/10 px-3 py-1 rounded-lg border border-emerald-500/20">Authenticated Session</span>
+                        </div>
+                    </div>
+                </div>
+                <button 
+                    onClick={() => setShowModal(true)}
+                    className="w-full md:w-auto bg-indigo-600/10 hover:bg-indigo-500 text-indigo-400 hover:text-white px-10 py-5 rounded-[1.5rem] text-[10px] font-black uppercase tracking-widest transition-all border border-indigo-500/20 hover:border-indigo-500 shadow-xl"
+                >
+                    Update Access Keys
+                </button>
+            </div>
+            {showModal && (
+                <div className="fixed inset-0 z-[300] flex items-center justify-center p-6 animate-in fade-in">
+                    <div className="absolute inset-0 bg-slate-950/90 backdrop-blur-3xl" onClick={() => setShowModal(false)} />
+                    <div className="relative bg-slate-900 border border-white/5 rounded-[3rem] p-10 max-w-lg w-full shadow-2xl">
+                        <CredentialModal 
+                            activeManager={activeManager} 
+                            onClose={() => setShowModal(false)} 
+                            onSave={onEditManager} 
+                        />
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+}
+
 function UtilityManager({ tenants, utilityBills, payments, onAddBill, onMarkUtilityPaid, activeManager, currency = 'USD' }) {
     const [activeTab, setActiveTab] = useState('new'); // 'new', 'monthly', or 'history'
     const [confirmUtilityTenant, setConfirmUtilityTenant] = useState(null); // { tenant, totalOwed, breakdowns }
