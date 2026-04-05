@@ -3697,34 +3697,41 @@ function UnitModal({ initialData, onSubmit, onClose }) {
                             <Camera className="w-3.5 h-3.5" /> Asset Photos
                         </label>
                         
-                        <div className="grid grid-cols-4 md:grid-cols-5 gap-3">
-                            {form.photos && form.photos.map((url, idx) => (
-                                <div key={idx} className="relative group aspect-square">
-                                    <div className="w-full h-full bg-slate-950 rounded-2xl border border-white/5 overflow-hidden ring-1 ring-white/5 ring-inset relative group-hover:border-indigo-500/30 transition-colors">
-                                        <div className="absolute inset-0 flex items-center justify-center opacity-20">
-                                            <ImageIcon className="w-5 h-5 text-indigo-400" />
+                        <div className="flex flex-nowrap gap-4 overflow-x-auto pb-4 no-scrollbar">
+                            {form.photos && form.photos.map((url, idx) => {
+                                const unitPrefix = (form.unitNumber || '').replace(/[^a-zA-Z]/g, '').slice(0, 2).toUpperCase() || 'UN';
+                                return (
+                                    <div key={idx} className="relative group shrink-0 w-32 h-32">
+                                        <div className="w-full h-full bg-slate-950 rounded-2xl border border-white/5 overflow-hidden ring-1 ring-white/5 ring-inset relative group-hover:border-indigo-500/30 transition-colors">
+                                            <div className="absolute inset-0 flex items-center justify-center opacity-20">
+                                                <ImageIcon className="w-6 h-6 text-indigo-400" />
+                                            </div>
+                                            <img 
+                                                src={url} 
+                                                alt="" 
+                                                className="w-full h-full object-cover cursor-pointer hover:scale-110 transition-transform relative z-10"
+                                                onClick={() => window.open(url, '_blank')}
+                                                onError={(e) => { e.target.src = 'https://via.placeholder.com/150/0f172a/6366f1?text='; }}
+                                            />
+                                            {/* Specialized Naming Overlay */}
+                                            <div className="absolute bottom-2 left-2 z-20 bg-slate-900/90 backdrop-blur-md px-2.5 py-1 rounded-lg border border-white/10 shadow-xl pointer-events-none">
+                                                <p className="text-[9px] font-black text-indigo-400 tracking-tighter uppercase">{unitPrefix}{idx + 1}</p>
+                                            </div>
                                         </div>
-                                        <img 
-                                            src={url} 
-                                            alt="" 
-                                            className="w-full h-full object-cover cursor-pointer hover:scale-110 transition-transform relative z-10"
-                                            onClick={() => window.open(url, '_blank')}
-                                            onError={(e) => { e.target.src = 'https://via.placeholder.com/150/0f172a/6366f1?text='; }}
-                                        />
+                                        <button 
+                                            type="button"
+                                            onClick={() => removePhoto(idx)}
+                                            className="absolute -top-1.5 -right-1.5 bg-red-600 shadow-lg text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:scale-110 z-30"
+                                        >
+                                            <X className="w-3.5 h-3.5" />
+                                        </button>
                                     </div>
-                                    <button 
-                                        type="button"
-                                        onClick={() => removePhoto(idx)}
-                                        className="absolute -top-1.5 -right-1.5 bg-red-600 shadow-lg text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:scale-110"
-                                    >
-                                        <X className="w-3.5 h-3.5" />
-                                    </button>
-                                </div>
-                            ))}
+                                );
+                            })}
                             
-                            <label className={`aspect-square flex flex-col items-center justify-center bg-slate-950/20 border-2 border-dashed border-white/5 rounded-2xl cursor-pointer hover:border-indigo-500/50 hover:bg-slate-900/50 transition-all ${isSubmitting ? 'animate-pulse' : ''}`}>
-                                <Plus className={`w-6 h-6 ${isSubmitting ? 'text-indigo-400' : 'text-slate-500'}`} />
-                                <span className="text-[9px] font-black text-slate-600 mt-2 uppercase tracking-widest">{isSubmitting ? 'UP...' : 'ADD'}</span>
+                            <label className={`shrink-0 w-32 h-32 flex flex-col items-center justify-center bg-slate-950/20 border-2 border-dashed border-white/5 rounded-2xl cursor-pointer hover:border-indigo-500/50 hover:bg-slate-900/50 transition-all ${isSubmitting ? 'animate-pulse' : ''}`}>
+                                <Plus className={`w-8 h-8 ${isSubmitting ? 'text-indigo-400' : 'text-slate-500'}`} />
+                                <span className="text-[10px] font-black text-slate-600 mt-2 uppercase tracking-widest">{isSubmitting ? 'UP...' : 'ADD'}</span>
                                 <input 
                                     type="file" 
                                     multiple 
