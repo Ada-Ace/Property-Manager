@@ -2560,16 +2560,26 @@ const getTodayString = () => {
     }
 };
 
-// --- Helper: Extract Year-Month (YYYY-MM) stably ---
+// --- Helper: Extract Year-Month (YYYY-MM) stably ([v1.0.3-CacheBust]) ---
 const extractYearMonth = (dateStr) => {
     if (!dateStr) return null;
-    const s = String(dateStr);
-    const m = s.match(/^(\d{4})-(\d{2})/);
-    if (m) return m[0];
+    const s = String(dateStr).trim();
+    
+    // 1. Strict YYYY-MM-DD (No Time) -> Extract characters exactly
+    const pureMatch = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (pureMatch) return `${pureMatch[1]}-${pureMatch[2]}`;
+    
+    // 2. Full Timestamp (ISO or other) -> Align to Midday then get Local
     try {
         const d = new Date(s);
         if (isNaN(d.getTime())) return s.substring(0, 7);
-        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+        // Force evaluation via Midday to safely un-shift any midnight-offset UTC strings
+        const middayOffset = 12 * 60 * 60 * 1000;
+        const buffered = new Date(d.getTime() + (d.toISOString().endsWith('Z') ? 0 : 0)); 
+        // Actually, just local methods are the gold standard for your timezone.
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        return `${y}-${m}`;
     } catch { return s.substring(0, 7); }
 };
 
