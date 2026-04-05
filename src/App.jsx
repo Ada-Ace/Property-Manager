@@ -232,15 +232,23 @@ const formatDate = (date, includeTime = false) => {
 const fmtDate = (str) => {
     if (!str) return 'N/A';
     const s = String(str).trim().replace(/^'/, '');
+    
+    // 1. Direct regex pass for yyyy-mm-dd
     const isoMatch = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
     if (isoMatch) return s;
+
+    // 2. Direct regex pass for dd-mm-yyyy
     const sheetMatch = s.match(/^(\d{2})-(\d{2})-(\d{4})$/);
     if (sheetMatch) return `${sheetMatch[3]}-${sheetMatch[2]}-${sheetMatch[1]}`;
 
+    // 3. Fallback: Parse and re-assemble using LOCAL parts to avoid UTC shift
     try {
         const d = new Date(fromSheetDate(s));
         if (!isNaN(d.getTime())) {
-            return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`;
+            const yyyy = d.getFullYear();
+            const mm = String(d.getMonth() + 1).padStart(2, '0');
+            const dd = String(d.getDate()).padStart(2, '0');
+            return `${yyyy}-${mm}-${dd}`;
         }
         return 'N/A';
     } catch { return 'N/A'; }
@@ -902,7 +910,7 @@ function App() {
                     id: generateId('PAY'),
                     tenantId: tenant.id,
                     amount: amount,
-                    date: new Date().toISOString(),
+                    date: toSheetDate(new Date()),
                     propertyName: activeProperty,
                     confirmedBy: activeManager?.name || 'Admin'
                 };
@@ -931,7 +939,7 @@ function App() {
         try {
             const tenant = tenants.find(t => t.id === tenantId);
             if (tenant) {
-                const updatedTenant = { ...tenant, utilityShare: 0, lastUtilityPaidDate: new Date().toISOString() };
+                const updatedTenant = { ...tenant, utilityShare: 0, lastUtilityPaidDate: toSheetDate(new Date()) };
                 const newPayment = {
                     id: generateId('UTL'),
                     tenantId: tenant.id,
@@ -1090,7 +1098,7 @@ function App() {
                 ...updatedTenant, 
                 leaseDocument: docUrl,
                 leaseExtensionDoc: extDocUrl,
-                lastUpdated: new Date().toISOString() 
+                lastUpdated: toSheetDate(new Date()) 
             };
             delete tenantData.leaseFile; 
             delete tenantData.leaseExtensionFile; 
@@ -1163,7 +1171,7 @@ function App() {
                 tenantId: activeTenantId,
                 content: msg,
                 photoUrl: photoUrl, // Remote URL
-                timestamp: new Date().toISOString(),
+                timestamp: toSheetDate(new Date()),
                 propertyName: activeProperty,
                 status: 'UNREAD',
                 handledBy: ''
@@ -1252,7 +1260,7 @@ function App() {
                 }
             }
             
-            const updatedUnit = { ...unit, photos: newPhotoUrls, lastUpdated: new Date().toISOString() };
+            const updatedUnit = { ...unit, photos: newPhotoUrls, lastUpdated: toSheetDate(new Date()) };
             setPropertyUnits(prev => prev.map(u => String(u.id) === String(unitId) ? updatedUnit : u));
             
             await API.saveToSheet('UPDATE', 'Units', updatedUnit);
@@ -1279,7 +1287,7 @@ function App() {
                 const tenant = tenants.find(t => String(t.id).toLowerCase().trim() === String(tenantId).toLowerCase().trim());
                 if (!tenant) throw new Error('Tenant record lookup failed');
                 
-                const updatedTenant = { ...tenant, leaseDocument: docUrl, lastUpdated: new Date().toISOString() };
+                const updatedTenant = { ...tenant, leaseDocument: docUrl, lastUpdated: toSheetDate(new Date()) };
                 
                 setTenants(prev => prev.map(t => String(t.id).toLowerCase().trim() === String(tenantId).toLowerCase().trim() ? updatedTenant : t));
                 
@@ -2054,7 +2062,7 @@ function RentSummaryTab({ tenants, payments, currency = 'USD', onMarkPaid, prope
         
         doc.setFontSize(10);
         doc.setTextColor(100);
-        doc.text(`Transaction Statement Generated: ${new Date().toLocaleDateString()}`, 14, 30);
+        doc.text(`Transaction Statement Generated: ${formatDate(new Date())}`, 14, 30);
 
         const tableColumn = ["Unit", "Tenant", "Payment Date", "Amount"];
         const tableRows = payments.slice().reverse().map(pay => {
@@ -2076,7 +2084,7 @@ function RentSummaryTab({ tenants, payments, currency = 'USD', onMarkPaid, prope
             alternateRowStyles: { fillColor: [245, 247, 250] }
         });
 
-        doc.save(`Ledger_${propertyName}_${new Date().toISOString().split('T')[0]}.pdf`);
+        doc.save(`Ledger_${propertyName}_${toSheetDate(new Date())}.pdf`);
     };
 
     const today = getLocalDate() || new Date();
@@ -2412,7 +2420,7 @@ function MessagesManager({ tenants, messages, onUpdateMessage, activeManager }) 
 
     const handleResolve = (msgId) => {
         if (!window.confirm("Archive this message as resolved?")) return;
-        onUpdateMessage(msgId, { status: 'RESOLVED', handledBy: activeManager?.name || 'Admin', resolvedAt: new Date().toISOString() });
+        onUpdateMessage(msgId, { status: 'RESOLVED', handledBy: activeManager?.name || 'Admin', resolvedAt: toSheetDate(new Date()) });
     };
 
     return (
@@ -2615,7 +2623,7 @@ const getTodayString = () => {
         const day = String(d.getDate()).padStart(2, '0');
         return `${y}-${m}-${day}`;
     } catch {
-        return new Date().toISOString().split('T')[0];
+        return toSheetDate(new Date());
     }
 };
 
@@ -3702,7 +3710,7 @@ function TenantDashboard({ tenant, unit, tenantMessages = [], onSendMessage, onU
                                             {msg.status === 'RESOLVED' ? '-?Resolved' : msg.status === 'IN PROGRESS' ? '-- In Progress' : '-- Unread'}
                                         </span>
                                         <span className="text-[10px] text-slate-500 font-black uppercase tracking-widest font-mono-data">
-                                            {new Date(msg.timestamp).toLocaleDateString()}
+                                            {formatDate(msg.timestamp)}
                                         </span>
                                     </div>
                                     {msg.handledBy && (
@@ -3856,7 +3864,7 @@ function UnitCard({ unit, tenant, currency = 'USD', history, onUpdateFittings, o
 
     // Financial Intelligence: Yield & Vacancy
     const yieldGap = isOccupied ? (Number(tenant.baseRent || 0) - Number(unit.expectedRent || 0)) : 0;
-    const vacancyDays = !isOccupied && unit.vacantSince ? Math.ceil((new Date() - new Date(unit.vacantSince)) / (1000 * 60 * 60 * 24)) : 0;
+    const vacancyDays = !isOccupied && unit.vacantSince ? Math.ceil((getLocalDate() - new Date(fromSheetDate(unit.vacantSince))) / (1000 * 60 * 60 * 24)) : 0;
     const lostRevenue = !isOccupied ? (Number(unit.expectedRent || 0) / 30) * vacancyDays : 0;
 
     // Decision Intelligence: Lease Expiry Calculation
@@ -3873,7 +3881,7 @@ function UnitCard({ unit, tenant, currency = 'USD', history, onUpdateFittings, o
     };
     const leaseStatus = getLeaseStatus();
 
-    const fmtDate = (d) => d ? new Date(d).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A';
+    const fmtDate = (d) => formatDate(d);
 
     return (
         <Motion.div 
