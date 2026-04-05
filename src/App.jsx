@@ -149,6 +149,21 @@ const getLocalDate = () => {
     }
 };
 
+const resolvePhotoUrl = (url) => {
+    if (!url || typeof url !== 'string' || !url.startsWith('http')) return url;
+    if (url.includes('drive.google.com')) {
+        let id = '';
+        if (url.includes('id=')) {
+            id = url.split('id=')[1].split('&')[0];
+        } else if (url.includes('/d/')) {
+            id = url.split('/d/')[1].split('/')[0];
+        }
+        // Use the high-res thumbnail endpoint which is more reliable for direct embedding
+        if (id) return `https://drive.google.com/thumbnail?id=${id}&sz=w1200`;
+    }
+    return url;
+};
+
 // Standardised date formatter -?dd-MMM-yyyy (e.g. 19-Mar-2026)
 const MONTHS_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
@@ -295,6 +310,29 @@ const API = {
         } catch (err) {
             console.error('Drive Upload Error:', err);
             return { success: false, message: 'Upload failed' };
+        }
+    },
+
+    async deleteFile(urlOrId) {
+        if (!this.isValid()) return { success: false };
+        try {
+            let fileId = urlOrId;
+            if (urlOrId.includes('id=')) {
+                fileId = urlOrId.split('id=')[1].split('&')[0];
+            } else if (urlOrId.includes('/d/')) {
+                fileId = urlOrId.split('/d/')[1].split('/')[0];
+            }
+            
+            await fetch(API_URL, {
+                method: 'POST',
+                mode: 'cors',
+                headers: { 'Content-Type': 'text/plain' },
+                body: JSON.stringify({ action: 'DELETE_FILE', fileId })
+            });
+            return { success: true };
+        } catch (e) {
+            console.error('Cloud Deletion Failed:', e);
+            return { success: false };
         }
     },
 
@@ -1425,7 +1463,7 @@ function ManagerDashboard({ activeProperty, tenants, payments, propertyUnits, ut
                 <div className="fixed inset-0 z-[250] bg-slate-950/95 backdrop-blur-2xl flex flex-col items-center justify-center p-8 animate-in fade-in transition-all" onClick={() => setViewerImage(null)}>
                     <button className="absolute top-8 right-8 p-3 text-slate-500 hover:text-white bg-white/5 rounded-2xl border border-white/5 transition-all"><X className="w-8 h-8" /></button>
                     <div className="relative w-full h-full flex items-center justify-center">
-                        <img src={viewerImage} alt="Fullscreen View" className="max-w-full max-h-full object-contain rounded-[2rem] shadow-2xl border border-white/10" />
+                        <img src={resolvePhotoUrl(viewerImage)} alt="Fullscreen View" className="max-w-full max-h-full object-contain rounded-[2rem] shadow-2xl border border-white/10" />
                         <div className="absolute bottom-10 left-1/2 -translate-x-1/2 px-8 py-3 bg-white/5 backdrop-blur-md rounded-2xl border border-white/5 text-[10px] font-black uppercase tracking-widest text-slate-400">Tap anywhere to return</div>
                     </div>
                 </div>
@@ -3114,7 +3152,7 @@ function UnitCard({ unit, tenant, currency = 'USD', history, onUpdateFittings, o
                 <div className="relative group/thumb cursor-pointer" onClick={() => images[0] && onViewImage(images[0])}>
                     {images.length > 0 ? (
                         <div className="relative">
-                            <img src={images[0]} alt="" className="w-24 h-24 md:w-28 md:h-28 object-cover rounded-3xl border-2 border-white/10 group-hover/thumb:border-indigo-500/50 group-hover/thumb:scale-105 transition-all duration-500 shadow-2xl" />
+                            <img src={resolvePhotoUrl(images[0])} alt="" className="w-24 h-24 md:w-28 md:h-28 object-cover rounded-3xl border-2 border-white/10 group-hover/thumb:border-indigo-500/50 group-hover/thumb:scale-105 transition-all duration-500 shadow-2xl" />
                             {images.length > 1 && (
                                 <div className="absolute -bottom-2 -right-2 bg-indigo-600 text-white text-[8px] font-black px-2 py-1 rounded-lg border border-white/10 shadow-lg">
                                     +{images.length - 1} MORE
@@ -3439,8 +3477,12 @@ function UnitModal({ initialData, onSubmit, onClose }) {
         }
     };
 
-    const removeImage = (index) => {
+    const removeImage = async (index) => {
+        const targetUrl = images[index];
         setImages(images.filter((_, i) => i !== index));
+        if (targetUrl && targetUrl.includes('drive.google.com')) {
+            await API.deleteFile(targetUrl);
+        }
     };
 
     const handleSubmit = async (e) => {
@@ -3497,7 +3539,7 @@ function UnitModal({ initialData, onSubmit, onClose }) {
                             {images.map((url, idx) => (
                                 <div key={idx} className="relative group aspect-square rounded-[1.5rem] overflow-hidden border border-white/10 bg-slate-800 flex items-center justify-center">
                                     <img 
-                                        src={url} 
+                                        src={resolvePhotoUrl(url)} 
                                         alt="" 
                                         className="w-full h-full object-cover group-hover:scale-105 transition-transform" 
                                         onError={(e) => {
