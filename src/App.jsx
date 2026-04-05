@@ -3700,13 +3700,16 @@ function UnitModal({ initialData, onSubmit, onClose }) {
                         <div className="grid grid-cols-4 md:grid-cols-5 gap-3">
                             {form.photos && form.photos.map((url, idx) => (
                                 <div key={idx} className="relative group aspect-square">
-                                    <div className="w-full h-full bg-slate-950 rounded-2xl border border-white/5 overflow-hidden ring-1 ring-white/5 ring-inset">
+                                    <div className="w-full h-full bg-slate-950 rounded-2xl border border-white/5 overflow-hidden ring-1 ring-white/5 ring-inset relative group-hover:border-indigo-500/30 transition-colors">
+                                        <div className="absolute inset-0 flex items-center justify-center opacity-20">
+                                            <ImageIcon className="w-5 h-5 text-indigo-400" />
+                                        </div>
                                         <img 
                                             src={url} 
-                                            alt="Asset Thumbnail" 
-                                            className="w-full h-full object-cover cursor-pointer hover:scale-110 transition-transform"
+                                            alt="" 
+                                            className="w-full h-full object-cover cursor-pointer hover:scale-110 transition-transform relative z-10"
                                             onClick={() => window.open(url, '_blank')}
-                                            onError={(e) => { e.target.src = 'https://via.placeholder.com/150/0f172a/6366f1?text=Img'; }}
+                                            onError={(e) => { e.target.src = 'https://via.placeholder.com/150/0f172a/6366f1?text='; }}
                                         />
                                     </div>
                                     <button 
