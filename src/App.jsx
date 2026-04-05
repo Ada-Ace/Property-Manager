@@ -2974,39 +2974,86 @@ function TasksManager({ tenants, tasks, vendors, onAddTask, onAddVendor, onEditV
                     </div>
                 </div>
             ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="space-y-3">
+                    {/* Header Row */}
+                    <div className="hidden md:grid grid-cols-[2fr_1.5fr_1fr_auto] gap-4 px-5 pb-2 border-b border-white/5">
+                        <span className="text-[9px] font-black uppercase tracking-widest text-slate-600">Contractor</span>
+                        <span className="text-[9px] font-black uppercase tracking-widest text-slate-600">Specialization</span>
+                        <span className="text-[9px] font-black uppercase tracking-widest text-slate-600">Rating</span>
+                        <span className="text-[9px] font-black uppercase tracking-widest text-slate-600">Actions</span>
+                    </div>
+
                     {vendors.map((v, i) => (
-                        <div key={i} className="bg-slate-900 border border-white/5 p-8 rounded-[2.5rem] hover:border-indigo-500/30 transition-all group relative">
-                            <div className="absolute top-8 right-8 flex gap-2">
-                                <button onClick={() => onEditVendor(v)} className="p-2 bg-slate-800/80 hover:bg-indigo-600 text-slate-400 hover:text-white rounded-xl transition-all border border-white/5">
+                        <Motion.div
+                            key={v.id || i}
+                            initial={{ opacity: 0, x: -10 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: i * 0.04 }}
+                            className="grid grid-cols-1 md:grid-cols-[2fr_1.5fr_1fr_auto] gap-3 md:gap-4 items-center bg-slate-900/60 border border-white/5 hover:border-indigo-500/20 hover:bg-slate-900/90 rounded-2xl px-5 py-4 transition-all group"
+                        >
+                            {/* Name + contact */}
+                            <div className="flex items-center gap-3 min-w-0">
+                                <div className="w-9 h-9 shrink-0 bg-indigo-600/15 border border-indigo-500/20 rounded-xl flex items-center justify-center">
+                                    <Briefcase className="w-4 h-4 text-indigo-400" />
+                                </div>
+                                <div className="min-w-0">
+                                    <p className="text-sm font-black text-white truncate">{v.name}</p>
+                                    <p className="text-[9px] text-slate-500 font-bold truncate font-mono-data">{v.mobile || v.email || 'No contact'}</p>
+                                </div>
+                            </div>
+
+                            {/* Type badge */}
+                            <div>
+                                <span className="text-[9px] font-black uppercase tracking-widest bg-slate-800 text-slate-300 border border-white/5 px-3 py-1.5 rounded-lg">
+                                    {v.type || 'General'}
+                                </span>
+                            </div>
+
+                            {/* Stars */}
+                            <div className="flex items-center gap-1">
+                                {[...Array(5)].map((_, idx) => (
+                                    <span key={idx} className={`w-1.5 h-1.5 rounded-full ${idx < Math.floor(v.rating || 5) ? 'bg-amber-400' : 'bg-slate-700'}`} />
+                                ))}
+                                <span className="text-[9px] text-slate-500 font-black ml-1">{v.rating || 5}</span>
+                            </div>
+
+                            {/* Actions */}
+                            <div className="flex items-center gap-2 shrink-0">
+                                <a
+                                    href={`https://wa.me/${String(v.mobile || '').replace(/\D/g, '')}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    title="Dispatch via WhatsApp"
+                                    className="p-2 bg-emerald-600/10 hover:bg-emerald-600 border border-emerald-500/20 text-emerald-400 hover:text-white rounded-xl transition-all"
+                                >
+                                    <Phone className="w-3.5 h-3.5" />
+                                </a>
+                                <button
+                                    onClick={() => onEditVendor(v)}
+                                    title="Edit"
+                                    className="p-2 bg-slate-800/60 hover:bg-indigo-600 text-slate-400 hover:text-white rounded-xl transition-all border border-white/5"
+                                >
                                     <Settings className="w-3.5 h-3.5" />
                                 </button>
-                                <button onClick={() => onDeleteVendor(v.id)} className="p-2 bg-slate-800/80 hover:bg-red-600 text-slate-400 hover:text-white rounded-xl transition-all border border-white/5">
+                                <button
+                                    onClick={() => onDeleteVendor(v.id)}
+                                    title="Remove"
+                                    className="p-2 bg-slate-800/60 hover:bg-red-600 text-slate-400 hover:text-white rounded-xl transition-all border border-white/5"
+                                >
                                     <Trash2 className="w-3.5 h-3.5" />
                                 </button>
                             </div>
-
-                            <div className="flex justify-between items-start mb-6">
-                                <div className="p-4 bg-indigo-600/10 rounded-2xl border border-indigo-500/20"><Briefcase className="w-6 h-6 text-indigo-400" /></div>
-                                <div className="text-right">
-                                    <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest">Specialization</p>
-                                    <p className="text-sm font-black text-white uppercase tracking-tight">{v.type}</p>
-                                </div>
-                            </div>
-                            <h4 className="text-xl font-black text-white mb-2">{v.name}</h4>
-                            <div className="flex items-center gap-1 mb-6">
-                                {[...Array(5)].map((_, idx) => <span key={idx} className={`w-1.5 h-1.5 rounded-full ${idx < Math.floor(v.rating || 5) ? 'bg-amber-500' : 'bg-slate-700'}`}></span>)}
-                                <span className="text-[10px] text-slate-500 font-black ml-2">{v.rating || 5} Verified</span>
-                            </div>
-                            <a href={`https://wa.me/${String(v.mobile || '').replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" className="w-full bg-emerald-600/10 hover:bg-emerald-600/20 text-emerald-500 border border-emerald-500/20 py-4 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] flex items-center justify-center gap-3 transition-all glow-emerald">
-                                <Phone className="w-4 h-4" /> DISPATCH VENDOR
-                            </a>
-                        </div>
+                        </Motion.div>
                     ))}
-                    <div onClick={onAddVendor} className="border-2 border-dashed border-white/5 rounded-[2.5rem] flex flex-col items-center justify-center p-12 text-slate-600 hover:text-indigo-400 hover:border-indigo-500/40 transition-all cursor-pointer group bg-white/[0.02]">
-                        <PlusSquare className="w-10 h-10 mb-4 group-hover:scale-110 transition-transform" />
-                        <p className="text-[10px] font-black uppercase tracking-widest">Enlist a New Partner</p>
-                    </div>
+
+                    {/* Add new partner row */}
+                    <button
+                        onClick={onAddVendor}
+                        className="w-full flex items-center justify-center gap-3 border border-dashed border-white/5 hover:border-indigo-500/30 rounded-2xl px-5 py-4 text-slate-600 hover:text-indigo-400 transition-all group"
+                    >
+                        <PlusSquare className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                        <span className="text-[10px] font-black uppercase tracking-widest">Enlist a New Partner</span>
+                    </button>
                 </div>
             )}
         </div>
