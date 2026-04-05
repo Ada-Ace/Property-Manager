@@ -3298,86 +3298,115 @@ function TasksManager({ tenants, tasks, vendors, onAddTask, onAddVendor, onEditV
                     </div>
                 </div>
             ) : (
-                <div className="space-y-3">
-                    {/* Header Row */}
-                    <div className="hidden md:grid grid-cols-[2fr_1.5fr_1fr_auto] gap-4 px-5 pb-2 border-b border-white/5">
-                        <span className="text-[9px] font-black uppercase tracking-widest text-slate-600">Contractor</span>
-                        <span className="text-[9px] font-black uppercase tracking-widest text-slate-600">Specialization</span>
-                        <span className="text-[9px] font-black uppercase tracking-widest text-slate-600">Rating</span>
-                        <span className="text-[9px] font-black uppercase tracking-widest text-slate-600">Actions</span>
-                    </div>
-
-                    {vendors.map((v, i) => (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {vendors.slice().reverse().map((v, i) => (
                         <Motion.div
                             key={v.id || i}
-                            initial={{ opacity: 0, x: -10 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            transition={{ delay: i * 0.04 }}
-                            className="grid grid-cols-1 md:grid-cols-[2fr_1.5fr_1fr_auto] gap-3 md:gap-4 items-center bg-slate-900/60 border border-white/5 hover:border-indigo-500/20 hover:bg-slate-900/90 rounded-2xl px-5 py-4 transition-all group"
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: i * 0.05 }}
+                            className="premium-card rounded-[2.5rem] overflow-hidden group flex flex-col h-full shadow-2xl shadow-black/50 border border-white/8 transition-all duration-500 bg-gradient-to-b from-slate-900 to-slate-950"
                         >
-                            {/* Name + contact */}
-                            <div className="flex items-center gap-3 min-w-0">
-                                <div className="w-9 h-9 shrink-0 bg-indigo-600/15 border border-indigo-500/20 rounded-xl flex items-center justify-center">
-                                    <Briefcase className="w-4 h-4 text-indigo-400" />
+                            {/* Top Bar — status + metric in one line */}
+                            <div className="flex items-center justify-between px-5 py-3 border-b border-white/5 bg-slate-950/50">
+                                <div className="flex items-center gap-2">
+                                    <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                                    <span className="text-[9px] font-black uppercase tracking-[0.2em] text-emerald-400">
+                                        Active Partner
+                                    </span>
                                 </div>
-                                <div className="min-w-0">
-                                    <p className="text-sm font-black text-white truncate">{v.name}</p>
-                                    <p className="text-[9px] text-slate-500 font-bold truncate font-mono-data">{v.mobile || v.email || 'No contact'}</p>
-                                </div>
-                            </div>
-
-                            {/* Type badge */}
-                            <div>
-                                <span className="text-[9px] font-black uppercase tracking-widest bg-slate-800 text-slate-300 border border-white/5 px-3 py-1.5 rounded-lg">
+                                <span className="text-[9px] font-black uppercase tracking-tight text-indigo-400 bg-indigo-500/10 px-3 py-1 rounded-full border border-indigo-500/20">
                                     {v.type || 'General'}
                                 </span>
                             </div>
 
-                            {/* Stars */}
-                            <div className="flex items-center gap-1">
-                                {[...Array(5)].map((_, idx) => (
-                                    <span key={idx} className={`w-1.5 h-1.5 rounded-full ${idx < Math.floor(v.rating || 5) ? 'bg-amber-400' : 'bg-slate-700'}`} />
-                                ))}
-                                <span className="text-[9px] text-slate-500 font-black ml-1">{v.rating || 5}</span>
-                            </div>
+                            <div className="p-6 flex-1 flex flex-col relative">
+                                {/* Vendor Title Row */}
+                                <div className="flex justify-between items-start mb-6">
+                                    <div className="flex-1 min-w-0">
+                                        <h4 className="text-xl font-black text-white tracking-tight italic truncate uppercase">{v.name}</h4>
+                                        <div className="flex items-center gap-2 mt-2">
+                                            {[...Array(5)].map((_, idx) => (
+                                                <span key={idx} className={`w-2 h-2 rounded-full ${idx < Math.floor(v.rating || 5) ? 'bg-amber-400' : 'bg-slate-700'}`} />
+                                            ))}
+                                            <span className="text-[9px] text-slate-500 font-black ml-1 uppercase">{v.rating || 5}.0 RATING</span>
+                                        </div>
+                                    </div>
+                                    <div className="bg-indigo-600/15 border border-indigo-500/20 rounded-[1.25rem] p-3 shadow-lg shadow-indigo-600/10">
+                                        <Briefcase className="w-5 h-5 text-indigo-400" />
+                                    </div>
+                                </div>
 
-                            {/* Actions */}
-                            <div className="flex items-center gap-2 shrink-0">
-                                <a
-                                    href={`https://wa.me/${String(v.mobile || '').replace(/\D/g, '')}`}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    title="Dispatch via WhatsApp"
-                                    className="p-2 bg-emerald-600/10 hover:bg-emerald-600 border border-emerald-500/20 text-emerald-400 hover:text-white rounded-xl transition-all"
-                                >
-                                    <Phone className="w-3.5 h-3.5" />
-                                </a>
-                                <button
-                                    onClick={() => onEditVendor(v)}
-                                    title="Edit"
-                                    className="p-2 bg-slate-800/60 hover:bg-indigo-600 text-slate-400 hover:text-white rounded-xl transition-all border border-white/5"
-                                >
-                                    <Settings className="w-3.5 h-3.5" />
-                                </button>
-                                <button
-                                    onClick={() => onDeleteVendor(v.id)}
-                                    title="Remove"
-                                    className="p-2 bg-slate-800/60 hover:bg-red-600 text-slate-400 hover:text-white rounded-xl transition-all border border-white/5"
-                                >
-                                    <Trash2 className="w-3.5 h-3.5" />
-                                </button>
+                                <div className="flex-1 space-y-4">
+                                    <div className="grid grid-cols-1 gap-3">
+                                        <div className="bg-slate-950/40 p-4 rounded-2xl border border-white/5 space-y-3 cursor-default hover:bg-white/[0.02] hover:border-indigo-500/30 transition-all group/info">
+                                            <div className="space-y-1">
+                                                <p className="text-[8px] font-black text-slate-600 uppercase tracking-widest flex justify-between items-center">
+                                                    WhatsApp Hotline
+                                                    <Phone className="w-2.5 h-2.5 opacity-40" />
+                                                </p>
+                                                <p className="text-white font-black text-sm tracking-tight font-mono-data">+{String(v.mobile || '').replace(/\D/g, '') || 'UNLISTED'}</p>
+                                            </div>
+                                            
+                                            {v.email && (
+                                                <div className="pt-3 border-t border-white/5 space-y-1">
+                                                    <p className="text-[8px] font-black text-slate-600 uppercase tracking-widest flex justify-between items-center">
+                                                        Email Address
+                                                        <Mail className="w-2.5 h-2.5 opacity-40" />
+                                                    </p>
+                                                    <p className="text-slate-300 font-bold text-[10px] truncate">{v.email}</p>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Interactive Actions */}
+                                <div className="flex gap-3 mt-8">
+                                    <a 
+                                        href={`https://wa.me/${String(v.mobile || '').replace(/\D/g, '')}`} 
+                                        target="_blank" 
+                                        rel="noopener noreferrer" 
+                                        className="flex-1 bg-emerald-600/10 hover:bg-emerald-600/20 border border-emerald-500/20 text-emerald-500 font-black rounded-2xl py-4 flex items-center justify-center gap-2.5 text-[10px] uppercase tracking-widest transition-all glow-emerald group-hover:bg-emerald-600 group-hover:text-white"
+                                    >
+                                        <MessageCircle className="w-4 h-4" /> DISPATCH PARTNER
+                                    </a>
+                                    <div className="flex gap-2">
+                                        <button 
+                                            onClick={() => onEditVendor(v)} 
+                                            className="bg-slate-900 border border-white/5 text-slate-500 hover:text-white rounded-2xl px-4 py-4 transition-all hover:border-indigo-500/30"
+                                            title="Edit Profile"
+                                        >
+                                            <Settings className="w-4 h-4" />
+                                        </button>
+                                        <button 
+                                            onClick={() => onDeleteVendor(v.id)} 
+                                            className="bg-slate-900 border border-white/5 text-slate-500 hover:text-red-400 rounded-2xl px-4 py-4 transition-all hover:border-red-500/30"
+                                            title="Remove Partner"
+                                        >
+                                            <Trash2 className="w-4 h-4" />
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
                         </Motion.div>
                     ))}
 
-                    {/* Add new partner row */}
-                    <button
-                        onClick={onAddVendor}
-                        className="w-full flex items-center justify-center gap-3 border border-dashed border-white/5 hover:border-indigo-500/30 rounded-2xl px-5 py-4 text-slate-600 hover:text-indigo-400 transition-all group"
+                    {/* Registration Trigger Card */}
+                    <Motion.button 
+                        whileHover={{ y: -5, scale: 1.01 }}
+                        whileTap={{ scale: 0.98 }}
+                        onClick={onAddVendor} 
+                        className="h-full min-h-[340px] border-2 border-dashed border-white/5 bg-white/[0.02] rounded-[2.5rem] flex flex-col items-center justify-center gap-4 text-slate-500 hover:text-indigo-400 hover:border-indigo-500/30 transition-all group shadow-xl"
                     >
-                        <PlusSquare className="w-4 h-4 group-hover:scale-110 transition-transform" />
-                        <span className="text-[10px] font-black uppercase tracking-widest">Enlist a New Partner</span>
-                    </button>
+                        <div className="p-6 bg-slate-900 border border-white/5 rounded-3xl group-hover:bg-indigo-600 group-hover:border-indigo-500/30 transition-all duration-300">
+                            <PlusSquare className="w-10 h-10 group-hover:text-white transition-transform group-hover:scale-110" />
+                        </div>
+                        <div className="text-center group-hover:translate-y-[-4px] transition-transform">
+                            <span className="text-[11px] font-black uppercase tracking-[0.4em] block">Enlist New Partner</span>
+                            <span className="text-[8px] font-black uppercase tracking-[0.2em] text-slate-600 mt-1 opacity-60">Expand Service Network</span>
+                        </div>
+                    </Motion.button>
                 </div>
             )}
         </div>
