@@ -250,7 +250,7 @@ function PhotoGallery({ photos = [], onClose }) {
 
                 {/* Professional Thumbnail Grid */}
                 <div className="flex justify-center flex-wrap items-center gap-4">
-                    {photos.map((url, i) => (
+                    {photos?.map((url, i) => (
                         <button
                             key={i}
                             onClick={() => setActiveIdx(i)}
@@ -369,7 +369,7 @@ function ManagerDashboard(props) {
                     { id: 'utilities', icon: <Droplets className="w-3.5 h-3.5" />, label: 'Utility Ledger' },
                     { id: 'tasks', icon: <Hammer className="w-3.5 h-3.5" />, label: 'Maintenance Desk' },
                     { id: 'messages', icon: <MessageSquare className="w-3.5 h-3.5" />, label: 'Communications', badge: (tenantMessages?.length > 0) }
-                ] : []).map((tab) => (
+                ] : [])?.map((tab) => (
                     <Motion.button 
                         key={tab.id}
                         layout
@@ -402,7 +402,7 @@ function ManagerDashboard(props) {
                     {activeTab === 'rents' && <RentSummaryTab tenants={tenants} payments={payments.filter(p => !p.propertyName || p.propertyName === activeProperty)} currency={currency} onMarkPaid={onMarkPaid} propertyName={activeProperty} tenantMessages={tenantMessages} activeManager={activeManager} />}
                     {activeTab === 'inventory' && (
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                            {propertyUnits.map(unit => {
+                            {propertyUnits?.map(unit => {
                                 const tenant = tenants.find(t => t.unit === unit.unitNumber);
                                 return (
                                     <UnitCard
@@ -521,7 +521,7 @@ function RentSummaryTab({ tenants, payments, currency = 'USD', onMarkPaid, prope
         doc.setTextColor(100);
         doc.text(`Transaction Statement Generated: ${formatDate(new Date())}`, 14, 30);
         const tableColumn = ["Unit", "Tenant", "Payment Date", "Amount"];
-        const tableRows = payments.slice().reverse().map(pay => {
+        const tableRows = (payments || []).slice().reverse().map(pay => {
             const t = tenants.find(ten => ten.id === pay.tenantId);
             return [t?.unit || 'N/A', t?.name || 'Archived Tenant', fmtDate(pay.date), `${currency} ${Number(pay.amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}` ];
         });
@@ -532,7 +532,7 @@ function RentSummaryTab({ tenants, payments, currency = 'USD', onMarkPaid, prope
     const today = getLocalDate() || new Date();
     const upcomingRents = useMemo(() => {
         if (!Array.isArray(tenants)) return [];
-        return tenants.map(t => {
+        return (tenants || []).map(t => {
             try {
                 if (!t.leaseStart) throw new Error();
                 const dueDate = calculateNextRentDue(t.leaseStart);
@@ -594,7 +594,7 @@ function RentSummaryTab({ tenants, payments, currency = 'USD', onMarkPaid, prope
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-white/5">
-                            {upcomingRents.length > 0 ? upcomingRents.map((tenant) => {
+                            {upcomingRents?.length > 0 ? upcomingRents?.map((tenant) => {
                                 const isSoon = (Number(tenant.daysUntil) || 0) <= 3;
                                 const isOverdue = (Number(tenant.daysUntil) || 0) < 0;
                                 return (
@@ -1428,7 +1428,7 @@ function App() {
             const unit = propertyUnits.find(u => u.id === unitId);
             if (unit) {
                 const updatedUnit = { ...unit, fittings: newFittings };
-                setPropertyUnits(prev => prev.map(u => u.id === unitId ? updatedUnit : u));
+                setPropertyUnits(prev => prev?.map(u => u.id === unitId ? updatedUnit : u));
                 setGlobalMessage({ type: 'info', text: "Synchronizing inventory with cloud..." });
                 const res = await API.saveToSheet('UPDATE', 'Units', updatedUnit);
                 if (res.success) {
@@ -2015,7 +2015,7 @@ function App() {
 
                                                 {/* Property List */}
                                                 <div className="px-2 pb-2 space-y-0.5">
-                                                    {Array.isArray(properties) && properties.filter(p => !p.isArchived).map(p => (
+                                                    {Array.isArray(properties) && properties?.filter(p => !p.isArchived)?.map(p => (
                                                         <button
                                                             key={p?.id || p?.name}
                                                             onClick={() => { setActiveProperty(p?.name || p); setShowPropertyPicker(false); }}
@@ -2186,7 +2186,7 @@ function MobileBottomNav({ activeTab, setActiveTab, tenantMessages, onLogout }) 
 
     return (
         <div className="fixed bottom-0 left-0 right-0 z-[100] md:hidden bg-slate-950/95 backdrop-blur-2xl border-t border-white/10 px-2 pt-3 flex justify-around items-center shadow-[0_-20px_40px_rgba(0,0,0,0.5)]" style={{ paddingBottom: 'max(1.25rem, env(safe-area-inset-bottom))' }}>
-            {tabs.map((tab) => (
+            {tabs?.map((tab) => (
                 <button
                     key={tab.id}
                     onClick={() => tab.action ? tab.action() : setActiveTab(tab.id)}
@@ -2331,9 +2331,9 @@ function MessagesManager({ tenants, messages, onUpdateMessage, activeManager }) 
                     </div>
                 ) : (
                     <div className="space-y-5">
-                        {currentList.map((msg, idx) => {
+                        {currentList?.map((msg, idx) => {
                             const tenant = tenants.find(t => t.id === msg.tenantId);
-                            const initials = (tenant?.name || '??').split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+                            const initials = (tenant?.name || '??').split(' ')?.map(n => n[0]).join('').toUpperCase().slice(0, 2);
                             const status = msg.status || 'UNREAD';
 
                             return (
@@ -2541,7 +2541,7 @@ function UtilityManager({ tenants, utilityBills, payments, onAddBill, onMarkUtil
         const currentMonth = todayStr.substring(0, 7);
         let months = [currentMonth];
         if (Array.isArray(utilityBills)) {
-            const billMonths = utilityBills.filter(b => b && b.date).map(b => extractYearMonth(b.date));
+            const billMonths = (utilityBills || []).filter(b => b && b.date)?.map(b => extractYearMonth(b.date));
             months = Array.from(new Set([...months, ...billMonths]));
         }
         return months.sort().reverse();
@@ -2578,7 +2578,7 @@ function UtilityManager({ tenants, utilityBills, payments, onAddBill, onMarkUtil
     const totalDays = Object.values(tenantDays).reduce((a, b) => a + Number(b), 0);
 
     const handleApply = () => {
-        const allocations = tenants.map(t => {
+        const allocations = (tenants || []).map(t => {
             let share = 0;
             if (mode === 'equal') {
                 share = totalBill / tenants.length;
@@ -2599,7 +2599,7 @@ function UtilityManager({ tenants, utilityBills, payments, onAddBill, onMarkUtil
             fileName: billFile?.name
         };
 
-        const updatedTenants = tenants.map(t => {
+        const updatedTenants = (tenants || []).map(t => {
             const allocation = allocations.find(a => a.tenantId === t.id);
             return { ...t, utilityShare: t.utilityShare + (allocation?.amount || 0) };
         });
@@ -2703,7 +2703,7 @@ function UtilityManager({ tenants, utilityBills, payments, onAddBill, onMarkUtil
                         </div>
 
                         <div className="space-y-4 flex-1">
-                            {tenants.map(t => {
+                            {(tenants || []).map(t => {
                                 const calculatedAmt = mode === 'equal' ? (totalBill / tenants.length) : (totalDays > 0 ? totalBill * (Number(tenantDays[t.id]) / totalDays) : 0);
                                 return (
                                     <div key={t.id} className="bg-white/5 rounded-2xl p-5 flex items-center justify-between group hover:bg-white/10 transition-all border border-transparent hover:border-white/5">
@@ -2756,7 +2756,7 @@ function UtilityManager({ tenants, utilityBills, payments, onAddBill, onMarkUtil
                         <div className="flex items-center gap-3">
                             <span className="text-[10px] font-black text-slate-600 uppercase tracking-widest hidden md:inline">Period</span>
                             <select className="bg-slate-950/60 border border-white/10 hover:border-indigo-500/40 rounded-2xl px-5 py-3 text-white text-xs font-black outline-none cursor-pointer transition-all font-mono-data" value={effectiveMonth} onChange={e => setSelectedMonth(e.target.value)}>
-                                {uniqueMonths.map(m => <option key={m} value={m}>{new Date(m + '-01').toLocaleString('default', { month: 'long', year: 'numeric' })}</option>)}
+                                {uniqueMonths?.map(m => <option key={m} value={m}>{new Date(m + '-01').toLocaleString('default', { month: 'long', year: 'numeric' })}</option>)}
                             </select>
                         </div>
                     </div>
@@ -2804,7 +2804,7 @@ function UtilityManager({ tenants, utilityBills, payments, onAddBill, onMarkUtil
                                     <div className="flex-1 md:px-6">
                                         {breakdowns.length > 0 ? (
                                             <div className="flex flex-wrap gap-2">
-                                                {breakdowns.map((b, i) => (
+                                                {breakdowns?.map((b, i) => (
                                                     <div key={i} className="flex items-center gap-2 bg-white/5 border border-white/5 px-3 py-2 rounded-xl">
                                                         {b.type === 'Electricity' ? <Zap className="w-3 h-3 text-amber-400 shrink-0" /> : b.type === 'Water' ? <Droplets className="w-3 h-3 text-blue-400 shrink-0" /> : b.type === 'Gas' ? <Flame className="w-3 h-3 text-orange-400 shrink-0" /> : <Receipt className="w-3 h-3 text-slate-400 shrink-0" />}
                                                         <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">{b.type}</span>
@@ -2921,7 +2921,7 @@ function UtilityManager({ tenants, utilityBills, payments, onAddBill, onMarkUtil
                                     </div>
 
                                     <div className="grid grid-cols-1 gap-2">
-                                        {confirmUtilityTenant.breakdowns.map((b, i) => (
+                                        {confirmUtilityTenant?.breakdowns?.map((b, i) => (
                                             <div key={i} className="flex justify-between items-center bg-white/5 px-4 py-2.5 rounded-xl border border-white/5">
                                                 <div className="flex items-center gap-2.5">
                                                     {b.type === 'Electricity' ? <Zap className="w-3 h-3 text-amber-400" /> : b.type === 'Water' ? <Droplets className="w-3 h-3 text-blue-400" /> : b.type === 'Gas' ? <Flame className="w-3 h-3 text-orange-400" /> : <Receipt className="w-3 h-3 text-indigo-400" />}
@@ -2989,7 +2989,7 @@ function UtilityManager({ tenants, utilityBills, payments, onAddBill, onMarkUtil
                         </div>
                     ) : (
                         <div className="space-y-6">
-                            {utilityBills.slice().reverse().map(bill => (
+                            {(utilityBills || []).slice().reverse()?.map(bill => (
                                 <div key={bill.id} className="bg-white/5 rounded-3xl p-6 border border-white/5">
                                     <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6 pb-6 border-b border-white/5">
                                         <div className="flex gap-4 items-center">
@@ -4406,7 +4406,7 @@ function CompactStatsBar({ stats }) {
     return (
         <div className="sticky top-[72px] z-30 -mx-4 md:-mx-12 px-4 md:px-12 py-3 bg-slate-950/40 backdrop-blur-xl border-b border-white/5 shadow-2xl shadow-black/20 overflow-x-auto no-scrollbar snap-x">
             <div className="flex items-center gap-5 md:gap-12 min-w-max">
-                {stats.map((stat, idx) => (
+                {stats?.map((stat, idx) => (
                     <div key={idx} className="flex items-center gap-3 snap-start group">
                         <div className="p-2 bg-white/5 rounded-lg border border-white/5 group-hover:bg-indigo-500/10 group-hover:border-indigo-500/20 transition-all">
                             {React.cloneElement(stat.icon, { className: "w-3.5 h-3.5" })}
@@ -4533,7 +4533,7 @@ function PropertySelectView({ properties, onSelect }) {
             </Motion.div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-5xl w-full relative z-10">
-                {properties.map((prop, idx) => (
+                {properties?.map((prop, idx) => (
                     <Motion.button
                         key={prop.id}
                         initial={{ opacity: 0, y: 20 }}
