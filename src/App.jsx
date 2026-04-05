@@ -1416,7 +1416,7 @@ function App() {
                             <span className="text-white font-black text-base tracking-tight uppercase">
                                 MyDay OS
                             </span>
-                            <span className="hidden sm:inline text-[7px] text-indigo-400/60 font-black uppercase tracking-[0.2em] mt-0.5">v1.3.1 -?STATUS: OPTIMIZED</span>
+                            <span className="hidden sm:inline text-[7px] text-indigo-400/60 font-black uppercase tracking-[0.2em] mt-0.5">v1.3.2 -?STATUS: OPTIMIZED</span>
                         </div>
                     </div>
 
