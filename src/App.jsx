@@ -1725,72 +1725,116 @@ function ManagerDashboard({ activeProperty, tenants, payments, propertyUnits, ut
                 />
             )}
 
-            {/* Photo Gallery Modal */}
-            {viewingPhotos && (
-                <div className="fixed inset-0 z-[190] flex items-center justify-center p-6 bg-slate-900/90 backdrop-blur-2xl animate-in fade-in zoom-in-95 duration-300">
-                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(79,70,229,0.15),transparent_70%)] pointer-events-none" />
-                    
-                    <Motion.div 
-                        initial={{ opacity: 0, scale: 0.9, y: 30 }}
-                        animate={{ opacity: 1, scale: 1, y: 0 }}
-                        exit={{ opacity: 0, scale: 0.9, y: 30 }}
-                        className="bg-slate-900 border border-white/10 w-full max-w-4xl rounded-[3rem] md:rounded-[4rem] shadow-[0_0_100px_rgba(0,0,0,0.8)] relative"
-                    >
-                        {/* Header */}
-                        <div className="flex justify-between items-center px-8 md:px-12 pt-8 md:pt-12 pb-8">
-                            <div className="space-y-1">
-                                <h3 className="text-3xl md:text-4xl font-black text-white italic flex items-center gap-4 tracking-tighter uppercase">
-                                    <Camera className="w-8 h-8 text-indigo-500" />
-                                    Visual catalog
-                                </h3>
-                                <p className="text-[10px] text-slate-500 font-black uppercase tracking-[0.3em] ml-1 opacity-60">Asset Inventory Check · {viewingPhotos.length} items</p>
-                            </div>
-                            <Motion.button 
-                                whileHover={{ rotate: 90, scale: 1.1 }}
-                                whileTap={{ scale: 0.9 }}
-                                onClick={() => setViewingPhotos(null)} 
-                                className="p-3 text-slate-500 hover:text-white bg-white/5 rounded-2xl border border-white/5 transition-all"
-                            >
-                                <X className="w-6 h-6" />
-                            </Motion.button>
-                        </div>
+            {/* Photo Gallery Modal — Premium Single-Photo Viewer */}
+            {viewingPhotos && (() => {
+                const GalleryViewer = () => {
+                    const [activeIdx, setActiveIdx] = React.useState(0);
+                    const total = viewingPhotos.length;
+                    const prev = () => setActiveIdx(i => (i - 1 + total) % total);
+                    const next = () => setActiveIdx(i => (i + 1) % total);
 
-                        {/* Scrollable Gallery — lives outside padded area to use full width */}
-                        <div 
-                            className="flex overflow-x-auto snap-x snap-mandatory gap-4 pb-4 px-8 md:px-12"
-                            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none', WebkitOverflowScrolling: 'touch' }}
-                        >
-                            {viewingPhotos.map((url, i) => (
-                                <div 
-                                    key={i} 
-                                    className="shrink-0 snap-center rounded-[2rem] overflow-hidden bg-slate-950 border border-white/10 relative group shadow-2xl"
-                                    style={{ width: 'min(75vw, 560px)', aspectRatio: '16/10' }}
-                                >
-                                    <img 
-                                        src={toDirectImageUrl(url)} 
-                                        alt="" 
-                                        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" 
-                                    />
-                                    <div className="absolute inset-0 bg-gradient-to-t from-slate-950/70 via-transparent to-transparent pointer-events-none" />
-                                    <div className="absolute bottom-6 left-6">
-                                        <div className="bg-indigo-600/90 backdrop-blur-xl px-4 py-2 rounded-xl border border-white/10 shadow-xl flex items-center gap-2.5">
-                                            <div className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
-                                            <p className="text-[10px] font-black text-white tracking-widest uppercase font-mono-data">Point {i + 1} / {viewingPhotos.length}</p>
-                                        </div>
+                    React.useEffect(() => {
+                        const handleKey = (e) => {
+                            if (e.key === 'ArrowLeft') prev();
+                            if (e.key === 'ArrowRight') next();
+                            if (e.key === 'Escape') setViewingPhotos(null);
+                        };
+                        window.addEventListener('keydown', handleKey);
+                        return () => window.removeEventListener('keydown', handleKey);
+                    }, []);
+
+                    return (
+                        <div className="fixed inset-0 z-[190] flex items-center justify-center bg-slate-950/95 backdrop-blur-2xl" onClick={() => setViewingPhotos(null)}>
+                            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(79,70,229,0.2),transparent_60%)] pointer-events-none" />
+
+                            <Motion.div
+                                initial={{ opacity: 0, scale: 0.95 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                className="relative w-full max-w-5xl mx-6 flex flex-col gap-6"
+                                onClick={e => e.stopPropagation()}
+                            >
+                                {/* Header */}
+                                <div className="flex justify-between items-center">
+                                    <div>
+                                        <h3 className="text-2xl md:text-3xl font-black text-white italic tracking-tighter uppercase flex items-center gap-3">
+                                            <Camera className="w-7 h-7 text-indigo-500" /> Visual Catalog
+                                        </h3>
+                                        <p className="text-[10px] text-slate-500 font-black uppercase tracking-[0.3em] mt-0.5 ml-0.5">Asset Point {activeIdx + 1} of {total}</p>
+                                    </div>
+                                    <div className="flex items-center gap-3">
+                                        <button
+                                            onClick={() => window.open(viewingPhotos[activeIdx], '_blank')}
+                                            className="p-3 text-slate-400 hover:text-white bg-white/5 hover:bg-white/10 rounded-2xl border border-white/10 transition-all"
+                                            title="Open full resolution"
+                                        >
+                                            <Maximize className="w-5 h-5" />
+                                        </button>
+                                        <Motion.button
+                                            whileHover={{ rotate: 90, scale: 1.1 }} whileTap={{ scale: 0.9 }}
+                                            onClick={() => setViewingPhotos(null)}
+                                            className="p-3 text-slate-500 hover:text-white bg-white/5 rounded-2xl border border-white/5 transition-all"
+                                        >
+                                            <X className="w-6 h-6" />
+                                        </Motion.button>
                                     </div>
                                 </div>
-                            ))}
-                        </div>
 
-                        {/* Dot Indicators */}
-                        <div className="flex justify-center gap-2 py-6">
-                            {viewingPhotos.map((_, i) => (
-                                <div key={i} className="w-1.5 h-1.5 rounded-full bg-indigo-600/50" />
-                            ))}
+                                {/* Main Photo + Side Arrows */}
+                                <div className="relative w-full group">
+                                    <div className="w-full rounded-[2.5rem] overflow-hidden bg-slate-950 border border-white/10 shadow-2xl" style={{ aspectRatio: '16/9' }}>
+                                        <AnimatePresence mode="wait">
+                                            <Motion.img
+                                                key={activeIdx}
+                                                src={toDirectImageUrl(viewingPhotos[activeIdx])}
+                                                alt=""
+                                                initial={{ opacity: 0, x: 40 }}
+                                                animate={{ opacity: 1, x: 0 }}
+                                                exit={{ opacity: 0, x: -40 }}
+                                                transition={{ duration: 0.25, ease: 'easeInOut' }}
+                                                className="w-full h-full object-cover"
+                                            />
+                                        </AnimatePresence>
+                                    </div>
+
+                                    {/* Left Arrow */}
+                                    {total > 1 && (
+                                        <button
+                                            onClick={prev}
+                                            className="absolute left-4 top-1/2 -translate-y-1/2 p-3.5 bg-slate-900/80 hover:bg-indigo-600 backdrop-blur-xl border border-white/10 text-white rounded-2xl opacity-0 group-hover:opacity-100 transition-all shadow-2xl hover:scale-110 active:scale-95"
+                                        >
+                                            <ChevronLeft className="w-6 h-6" />
+                                        </button>
+                                    )}
+                                    {/* Right Arrow */}
+                                    {total > 1 && (
+                                        <button
+                                            onClick={next}
+                                            className="absolute right-4 top-1/2 -translate-y-1/2 p-3.5 bg-slate-900/80 hover:bg-indigo-600 backdrop-blur-xl border border-white/10 text-white rounded-2xl opacity-0 group-hover:opacity-100 transition-all shadow-2xl hover:scale-110 active:scale-95"
+                                        >
+                                            <ChevronRight className="w-6 h-6" />
+                                        </button>
+                                    )}
+                                </div>
+
+                                {/* Dot / Thumbnail Strip */}
+                                <div className="flex justify-center items-center gap-3">
+                                    {viewingPhotos.map((url, i) => (
+                                        <button
+                                            key={i}
+                                            onClick={() => setActiveIdx(i)}
+                                            className={`transition-all rounded-xl overflow-hidden border-2 ${i === activeIdx ? 'border-indigo-500 scale-110 shadow-lg shadow-indigo-500/30' : 'border-white/10 opacity-50 hover:opacity-80'}`}
+                                            style={{ width: 56, height: 38 }}
+                                        >
+                                            <img src={toDirectImageUrl(url)} alt="" className="w-full h-full object-cover" />
+                                        </button>
+                                    ))}
+                                </div>
+                            </Motion.div>
                         </div>
-                    </Motion.div>
-                </div>
-            )}
+                    );
+                };
+                return <GalleryViewer key="gallery" />;
+            })()}
             {editingCredentials && (
                 <CredentialModal 
                     tenant={editingCredentials} 
