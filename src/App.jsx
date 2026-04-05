@@ -353,10 +353,12 @@ const API = {
                 dataToSave[key.toUpperCase()] = processedVal;
                 
                 // Special mapping for common visual fields
-                if (key.toLowerCase() === 'image') {
+                if (key.toLowerCase() === 'image' || key.toLowerCase() === 'photos' || key.toLowerCase() === 'photourl') {
                     dataToSave['PHOTO'] = processedVal;
                     dataToSave['IMG'] = processedVal;
                     dataToSave['VISUALS'] = processedVal;
+                    dataToSave['PHOTOS'] = processedVal;
+                    dataToSave['IMAGE'] = processedVal;
                 }
             });
         }
@@ -588,7 +590,7 @@ function App() {
                 });
 
                 // Robustly Extract Collections (Keys are now lowercased & trimmed from GAS)
-                const keyMap={'unitnumber':'unitNumber','expectedrent':'expectedRent','propertyname':'propertyName','baserent':'baseRent','leasestart':'leaseStart','leaseend':'leaseEnd','leasedocument':'leaseDocument','leaseextensiondoc':'leaseExtensionDoc','mobile':'mobile','password':'password','utilityshare':'utilityShare','depositrefunded':'depositRefunded','depositdeducted':'depositDeducted','moveoutdate':'moveOutDate','lastpaymentdate':'lastPaymentDate','scheduledate':'scheduleDate','tenantid':'tenantId','photourl':'photoUrl','handledby':'handledBy','duedate':'dueDate','maintenanceselection':'maintenanceSelection','vacantsince':'vacantSince','lastupdated':'lastUpdated','image':'image','status':'status','size':'size','fittings':'fittings'};
+                const keyMap={'unitnumber':'unitNumber','expectedrent':'expectedRent','propertyname':'propertyName','baserent':'baseRent','leasestart':'leaseStart','leaseend':'leaseEnd','leasedocument':'leaseDocument','leaseextensiondoc':'leaseExtensionDoc','mobile':'mobile','password':'password','utilityshare':'utilityShare','depositrefunded':'depositRefunded','depositdeducted':'depositDeducted','moveoutdate':'moveOutDate','lastpaymentdate':'lastPaymentDate','scheduledate':'scheduleDate','tenantid':'tenantId','photourl':'photoUrl','photos':'photos','assetphotos':'photos','handledby':'handledBy','duedate':'dueDate','maintenanceselection':'maintenanceSelection','vacantsince':'vacantSince','lastupdated':'lastUpdated','image':'image','status':'status','size':'size','fittings':'fittings'};
                 const normalize = (arr) => {
                     if (arr.length > 0) console.log('SYNC_KEYS:', Object.keys(arr[0]).join(','));
                     return arr.map(item => {
@@ -625,19 +627,22 @@ function App() {
                         }
 
                         // Hardened Photos Parsing
-                        if (obj.photos) {
-                            if (typeof obj.photos === 'string') {
+                        const photosSrc = obj.photos || obj.photoUrl || obj.image;
+                        if (photosSrc) {
+                            if (typeof photosSrc === 'string') {
                                 try {
-                                    const trimmed = obj.photos.trim();
+                                    const trimmed = photosSrc.trim();
                                     if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
                                         obj.photos = JSON.parse(trimmed);
                                     } else {
                                         obj.photos = trimmed.split(',').map(s => s.trim()).filter(Boolean);
                                     }
                                 } catch (e) {
-                                    obj.photos = obj.photos.split(',').map(s => s.trim()).filter(Boolean);
+                                    obj.photos = photosSrc.split(',').map(s => s.trim()).filter(Boolean);
                                 }
-                            } else if (!Array.isArray(obj.photos)) {
+                            } else if (Array.isArray(photosSrc)) {
+                                obj.photos = photosSrc;
+                            } else {
                                 obj.photos = [];
                             }
                         } else {
@@ -1132,6 +1137,38 @@ function App() {
         }
     };
 
+    const handleUnitPhotosUpload = async (unitId, files) => {
+        if (!files || files.length === 0) return;
+        try {
+            setProcessingMessage('PHOTO_SYNC');
+            setGlobalMessage({ type: 'info', text: 'Syncing Asset Photos to Cloud...' });
+            
+            const unit = propertyUnits.find(u => String(u.id) === String(unitId));
+            if (!unit) return;
+            
+            const newPhotoUrls = [...(unit.photos || [])];
+            for (let i = 0; i < files.length; i++) {
+                const res = await API.uploadFile(files[i]);
+                if (res && res.success) {
+                    newPhotoUrls.push(res.url);
+                }
+            }
+            
+            const updatedUnit = { ...unit, photos: newPhotoUrls, lastUpdated: new Date().toISOString() };
+            setPropertyUnits(prev => prev.map(u => String(u.id) === String(unitId) ? updatedUnit : u));
+            
+            await API.saveToSheet('UPDATE', 'Units', updatedUnit);
+            setGlobalMessage({ type: 'success', text: 'Visuals Synchronized' });
+            setTimeout(() => setGlobalMessage(null), 3000);
+        } catch (err) {
+            console.error('Photo sync failed:', err);
+            setGlobalMessage({ type: 'error', text: 'Photo Sync Failed' });
+            setTimeout(() => setGlobalMessage(null), 3000);
+        } finally {
+            setProcessingMessage(null);
+        }
+    };
+
     const handleLeaseDocUpload = async (tenantId, file) => {
         try {
             setGlobalMessage({ type: 'info', text: 'Step 1/3: Reading Agreement File...' });
@@ -1416,6 +1453,7 @@ function App() {
                                     currency={activeCurrency}
                                     onAddUnit={addUnitToCatalog}
                                     onEditUnit={editUnitInCatalog}
+                                    onUpdateUnitPhotos={handleUnitPhotosUpload}
                                     onDeleteUnit={deleteUnit}
                                     onAddTenant={addTenant}
                                     onEditTenant={editTenant}
@@ -1500,7 +1538,7 @@ function MobileBottomNav({ activeTab, setActiveTab, tenantMessages, onLogout }) 
 
 // --- Manager Components ---
 
-function ManagerDashboard({ activeProperty, tenants, payments, propertyUnits, utilityBills, tasks, vendors, tenantMessages, currency = 'USD', onAddUnit, onEditUnit, onDeleteUnit, onAddTenant, onEditTenant, onUpdateFittings, onAddBill, onAddTask, onAddVendor, onEditVendor, onDeleteVendor, onMarkPaid, onUpdateLeaseDoc, onMoveOut, onUpdateMessage, activeManager, activeTab: externalActiveTab, setActiveTab: setExternalActiveTab }) {
+function ManagerDashboard({ activeProperty, tenants, payments, propertyUnits, utilityBills, tasks, vendors, tenantMessages, currency = 'USD', onAddUnit, onEditUnit, onUpdateUnitPhotos, onDeleteUnit, onAddTenant, onEditTenant, onUpdateFittings, onAddBill, onAddTask, onAddVendor, onEditVendor, onDeleteVendor, onMarkPaid, onUpdateLeaseDoc, onMoveOut, onUpdateMessage, activeManager, activeTab: externalActiveTab, setActiveTab: setExternalActiveTab }) {
     const [internalActiveTab, setInternalActiveTab] = useState('rents');
     const [editingCredentials, setEditingCredentials] = useState(null);
     const activeTab = externalActiveTab || internalActiveTab;
@@ -1619,6 +1657,7 @@ function ManagerDashboard({ activeProperty, tenants, payments, propertyUnits, ut
                                         }}
                                         onUpdateFittings={onUpdateFittings}
                                         onEditUnit={() => setEditingUnit(unit)}
+                                        onUpdateUnitPhotos={onUpdateUnitPhotos}
                                         onDeleteUnit={() => onDeleteUnit(unit.id)}
                                         onAddLease={() => { setEditingTenant(null); setSelectedUnitForLease(unit); setShowLeaseModal(true); }}
                                         onEditLease={() => { setEditingTenant(tenant); setSelectedUnitForLease(unit); setShowLeaseModal(true); }}
@@ -3233,7 +3272,7 @@ function InventoryModal({ unit, onClose, onSave }) {
     );
 }
 
-function UnitCard({ unit, tenant, currency = 'USD', history, onUpdateFittings, onEditUnit, onDeleteUnit, onAddLease, onEditLease, onEditCredentials, onUpdateLeaseDoc, onMoveOut }) {
+function UnitCard({ unit, tenant, currency = 'USD', history, onUpdateFittings, onEditUnit, onDeleteUnit, onAddLease, onEditLease, onUpdateUnitPhotos, onEditCredentials, onUpdateLeaseDoc, onMoveOut }) {
     const tenantName = tenant?.name;
     const actualRent = tenant?.baseRent;
     const isOccupied = unit.status === 'Occupied' && !!tenant;
@@ -3375,7 +3414,7 @@ function UnitCard({ unit, tenant, currency = 'USD', history, onUpdateFittings, o
                                             <Lock className="w-3.5 h-3.5 text-slate-700" />
                                         </div>
 
-                                        {unit.photos && unit.photos.length > 0 && (
+                                        {unit.photos && unit.photos.length > 0 ? (
                                             <div 
                                                 onClick={(e) => { e.stopPropagation(); window.open(unit.photos[0], '_blank'); }}
                                                 className="bg-indigo-600/10 p-3.5 rounded-2xl border border-indigo-500/20 flex items-center justify-center gap-2 cursor-pointer hover:bg-indigo-600/20 transition-all group"
@@ -3386,6 +3425,18 @@ function UnitCard({ unit, tenant, currency = 'USD', history, onUpdateFittings, o
                                                 </div>
                                                 <Camera className="w-4 h-4 text-indigo-500 group-hover:scale-110 transition-transform" />
                                             </div>
+                                        ) : (
+                                            <label className="bg-slate-900 border border-dashed border-white/10 p-3.5 rounded-2xl flex items-center justify-center gap-2 cursor-pointer hover:border-indigo-500/50 transition-all text-slate-600 hover:text-indigo-400">
+                                                <Camera className="w-4 h-4" />
+                                                <span className="text-[8px] font-black uppercase tracking-widest">Add Photos</span>
+                                                <input 
+                                                    type="file" 
+                                                    multiple 
+                                                    accept="image/*" 
+                                                    className="hidden" 
+                                                    onChange={(e) => onUpdateUnitPhotos(unit.id, e.target.files)} 
+                                                />
+                                            </label>
                                         )}
                                     </div>
 
@@ -3445,7 +3496,7 @@ function UnitCard({ unit, tenant, currency = 'USD', history, onUpdateFittings, o
                                             </div>
                                         </div>
 
-                                        {unit.photos && unit.photos.length > 0 && (
+                                        {unit.photos && unit.photos.length > 0 ? (
                                             <div className="flex gap-2 mt-4 overflow-x-auto no-scrollbar pb-1">
                                                 {unit.photos.map((url, i) => (
                                                     <img 
@@ -3456,7 +3507,29 @@ function UnitCard({ unit, tenant, currency = 'USD', history, onUpdateFittings, o
                                                         alt="Unit"
                                                     />
                                                 ))}
+                                                <label className="w-12 h-12 flex items-center justify-center bg-slate-900 border border-dashed border-white/10 rounded-lg cursor-pointer hover:border-indigo-500/50 transition-all text-slate-700">
+                                                    <Plus className="w-4 h-4" />
+                                                    <input 
+                                                        type="file" 
+                                                        multiple 
+                                                        accept="image/*" 
+                                                        className="hidden" 
+                                                        onChange={(e) => onUpdateUnitPhotos(unit.id, e.target.files)} 
+                                                    />
+                                                </label>
                                             </div>
+                                        ) : (
+                                            <label className="w-full h-16 flex items-center justify-center bg-slate-900 border border-dashed border-white/10 rounded-2xl cursor-pointer hover:border-indigo-500/50 transition-all text-slate-600 hover:text-indigo-400 mt-4 group">
+                                                <Camera className="w-5 h-5 mr-3 group-hover:scale-110 transition-transform" />
+                                                <span className="text-[9px] font-black uppercase tracking-widest">Upload Unit Visuals</span>
+                                                <input 
+                                                    type="file" 
+                                                    multiple 
+                                                    accept="image/*" 
+                                                    className="hidden" 
+                                                    onChange={(e) => onUpdateUnitPhotos(unit.id, e.target.files)} 
+                                                />
+                                            </label>
                                         )}
                                     </div>
 
