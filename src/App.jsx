@@ -4317,37 +4317,7 @@ function CompactStatsBar({ stats }) {
     );
 }
 
-function StatCard({ title, value, icon, index, trend }) {
-    // Legacy big card if needed elsewhere, but currently replaced by compact bar
-    return (
-        <Motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: index * 0.1 }}
-            whileTap={{ scale: 0.98 }}
-            className="premium-card p-5 md:p-6 lg:p-8 rounded-[2rem] flex flex-col gap-3 md:gap-4 relative overflow-hidden group h-full"
-        >
-            <div className="absolute top-0 right-0 p-4 md:p-6 opacity-10 group-hover:opacity-20 transition-opacity">
-                {React.cloneElement(icon, { className: "w-12 h-12 md:w-16 md:h-16" })}
-            </div>
-            <div className="flex items-center gap-3">
-                <div className="p-2.5 md:p-3 bg-white/5 rounded-xl border border-white/5">
-                    {React.cloneElement(icon, { className: "w-4 h-4 md:w-5 md:h-5" })}
-                </div>
-                <p className="text-[10px] md:text-xs font-black text-slate-500 uppercase tracking-[0.2em] leading-tight">{title}</p>
-            </div>
-            <div className="relative z-10">
-                <h4 className="text-2xl md:text-3xl font-black text-white tracking-tighter italic">{value}</h4>
-                {trend && (
-                    <div className="flex items-center gap-1.5 mt-2">
-                        <TrendingUp className="w-3.5 h-3.5 text-emerald-400" />
-                        <span className="text-[9px] md:text-[11px] font-black text-emerald-400 uppercase tracking-widest">{trend}</span>
-                    </div>
-                )}
-            </div>
-        </Motion.div>
-    );
-}
+
 
 function LoginPage({ onLogin }) {
     const [mobile, setMobile] = useState('');
