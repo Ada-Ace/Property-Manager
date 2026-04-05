@@ -624,6 +624,26 @@ function App() {
                             obj.fittings = [];
                         }
 
+                        // Hardened Photos Parsing
+                        if (obj.photos) {
+                            if (typeof obj.photos === 'string') {
+                                try {
+                                    const trimmed = obj.photos.trim();
+                                    if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
+                                        obj.photos = JSON.parse(trimmed);
+                                    } else {
+                                        obj.photos = trimmed.split(',').map(s => s.trim()).filter(Boolean);
+                                    }
+                                } catch (e) {
+                                    obj.photos = obj.photos.split(',').map(s => s.trim()).filter(Boolean);
+                                }
+                            } else if (!Array.isArray(obj.photos)) {
+                                obj.photos = [];
+                            }
+                        } else {
+                            obj.photos = [];
+                        }
+
                         if (obj.propertyname && !obj.propertyName) {
                             obj.propertyName = String(obj.propertyname);
                             delete obj.propertyname;
@@ -3457,7 +3477,7 @@ function UnitModal({ initialData, onSubmit, onClose }) {
     const [form, setForm] = useState(initialData ? {
         ...initialData,
         fittings: Array.isArray(initialData.fittings) ? initialData.fittings.join(', ') : (initialData.fittings || ''),
-        photos: Array.isArray(initialData.photos) ? initialData.photos : (typeof initialData.photos === 'string' ? initialData.photos.split(',').filter(Boolean) : [])
+        photos: Array.isArray(initialData.photos) ? initialData.photos : (typeof initialData.photos === 'string' ? initialData.photos.split(',').map(s => s.trim()).filter(Boolean) : [])
     } : { unitNumber: '', size: '', expectedRent: '', status: 'Available', fittings: '', photos: [] });
     const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -3468,9 +3488,10 @@ function UnitModal({ initialData, onSubmit, onClose }) {
         const uploadedUrls = [...(form.photos || [])];
         
         for (let i = 0; i < files.length; i++) {
+            const file = files[i];
+            // Provide immediate visual feedback with a temporary object URL if we wanted, 
+            // but for now let's just show a global message like lease
             try {
-                // Similar logic as lease agreement upload
-                const file = files[i];
                 const uploadRes = await API.uploadFile(file);
                 if (uploadRes && uploadRes.success) {
                     uploadedUrls.push(uploadRes.url);
@@ -3480,7 +3501,7 @@ function UnitModal({ initialData, onSubmit, onClose }) {
             }
         }
         
-        setForm({ ...form, photos: uploadedUrls });
+        setForm(prev => ({ ...prev, photos: uploadedUrls }));
         setIsSubmitting(false);
     };
 
@@ -3603,34 +3624,38 @@ function UnitModal({ initialData, onSubmit, onClose }) {
                             <Camera className="w-3.5 h-3.5" /> Asset Photos
                         </label>
                         
-                        <div className="flex flex-wrap gap-3">
+                        <div className="grid grid-cols-4 md:grid-cols-5 gap-3">
                             {form.photos && form.photos.map((url, idx) => (
-                                <div key={idx} className="relative group w-20 h-20">
-                                    <img 
-                                        src={url} 
-                                        alt="Asset" 
-                                        className="w-full h-full object-cover rounded-xl border border-white/10 cursor-pointer hover:opacity-80 transition-opacity"
-                                        onClick={() => window.open(url, '_blank')}
-                                    />
+                                <div key={idx} className="relative group aspect-square">
+                                    <div className="w-full h-full bg-slate-950 rounded-2xl border border-white/5 overflow-hidden ring-1 ring-white/5 ring-inset">
+                                        <img 
+                                            src={url} 
+                                            alt="Asset Thumbnail" 
+                                            className="w-full h-full object-cover cursor-pointer hover:scale-110 transition-transform"
+                                            onClick={() => window.open(url, '_blank')}
+                                            onError={(e) => { e.target.src = 'https://via.placeholder.com/150/0f172a/6366f1?text=Img'; }}
+                                        />
+                                    </div>
                                     <button 
                                         type="button"
                                         onClick={() => removePhoto(idx)}
-                                        className="absolute -top-1.5 -right-1.5 bg-red-600 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                                        className="absolute -top-1.5 -right-1.5 bg-red-600 shadow-lg text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:scale-110"
                                     >
-                                        <X className="w-3 h-3" />
+                                        <X className="w-3.5 h-3.5" />
                                     </button>
                                 </div>
                             ))}
                             
-                            <label className="w-20 h-20 flex flex-col items-center justify-center bg-slate-950/50 border border-dashed border-white/10 rounded-xl cursor-pointer hover:border-indigo-500/50 hover:bg-slate-900/50 transition-all">
-                                <Plus className="w-5 h-5 text-slate-500" />
-                                <span className="text-[8px] font-black text-slate-600 mt-1 uppercase tracking-tighter">Add</span>
+                            <label className={`aspect-square flex flex-col items-center justify-center bg-slate-950/20 border-2 border-dashed border-white/5 rounded-2xl cursor-pointer hover:border-indigo-500/50 hover:bg-slate-900/50 transition-all ${isSubmitting ? 'animate-pulse' : ''}`}>
+                                <Plus className={`w-6 h-6 ${isSubmitting ? 'text-indigo-400' : 'text-slate-500'}`} />
+                                <span className="text-[9px] font-black text-slate-600 mt-2 uppercase tracking-widest">{isSubmitting ? 'UP...' : 'ADD'}</span>
                                 <input 
                                     type="file" 
                                     multiple 
                                     accept="image/*" 
                                     className="hidden" 
                                     onChange={(e) => handlePhotoUpload(e.target.files)} 
+                                    disabled={isSubmitting}
                                 />
                             </label>
                         </div>
