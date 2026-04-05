@@ -170,23 +170,30 @@ const toDirectImageUrl = (url) => {
     return trimmed;
 };
 
-// Standardised date handlers for dd-mm-yyyy consistency
+// Robust date handlers to prevent timezone-shift-bugs
 const toSheetDate = (val) => {
     if (!val) return '';
+    const s = String(val).trim();
+    // If it's already dd-mm-yyyy or dd/mm/yyyy, return it
+    if (/^\d{2}[-\/]\d{2}[-\/]\d{4}$/.test(s)) return s.replace(/\//g, '-');
+    // If it's yyyy-mm-dd (ISO), reorder directly to avoid Timezone shifts from Date objects
+    const isoMatch = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (isoMatch) return `${isoMatch[3]}-${isoMatch[2]}-${isoMatch[1]}`;
+
+    // Fallback for Date objects or timestamp strings
     try {
         const d = (val instanceof Date) ? val : new Date(val);
-        if (isNaN(d.getTime())) {
-            if (/^\d{2}-\d{2}-\d{4}$/.test(String(val).trim())) return val.trim();
-            return val;
-        }
+        if (isNaN(d.getTime())) return s;
+        // Check if we should use UTC (for pure strings) or local?
+        // To keep it simple and safe for "dates", we extract component strings if possible.
         return `${String(d.getDate()).padStart(2, '0')}-${String(d.getMonth() + 1).padStart(2, '0')}-${d.getFullYear()}`;
-    } catch { return val; }
+    } catch { return s; }
 };
 
 const fromSheetDate = (val) => {
     if (!val || typeof val !== 'string') return val;
     const trimmed = val.trim();
-    // Convert dd-mm-yyyy or dd/mm/yyyy to yyyy-mm-dd for internal App use
+    // Convert dd-mm-yyyy or dd/mm/yyyy to yyyy-mm-dd
     const match = trimmed.match(/^(\d{2})[-\/](\d{2})[-\/](\d{4})/);
     if (match) {
         const [_, d, m, y] = match;
@@ -197,16 +204,22 @@ const fromSheetDate = (val) => {
 
 const formatDate = (date, includeTime = false) => {
     if (!date) return 'N/A';
+    const s = String(date).trim();
+    
+    // Direct mapping for dd-mm-yyyy or yyyy-mm-dd strings
+    const sheetMatch = s.match(/^(\d{2})-(\d{2})-(\d{4})$/);
+    if (sheetMatch && !includeTime) return s;
+    const isoMatch = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (isoMatch && !includeTime) return `${isoMatch[3]}-${isoMatch[2]}-${isoMatch[1]}`;
+
     try {
-        const d = typeof date === 'string' ? new Date(fromSheetDate(date)) : date;
+        const d = (date instanceof Date) ? date : new Date(fromSheetDate(s));
         if (isNaN(d.getTime())) return 'N/A';
-        
-        const dd   = String(d.getDate()).padStart(2, '0');
-        const mm   = String(d.getMonth() + 1).padStart(2, '0');
+        const dd = String(d.getDate()).padStart(2, '0');
+        const mm = String(d.getMonth() + 1).padStart(2, '0');
         const yyyy = d.getFullYear();
         const base = `${dd}-${mm}-${yyyy}`;
         if (!includeTime) return base;
-        
         const hh = String(d.getHours()).padStart(2, '0');
         const mi = String(d.getMinutes()).padStart(2, '0');
         return `${base} ${hh}:${mi}`;
@@ -215,14 +228,17 @@ const formatDate = (date, includeTime = false) => {
 
 const fmtDate = (str) => {
     if (!str) return 'N/A';
+    const s = String(str).trim();
+    // Try regex-only reorder for pure dates
+    const sheetMatch = s.match(/^(\d{2})-(\d{2})-(\d{4})$/);
+    if (sheetMatch) return s;
+    const isoMatch = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (isoMatch) return `${isoMatch[3]}-${isoMatch[2]}-${isoMatch[1]}`;
+
     try {
-        const strVal = String(str).trim();
-        const d = new Date(fromSheetDate(strVal));
+        const d = new Date(fromSheetDate(s));
         if (!isNaN(d.getTime())) {
-            const day = String(d.getDate()).padStart(2, '0');
-            const month = String(d.getMonth() + 1).padStart(2, '0');
-            const year = d.getFullYear();
-            return `${day}-${month}-${year}`;
+            return `${String(d.getDate()).padStart(2, '0')}-${String(d.getMonth() + 1).padStart(2, '0')}-${d.getFullYear()}`;
         }
         return 'N/A';
     } catch { return 'N/A'; }
