@@ -4111,6 +4111,15 @@ export function TenantDashboard({ tenant, unit, tenantMessages = [], onSendMessa
                                             "{msg.content}"
                                         </p>
 
+                                        {msg.photoUrl && (
+                                            <div className="mt-4 overflow-hidden rounded-2xl border border-white/10 max-w-[280px] group/photo relative cursor-pointer" onClick={() => window.open(msg.photoUrl, '_blank')}>
+                                                <img src={msg.photoUrl} alt="Attachment" className="w-full h-auto object-cover group-hover/photo:scale-105 transition-transform duration-500" />
+                                                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/photo:opacity-100 transition-opacity flex items-center justify-center">
+                                                    <span className="text-[10px] font-black text-white uppercase tracking-widest bg-black/60 px-4 py-2 rounded-full border border-white/20">Open Attachment</span>
+                                                </div>
+                                            </div>
+                                        )}
+
                                         {msg.response && (
                                             <div className="bg-indigo-500/5 border-l-2 border-indigo-500/30 p-5 rounded-r-2xl animate-in fade-in slide-in-from-left-4 duration-500">
                                                 <p className="text-[9px] font-black text-indigo-400 uppercase tracking-widest mb-2 flex items-center gap-2">
@@ -4120,12 +4129,6 @@ export function TenantDashboard({ tenant, unit, tenantMessages = [], onSendMessa
                                                 <p className="text-sm text-slate-200 font-medium leading-relaxed">
                                                     {msg.response}
                                                 </p>
-                                            </div>
-                                        )}
-
-                                        {msg.photoUrl && (
-                                            <div className="mt-3 overflow-hidden rounded-xl border border-white/10 md:w-1/2">
-                                                <img src={msg.photoUrl} alt="Attachment" className="w-full h-auto object-cover hover:scale-105 transition-transform" />
                                             </div>
                                         )}
                                     </div>
