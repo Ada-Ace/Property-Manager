@@ -2574,6 +2574,7 @@ const extractYearMonth = (dateStr) => {
 function ManagerChat({ messages = [], tenants = [], onUpdateMessage, onAddVendor, vendors = [], onEditVendor, onDeleteVendor, activeManager }) {
     const [filter, setFilter] = useState('ACTIVE');
     const [sortBy, setSortBy] = useState('DATE');
+    const [sortDir, setSortDir] = useState('DESC');
     const [search, setSearch] = useState('');
     const [replyingTo, setReplyingTo] = useState(null);
     const [replyText, setReplyText] = useState('');
@@ -2610,12 +2611,15 @@ function ManagerChat({ messages = [], tenants = [], onUpdateMessage, onAddVendor
             const tenantA = (tenants.find(t => String(t.id) === String(a.tenantId))?.name || 'Guest').toLowerCase();
             const tenantB = (tenants.find(t => String(t.id) === String(b.tenantId))?.name || 'Guest').toLowerCase();
             
-            if (tenantA !== tenantB) return tenantA.localeCompare(tenantB);
-            // If same tenant, sort by newest date
-            return safeTime(b) - safeTime(a);
+            let result = 0;
+            if (tenantA !== tenantB) result = tenantA.localeCompare(tenantB);
+            else result = safeTime(b) - safeTime(a); // Group same tenant by newest first always
+
+            return sortDir === 'ASC' ? result : -result;
         }
-        // Default DATE sort: Newest Hub
-        return safeTime(b) - safeTime(a);
+        // Default DATE sort
+        const result = safeTime(a) - safeTime(b);
+        return sortDir === 'ASC' ? result : -result;
     });
 
     const handleSendReply = async (msgId) => {
@@ -2662,19 +2666,29 @@ function ManagerChat({ messages = [], tenants = [], onUpdateMessage, onAddVendor
                             />
                         </div>
                         <div className="flex items-center gap-3 bg-slate-900/50 px-3 py-1 rounded-xl">
-                            <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest border-r border-white/10 pr-3 mr-1">Sort</span>
+                            <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest border-r border-white/10 pr-3 mr-1">Sort Hub</span>
                             <div className="flex items-center gap-1">
                                 <button 
-                                    onClick={() => setSortBy('DATE')}
+                                    onClick={() => {
+                                        if (sortBy === 'DATE') setSortDir(prev => prev === 'ASC' ? 'DESC' : 'ASC');
+                                        else { setSortBy('DATE'); setSortDir('DESC'); }
+                                    }}
                                     className={`px-4 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest flex items-center gap-2 transition-all ${sortBy === 'DATE' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}
                                 >
-                                    <Calendar className="w-3 h-3" /> Date
+                                    <Calendar className="w-3 h-3" /> 
+                                    Date
+                                    {sortBy === 'DATE' && (sortDir === 'ASC' ? <ArrowUpRight className="w-2.5 h-2.5" /> : <ChevronDown className="w-2.5 h-2.5" />)}
                                 </button>
                                 <button 
-                                    onClick={() => setSortBy('TENANT')}
+                                    onClick={() => {
+                                        if (sortBy === 'TENANT') setSortDir(prev => prev === 'ASC' ? 'DESC' : 'ASC');
+                                        else { setSortBy('TENANT'); setSortDir('ASC'); }
+                                    }}
                                     className={`px-4 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest flex items-center gap-2 transition-all ${sortBy === 'TENANT' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}
                                 >
-                                    <User className="w-3 h-3" /> Tenant
+                                    <User className="w-3 h-3" /> 
+                                    Tenant
+                                    {sortBy === 'TENANT' && (sortDir === 'ASC' ? <ArrowUpRight className="w-2.5 h-2.5" /> : <ChevronDown className="w-2.5 h-2.5" />)}
                                 </button>
                             </div>
                         </div>
