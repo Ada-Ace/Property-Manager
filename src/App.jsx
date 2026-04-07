@@ -370,7 +370,6 @@ function ManagerDashboard(props) {
                     { id: 'inventory', icon: <Building2 className="w-3.5 h-3.5" />, label: 'My Property Assets' },
                     { id: 'utilities', icon: <Droplets className="w-3.5 h-3.5" />, label: 'Utility Ledger' },
                     { id: 'tasks', icon: <Hammer className="w-3.5 h-3.5" />, label: 'Maintenance Desk' },
-                    { id: 'vendors', icon: <Users className="w-3.5 h-3.5" />, label: 'Service Network' },
                     { id: 'messages', icon: <MessageSquare className="w-3.5 h-3.5" />, label: 'Communications', badge: (tenantMessages?.length > 0) },
                     { id: 'settings', icon: <Lock className="w-3.5 h-3.5" />, label: 'Security Hub' }
                 ] : [])?.map((tab) => (
@@ -455,8 +454,7 @@ function ManagerDashboard(props) {
                             currency={currency} 
                         />
                     )}
-                    {activeTab === 'tasks' && <MaintenanceManager tasks={tasks} tenants={tenants} onAddTask={onAddTask} currency={currency} />}
-                    {activeTab === 'vendors' && <VendorManager vendors={vendors} />}
+                    {activeTab === 'tasks' && <MaintenanceManager tasks={tasks} tenants={tenants} onAddTask={onAddTask} currency={currency} vendors={vendors} onAddVendor={() => setShowVendorModal(true)} onEditVendor={setEditingVendor} onDeleteVendor={onDeleteVendor} />}
                     {activeTab === 'messages' && <ManagerChat messages={tenantMessages} onUpdateMessage={onUpdateMessage} onAddVendor={setShowVendorModal} vendors={vendors} onEditVendor={setEditingVendor} onDeleteVendor={onDeleteVendor} />}
                     {activeTab === 'settings' && <CredentialManager activeManager={activeManager} onEditManager={onEditManager} />}
                 </Motion.div>
@@ -2702,7 +2700,7 @@ function MaintenanceModal({ onClose, onSubmit, tenants = [] }) {
     );
 }
 
-function MaintenanceManager({ tasks = [], tenants = [], onAddTask, currency = 'USD' }) {
+function MaintenanceManager({ tasks = [], tenants = [], onAddTask, currency = 'USD', vendors = [], onAddVendor, onEditVendor, onDeleteVendor }) {
     const [showAdd, setShowAdd] = useState(false);
     return (
         <div className="premium-card rounded-[2.5rem] p-8 mt-12 animate-in fade-in slide-in-from-bottom-5">
