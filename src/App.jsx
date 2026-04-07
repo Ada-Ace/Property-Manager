@@ -2582,15 +2582,28 @@ function ManagerChat({ messages = [], tenants = [], onUpdateMessage, onAddVendor
         return m.status === filter;
     });
 
+    const safeTime = (msg) => {
+        const dateStr = msg.resolvedAt || msg.timestamp || msg.date;
+        if (!dateStr) return 0;
+        // Handle dd-mm-yyyy standard sheet format if not already normalized
+        if (typeof dateStr === 'string' && dateStr.includes('-') && dateStr.split('-')[2]?.length === 4) {
+            const p = dateStr.split('-');
+            return new Date(`${p[2]}-${p[1]}-${p[0]}`).getTime() || 0;
+        }
+        return new Date(dateStr).getTime() || 0;
+    };
+
     const currentList = [...(filteredList || [])].sort((a, b) => {
         if (sortBy === 'TENANT') {
             const tenantA = (tenants.find(t => String(t.id) === String(a.tenantId))?.name || 'Guest').toLowerCase();
             const tenantB = (tenants.find(t => String(t.id) === String(b.tenantId))?.name || 'Guest').toLowerCase();
-            return tenantA.localeCompare(tenantB);
+            
+            if (tenantA !== tenantB) return tenantA.localeCompare(tenantB);
+            // If same tenant, sort by newest date
+            return safeTime(b) - safeTime(a);
         }
-        const timeA = new Date(a.resolvedAt || a.timestamp || a.date || 0).getTime();
-        const timeB = new Date(b.resolvedAt || b.timestamp || b.date || 0).getTime();
-        return timeB - timeA;
+        // Default DATE sort: Newest Hub
+        return safeTime(b) - safeTime(a);
     });
 
     const handleSendReply = async (msgId) => {
