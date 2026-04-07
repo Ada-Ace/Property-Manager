@@ -551,9 +551,9 @@ function RentSummaryTab({ tenants, payments, currency = 'USD', onMarkPaid, prope
                 const payDate = new Date(p.date || p.timestamp);
                 if (isNaN(payDate.getTime())) return false;
                 
-                // A payment covers the upcoming cycle if it was processed within 25 days prior to the specific dueDate.
+                // A payment covers the upcoming cycle if it was processed within 14 days prior to the specific dueDate.
                 const diffFromDue = (t.dueDate.getTime() - payDate.getTime()) / (1000 * 60 * 60 * 24);
-                return diffFromDue <= 25 && diffFromDue >= -15;
+                return diffFromDue <= 14 && diffFromDue >= -15;
             });
             return !hasPaid && (Number(t.daysUntil) || 0) <= 14;
         }).sort((a, b) => {
@@ -592,7 +592,7 @@ function RentSummaryTab({ tenants, payments, currency = 'USD', onMarkPaid, prope
             <div className="bg-slate-900/40 rounded-[2.5rem] border border-white/5 overflow-hidden shadow-2xl backdrop-blur-md">
                 <div className="px-8 py-6 border-b border-white/5 bg-slate-950/50 flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div>
-                        <h3 className="text-lg font-black text-white italic tracking-tight uppercase">Current Billing Cycle</h3>
+                        <h3 className="text-lg font-black text-white italic tracking-tight uppercase">Upcoming Billing Cycle</h3>
                         <p className="text-[9px] text-slate-500 font-black uppercase tracking-[0.3em] mt-1">Real-time Tenant Obligations</p>
                     </div>
                     <button onClick={downloadLedgerPDF} className="bg-white/5 hover:bg-white/10 px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] transition-all border border-white/5 flex items-center gap-3">
