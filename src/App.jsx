@@ -2573,13 +2573,25 @@ const extractYearMonth = (dateStr) => {
 
 function ManagerChat({ messages = [], tenants = [], onUpdateMessage, onAddVendor, vendors = [], onEditVendor, onDeleteVendor, activeManager }) {
     const [filter, setFilter] = useState('ALL');
+    const [sortBy, setSortBy] = useState('DATE');
     const [replyingTo, setReplyingTo] = useState(null);
     const [replyText, setReplyText] = useState('');
 
-    const currentList = messages?.filter(m => {
+    const filteredList = messages?.filter(m => {
         if (filter === 'ALL') return m.status === 'UNREAD';
         if (filter === 'RESOLVED') return m.status === 'READ';
         return m.status === filter;
+    });
+
+    const currentList = [...(filteredList || [])].sort((a, b) => {
+        if (sortBy === 'TENANT') {
+            const tenantA = (tenants.find(t => t.id === a.tenantId)?.name || 'Guest').toLowerCase();
+            const tenantB = (tenants.find(t => t.id === b.tenantId)?.name || 'Guest').toLowerCase();
+            return tenantA.localeCompare(tenantB);
+        }
+        const timeA = new Date(a.resolvedAt || a.timestamp || a.date || 0).getTime();
+        const timeB = new Date(b.resolvedAt || b.timestamp || b.date || 0).getTime();
+        return timeB - timeA;
     });
 
     const handleSendReply = async (msgId) => {
@@ -2611,12 +2623,27 @@ function ManagerChat({ messages = [], tenants = [], onUpdateMessage, onAddVendor
             {/* Signal Feed */}
             <div className="premium-card rounded-[2.5rem] p-8">
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-10 pb-6 border-b border-white/5">
-                    <div>
+                    <div className="flex-1">
                         <h3 className="font-black text-2xl text-white italic tracking-tight flex items-center gap-3"><Radio className="w-7 h-7 text-indigo-400" /> Signal Communications</h3>
-                        <div className="flex gap-6 mt-3">
+                        <div className="flex items-center gap-6 mt-3">
                             <button onClick={() => setFilter('ALL')} className={`text-[9px] font-black uppercase tracking-widest transition-all ${filter === 'ALL' ? 'text-indigo-400' : 'text-slate-500 hover:text-slate-300'}`}>Active Signals ({messages?.filter(m => m.status === 'UNREAD')?.length})</button>
                             <button onClick={() => setFilter('RESOLVED')} className={`text-[9px] font-black uppercase tracking-widest transition-all ${filter === 'RESOLVED' ? 'text-emerald-400' : 'text-slate-500 hover:text-slate-300'}`}>Resolved Hub ({messages?.filter(m => m.status === 'READ')?.length})</button>
                         </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 bg-black/20 p-1 rounded-xl border border-white/5">
+                        <button 
+                            onClick={() => setSortBy('DATE')}
+                            className={`px-4 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest flex items-center gap-2 transition-all ${sortBy === 'DATE' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}
+                        >
+                            <Calendar className="w-3 h-3" /> Date
+                        </button>
+                        <button 
+                            onClick={() => setSortBy('TENANT')}
+                            className={`px-4 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest flex items-center gap-2 transition-all ${sortBy === 'TENANT' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}
+                        >
+                            <User className="w-3 h-3" /> Tenant
+                        </button>
                     </div>
                 </div>
 
