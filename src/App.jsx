@@ -366,11 +366,11 @@ function ManagerDashboard(props) {
 
             <div className="hidden md:flex bg-slate-900/40 p-1 rounded-2xl border border-white/5 w-full md:w-fit overflow-x-auto no-scrollbar snap-x relative backdrop-blur-md">
                 {(Array.isArray(tenants) ? [
-                    { id: 'rents', icon: <Receipt className="w-3.5 h-3.5" />, label: 'My Collections' },
-                    { id: 'inventory', icon: <Building2 className="w-3.5 h-3.5" />, label: 'My Property Assets' },
-                    { id: 'utilities', icon: <Droplets className="w-3.5 h-3.5" />, label: 'Utility Ledger' },
-                    { id: 'tasks', icon: <Hammer className="w-3.5 h-3.5" />, label: 'Maintenance Desk' },
-                    { id: 'messages', icon: <MessageSquare className="w-3.5 h-3.5" />, label: 'Communications', badge: (tenantMessages?.length > 0) }
+                    { id: 'rents', icon: <Receipt className="w-3.5 h-3.5" />, label: 'Rents' },
+                    { id: 'inventory', icon: <Building2 className="w-3.5 h-3.5" />, label: 'Units' },
+                    { id: 'utilities', icon: <Droplets className="w-3.5 h-3.5" />, label: 'Utilities' },
+                    { id: 'tasks', icon: <Hammer className="w-3.5 h-3.5" />, label: 'Services' },
+                    { id: 'messages', icon: <MessageSquare className="w-3.5 h-3.5" />, label: 'Signals', badge: (tenantMessages?.length > 0) }
                 ] : [])?.map((tab) => (
                     <Motion.button 
                         key={tab.id}
