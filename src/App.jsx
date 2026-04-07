@@ -454,7 +454,20 @@ function ManagerDashboard(props) {
                         />
                     )}
                     {activeTab === 'tasks' && <TasksManager tasks={tasks} tenants={tenants} onAddTask={onAddTask} currency={currency} vendors={vendors} onAddVendor={() => setShowVendorModal(true)} onEditVendor={(v) => { setEditingVendor(v); setShowVendorModal(true); }} onDeleteVendor={onDeleteVendor} />}
-                    {activeTab === 'messages' && <ManagerChat messages={tenantMessages} onUpdateMessage={onUpdateMessage} onAddVendor={setShowVendorModal} vendors={vendors} onEditVendor={(v) => { setEditingVendor(v); setShowVendorModal(true); }} onDeleteVendor={onDeleteVendor} />}
+                    {activeTab === 'messages' && (
+                        <ManagerChat 
+                            messages={tenantMessages} 
+                            tenants={tenants}
+                            onUpdateMessage={onUpdateMessage} 
+                            onAddVendor={setShowVendorModal} 
+                            vendors={vendors} 
+                            onEditVendor={(v) => { 
+                                setEditingVendor(v); 
+                                setShowVendorModal(true); 
+                            }} 
+                            onDeleteVendor={onDeleteVendor} 
+                        />
+                    )}
                 </Motion.div>
             </AnimatePresence>
 
@@ -2557,7 +2570,7 @@ const extractYearMonth = (dateStr) => {
 
 // --- Utility Components ---
 
-function ManagerChat({ messages = [], onUpdateMessage, onAddVendor, vendors = [], onEditVendor, onDeleteVendor }) {
+function ManagerChat({ messages = [], tenants = [], onUpdateMessage, onAddVendor, vendors = [], onEditVendor, onDeleteVendor }) {
     const [filter, setFilter] = useState('ALL');
     const currentList = messages?.filter(m => filter === 'ALL' || m.status === filter);
 
@@ -2597,10 +2610,14 @@ function ManagerChat({ messages = [], onUpdateMessage, onAddVendor, vendors = []
                             <div key={msg.id || idx} className="bg-white/[0.03] border border-white/5 p-6 rounded-[2rem] flex flex-col md:flex-row justify-between items-start md:items-center gap-6 group hover:bg-white/[0.06] transition-all">
                                 <div className="flex-1">
                                     <div className="flex items-center gap-3 mb-2">
-                                        <span className="text-[9px] font-black text-indigo-400 uppercase tracking-widest bg-indigo-500/10 px-3 py-1 rounded-lg border border-indigo-500/20">{msg.tenantName || 'Tenant Signal'}</span>
-                                        <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">{new Date(msg.date).toLocaleDateString()}</span>
+                                        <span className="text-[9px] font-black text-indigo-400 uppercase tracking-widest bg-indigo-500/10 px-3 py-1 rounded-lg border border-indigo-500/20">
+                                            {tenants.find(t => t.id === msg.tenantId)?.name || 'Tenant Signal'}
+                                        </span>
+                                        <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">
+                                            {msg.timestamp ? formatDate(msg.timestamp) : msg.date ? formatDate(msg.date) : 'New Signal'}
+                                        </span>
                                     </div>
-                                    <p className="text-sm text-slate-300 font-medium leading-relaxed">{msg.message}</p>
+                                    <p className="text-sm text-slate-300 font-medium leading-relaxed">{msg.content || msg.message || 'No content provided'}</p>
                                 </div>
                                 <div className="flex items-center gap-4">
                                     {msg.status === 'UNREAD' && (
