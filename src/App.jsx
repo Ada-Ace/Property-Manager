@@ -553,7 +553,7 @@ function RentSummaryTab({ tenants, payments, currency = 'USD', onMarkPaid, prope
                 const daysSincePayment = (today.getTime() - payDate.getTime()) / (1000 * 60 * 60 * 24);
                 return daysSincePayment >= 0 && daysSincePayment <= 25;
             });
-            return !hasPaid;
+            return !hasPaid && (Number(t.daysUntil) || 0) <= 14;
         }).sort((a, b) => {
             const da = (a.dueDate instanceof Date && !isNaN(a.dueDate)) ? a.dueDate.getTime() : 0;
             const db = (b.dueDate instanceof Date && !isNaN(b.dueDate)) ? b.dueDate.getTime() : 0;
