@@ -1258,7 +1258,7 @@ function App() {
 
                 // Robustly Extract Collections (Keys are now lowercased & trimmed from GAS)
                 const dateFields = ['leasestart', 'leaseend', 'date', 'timestamp', 'scheduledate', 'duedate', 'moveoutdate', 'lastpaymentdate', 'vacantsince', 'lastupdated', 'resolvedat'];
-                const keyMap={'unitnumber':'unitNumber','expectedrent':'expectedRent','propertyname':'propertyName','baserent':'baseRent','leasestart':'leaseStart','leaseend':'leaseEnd','leasedocument':'leaseDocument','leaseextensiondoc':'leaseExtensionDoc','mobile':'mobile','password':'password','utilityshare':'utilityShare','depositrefunded':'depositRefunded','depositdeducted':'depositDeducted','moveoutdate':'moveOutDate','lastpaymentdate':'lastPaymentDate','scheduledate':'scheduleDate','tenantid':'tenantId','photourl':'photoUrl','photos':'photos','assetphotos':'photos','handledby':'handledBy','duedate':'dueDate','maintenanceselection':'maintenanceSelection','vacantsince':'vacantSince','lastupdated':'lastUpdated','image':'image','status':'status','size':'size','fittings':'fittings','response':'response','resolvedat':'resolvedAt'};
+                const keyMap={'unitnumber':'unitNumber','expectedrent':'expectedRent','propertyname':'propertyName','baserent':'baseRent','leasestart':'leaseStart','leaseend':'leaseEnd','leasedocument':'leaseDocument','leaseextensiondoc':'leaseExtensionDoc','mobile':'mobile','password':'password','utilityshare':'utilityShare','depositrefunded':'depositRefunded','depositdeducted':'depositDeducted','moveoutdate':'moveOutDate','lastpaymentdate':'lastPaymentDate','scheduledate':'scheduleDate','tenantid':'tenantId','photourl':'photoUrl','viewurl':'viewUrl','photos':'photos','assetphotos':'photos','handledby':'handledBy','duedate':'dueDate','maintenanceselection':'maintenanceSelection','vacantsince':'vacantSince','lastupdated':'lastUpdated','image':'image','status':'status','size':'size','fittings':'fittings','response':'response','resolvedat':'resolvedAt'};
                 const normalize = (arr) => {
                     if (arr.length > 0) console.log('SYNC_KEYS:', Object.keys(arr[0]).join(','));
                     return arr.map(item => {
@@ -2673,8 +2673,21 @@ function ManagerChat({ messages = [], tenants = [], onUpdateMessage, onAddVendor
                                         
                                         {msg.photoUrl && (
                                             <div className="mt-3 space-y-2">
-                                                <div className="overflow-hidden rounded-xl border border-white/10 md:w-1/2 group/msgimg relative cursor-pointer" onClick={() => window.open(msg.photoUrl, '_blank')}>
-                                                    <img src={msg.photoUrl} alt="Attachment" className="w-full h-auto object-cover hover:scale-105 transition-transform" />
+                                                <div className="overflow-hidden rounded-xl border border-white/10 md:w-1/2 group/msgimg relative cursor-pointer" onClick={() => window.open(msg.viewUrl || msg.photoUrl, '_blank')}>
+                                                    <img 
+                                                        src={msg.photoUrl} 
+                                                        alt="Attachment" 
+                                                        className="w-full h-auto object-cover hover:scale-105 transition-transform" 
+                                                        onError={(e) => {
+                                                            if (msg.photoUrl?.includes('id=')) {
+                                                                const id = msg.photoUrl.split('id=')[1].split('&')[0];
+                                                                e.target.src = `https://drive.google.com/thumbnail?id=${id}&sz=w800`;
+                                                            } else if (msg.photoUrl?.includes('/d/')) {
+                                                                const id = msg.photoUrl.split('/d/')[1].split('/')[0];
+                                                                e.target.src = `https://drive.google.com/thumbnail?id=${id}&sz=w800`;
+                                                            }
+                                                        }}
+                                                    />
                                                     <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/msgimg:opacity-100 transition-opacity flex items-center justify-center">
                                                         <span className="text-[9px] font-black text-white uppercase tracking-widest bg-black/60 px-3 py-1.5 rounded-lg">View Full</span>
                                                     </div>
@@ -4124,8 +4137,21 @@ export function TenantDashboard({ tenant, unit, tenantMessages = [], onSendMessa
 
                                         {msg.photoUrl && (
                                             <div className="mt-4 space-y-2">
-                                                <div className="overflow-hidden rounded-2xl border border-white/10 max-w-[280px] group/photo relative cursor-pointer" onClick={() => window.open(msg.photoUrl, '_blank')}>
-                                                    <img src={msg.photoUrl} alt="Attachment" className="w-full h-auto object-cover group-hover/photo:scale-105 transition-transform duration-500" />
+                                                <div className="overflow-hidden rounded-2xl border border-white/10 max-w-[280px] group/photo relative cursor-pointer" onClick={() => window.open(msg.viewUrl || msg.photoUrl, '_blank')}>
+                                                    <img 
+                                                        src={msg.photoUrl} 
+                                                        alt="Attachment" 
+                                                        className="w-full h-auto object-cover group-hover/photo:scale-105 transition-transform duration-500" 
+                                                        onError={(e) => {
+                                                            if (msg.photoUrl?.includes('id=')) {
+                                                                const id = msg.photoUrl.split('id=')[1].split('&')[0];
+                                                                e.target.src = `https://drive.google.com/thumbnail?id=${id}&sz=w800`;
+                                                            } else if (msg.photoUrl?.includes('/d/')) {
+                                                                const id = msg.photoUrl.split('/d/')[1].split('/')[0];
+                                                                e.target.src = `https://drive.google.com/thumbnail?id=${id}&sz=w800`;
+                                                            }
+                                                        }}
+                                                    />
                                                     <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/photo:opacity-100 transition-opacity flex items-center justify-center">
                                                         <span className="text-[10px] font-black text-white uppercase tracking-widest bg-black/60 px-4 py-2 rounded-full border border-white/20">Expand Image</span>
                                                     </div>
