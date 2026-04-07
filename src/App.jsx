@@ -648,12 +648,22 @@ function RentSummaryTab({ tenants, payments, currency = 'USD', onMarkPaid, prope
                                             </div>
                                         </td>
                                         <td className="px-8 py-6 text-right">
-                                            <button 
-                                                onClick={() => setConfirmTenant(tenant)}
-                                                className="bg-emerald-600/10 hover:bg-emerald-600 text-emerald-400 hover:text-white px-5 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all border border-emerald-500/20 active:scale-95 shadow-lg shadow-emerald-600/0 hover:shadow-emerald-600/20"
-                                            >
-                                                Mark Paid
-                                            </button>
+                                            <div className="flex items-center justify-end gap-2">
+                                                <a 
+                                                    href={`https://wa.me/${String(tenant.mobile || '').replace(/\D/g, '')}?text=${encodeURIComponent(`Hi ${String(tenant.name || 'Tenant').split(' ')[0]},\n\nThis is a friendly reminder that your rent for ${tenant.unit} is ${isOverdue ? 'overdue' : 'due'} on ${fmtDate(tenant.dueDate)}.\n\n*Amount Due: ${currency} ${Number(tenant.baseRent || 0).toLocaleString()}*\n\nPlease arrange for payment as soon as possible. Thank you!`)}`}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="flex items-center gap-1.5 bg-indigo-600/10 hover:bg-indigo-600 text-indigo-400 hover:text-white px-5 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all border border-indigo-500/20 active:scale-95"
+                                                >
+                                                    <MessageSquare className="w-3 h-3" /> Alert
+                                                </a>
+                                                <button 
+                                                    onClick={() => setConfirmTenant(tenant)}
+                                                    className="bg-emerald-600/10 hover:bg-emerald-600 text-emerald-400 hover:text-white px-5 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all border border-emerald-500/20 active:scale-95 shadow-lg shadow-emerald-600/0 hover:shadow-emerald-600/20 whitespace-nowrap"
+                                                >
+                                                    Mark Paid
+                                                </button>
+                                            </div>
                                         </td>
                                     </tr>
                                 );
