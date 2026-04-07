@@ -2571,15 +2571,26 @@ const extractYearMonth = (dateStr) => {
 // --- Utility Components ---
 
 function ManagerChat({ messages = [], tenants = [], onUpdateMessage, onAddVendor, vendors = [], onEditVendor, onDeleteVendor, activeManager }) {
-    const [filter, setFilter] = useState('ALL');
+    const [filter, setFilter] = useState('ACTIVE');
     const [sortBy, setSortBy] = useState('DATE');
+    const [search, setSearch] = useState('');
     const [replyingTo, setReplyingTo] = useState(null);
     const [replyText, setReplyText] = useState('');
 
-    const filteredList = messages?.filter(m => {
-        if (filter === 'ALL') return m.status === 'UNREAD';
-        if (filter === 'RESOLVED') return m.status === 'READ';
-        return m.status === filter;
+    const filteredList = (messages || []).filter(m => {
+        const mStatus = String(m.status || 'UNREAD').toUpperCase();
+        const matchesFilter = filter === 'ACTIVE' ? mStatus === 'UNREAD' : mStatus === 'READ';
+        
+        if (!matchesFilter) return false;
+        if (!search.trim()) return true;
+
+        const term = search.toLowerCase();
+        const tenant = tenants.find(t => String(t.id) === String(m.tenantId));
+        const content = (m.content || m.message || '').toLowerCase();
+        const name = (tenant?.name || '').toLowerCase();
+        const unit = (tenant?.unit || '').toLowerCase();
+
+        return name.includes(term) || content.includes(term) || unit.includes(term);
     });
 
     const safeTime = (msg) => {
@@ -2637,26 +2648,44 @@ function ManagerChat({ messages = [], tenants = [], onUpdateMessage, onAddVendor
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-10 pb-6 border-b border-white/5">
                     <div className="flex-1">
                         <h3 className="font-black text-2xl text-white italic tracking-tight flex items-center gap-3"><Radio className="w-7 h-7 text-indigo-400" /> Signal Communications</h3>
-                        <div className="flex items-center gap-6 mt-3">
-                            <button onClick={() => setFilter('ALL')} className={`text-[9px] font-black uppercase tracking-widest transition-all ${filter === 'ALL' ? 'text-indigo-400' : 'text-slate-500 hover:text-slate-300'}`}>Active Signals ({messages?.filter(m => m.status === 'UNREAD')?.length})</button>
-                            <button onClick={() => setFilter('RESOLVED')} className={`text-[9px] font-black uppercase tracking-widest transition-all ${filter === 'RESOLVED' ? 'text-emerald-400' : 'text-slate-500 hover:text-slate-300'}`}>Resolved Hub ({messages?.filter(m => m.status === 'READ')?.length})</button>
+                    </div>
+                    <div className="flex flex-col md:flex-row items-center gap-4 bg-black/20 p-2 rounded-2xl border border-white/5 w-full md:w-auto">
+                        <div className="relative flex-1 min-w-[200px]">
+                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                            <input 
+                                type="text"
+                                placeholder="Search signals..."
+                                value={search}
+                                onChange={e => setSearch(e.target.value)}
+                                className="w-full bg-slate-900/50 border-none rounded-xl py-2 pl-12 pr-4 text-xs text-white outline-none ring-1 ring-white/5 focus:ring-indigo-500 transition-all placeholder:text-slate-600 font-bold"
+                            />
+                        </div>
+                        <div className="flex items-center gap-1 bg-slate-900/50 p-1 rounded-xl">
+                            <button 
+                                onClick={() => setSortBy('DATE')}
+                                className={`px-4 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest flex items-center gap-2 transition-all ${sortBy === 'DATE' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}
+                            >
+                                <Calendar className="w-3 h-3" /> Date
+                            </button>
+                            <button 
+                                onClick={() => setSortBy('TENANT')}
+                                className={`px-4 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest flex items-center gap-2 transition-all ${sortBy === 'TENANT' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}
+                            >
+                                <User className="w-3 h-3" /> Tenant
+                            </button>
                         </div>
                     </div>
+                </div>
 
-                    <div className="flex items-center gap-2 bg-black/20 p-1 rounded-xl border border-white/5">
-                        <button 
-                            onClick={() => setSortBy('DATE')}
-                            className={`px-4 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest flex items-center gap-2 transition-all ${sortBy === 'DATE' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}
-                        >
-                            <Calendar className="w-3 h-3" /> Date
-                        </button>
-                        <button 
-                            onClick={() => setSortBy('TENANT')}
-                            className={`px-4 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest flex items-center gap-2 transition-all ${sortBy === 'TENANT' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}
-                        >
-                            <User className="w-3 h-3" /> Tenant
-                        </button>
-                    </div>
+                <div className="flex items-center gap-6 mb-8 mt-2">
+                    <button onClick={() => setFilter('ACTIVE')} className={`text-[10px] font-black uppercase tracking-[0.2em] transition-all flex items-center gap-2 ${filter === 'ACTIVE' ? 'text-indigo-400' : 'text-slate-600 hover:text-slate-400'}`}>
+                        <div className={`w-1.5 h-1.5 rounded-full ${filter === 'ACTIVE' ? 'bg-indigo-500 animate-pulse shadow-[0_0_8px_rgba(99,102,241,0.5)]' : 'bg-slate-700'}`}></div>
+                        ACTIVE SIGNALS ({messages?.filter(m => String(m.status || 'UNREAD').toUpperCase() === 'UNREAD')?.length})
+                    </button>
+                    <button onClick={() => setFilter('RESOLVED')} className={`text-[10px] font-black uppercase tracking-[0.2em] transition-all flex items-center gap-2 ${filter === 'RESOLVED' ? 'text-emerald-400' : 'text-slate-600 hover:text-slate-400'}`}>
+                        <div className={`w-1.5 h-1.5 rounded-full ${filter === 'RESOLVED' ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-slate-700'}`}></div>
+                        RESOLVED HUB ({messages?.filter(m => String(m.status || '').toUpperCase() === 'READ')?.length})
+                    </button>
                 </div>
 
                 {!currentList || currentList?.length === 0 ? (
