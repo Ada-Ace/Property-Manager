@@ -4001,12 +4001,6 @@ export function TenantDashboard({ tenant, unit, tenantMessages = [], onSendMessa
                         </div>
                     </div>
 
-                    <div className="bg-indigo-600/10 border border-indigo-500/20 p-5 rounded-2xl flex items-start gap-3">
-                        <Info className="w-5 h-5 text-indigo-400 mt-0.5 shrink-0" />
-                        <p className="text-[11px] leading-relaxed text-indigo-200/70 font-medium">
-                            Bills are updated monthly based on building consumption. {tenant.utilityShare > 0 ? "The current amount includes shared building water and electricity charges." : "Utilities for this period haven't been shared yet."}
-                        </p>
-                    </div>
 
                     {/* Digital Identity Section */}
                     <div className="bg-slate-900/60 border border-white/5 p-6 md:p-8 rounded-[2rem] backdrop-blur-md shadow-2xl relative overflow-hidden group border-indigo-500/10">
