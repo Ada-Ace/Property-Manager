@@ -4124,20 +4124,6 @@ export function TenantDashboard({ tenant, unit, tenantMessages = [], onSendMessa
 
 function MessageModal({ onClose, onSubmit }) {
     const [msg, setMsg] = useState('');
-    const [photo, setPhoto] = useState(null);
-    const [photoPreview, setPhotoPreview] = useState(null);
-
-    const handlePhotoChange = (e) => {
-        const file = e.target.files[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                setPhoto(reader.result); // Data URL
-                setPhotoPreview(reader.result);
-            };
-            reader.readAsDataURL(file);
-        }
-    };
 
     return (
         <div className="fixed inset-0 z-[155] flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-md">
@@ -4153,7 +4139,7 @@ function MessageModal({ onClose, onSubmit }) {
                     </h2>
                     <button onClick={onClose} className="text-slate-500 hover:text-white transition-colors"></button>
                 </div>
-                <form onSubmit={(e) => { e.preventDefault(); onSubmit(msg, photo); }} className="space-y-4">
+                <form onSubmit={(e) => { e.preventDefault(); onSubmit(msg); }} className="space-y-4">
                     <textarea
                         required
                         rows={4}
@@ -4162,27 +4148,6 @@ function MessageModal({ onClose, onSubmit }) {
                         value={msg}
                         onChange={e => setMsg(e.target.value)}
                     />
-                    
-                    <div className="space-y-2">
-                        <label className="text-[10px] text-slate-500 font-bold uppercase tracking-widest pl-1 mb-2 block">Attachment (Optional)</label>
-                        <div className="flex gap-4 items-center">
-                            <label className="flex-1 cursor-pointer">
-                                <input type="file" accept="image/*" className="hidden" onChange={handlePhotoChange} />
-                                <div className="border border-dashed border-white/10 rounded-2xl p-4 flex flex-col items-center justify-center gap-2 text-slate-500 hover:text-indigo-400 hover:border-indigo-500/30 transition-all">
-                                    <ImageIcon className="w-5 h-5" />
-                                    <span className="text-[9px] font-black uppercase tracking-widest">{photo ? 'Change Photo' : 'Upload Photo'}</span>
-                                </div>
-                            </label>
-                            {photoPreview && (
-                                <div className="w-20 h-20 bg-slate-800 rounded-2xl overflow-hidden border border-white/10 relative group">
-                                    <img src={photoPreview} alt="Preview" className="w-full h-full object-cover" />
-                                    <button onClick={() => { setPhoto(null); setPhotoPreview(null); }} className="absolute inset-0 bg-red-600/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white">
-                                        <Trash2 className="w-4 h-4" />
-                                    </button>
-                                </div>
-                            )}
-                        </div>
-                    </div>
 
                     <button type="submit" className="w-full py-4 bg-indigo-600 hover:bg-indigo-500 text-white font-black rounded-2xl shadow-xl shadow-indigo-600/20 transition-all uppercase tracking-widest text-[10px] flex items-center justify-center gap-2 glow-indigo">
                         <Send className="w-3.5 h-3.5" /> Send Message
