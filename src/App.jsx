@@ -2671,6 +2671,12 @@ function ManagerChat({ messages = [], tenants = [], onUpdateMessage, onAddVendor
                                         </div>
                                         <p className="text-sm text-slate-300 font-medium leading-relaxed italic">"{msg.content || msg.message || 'No content provided'}"</p>
                                         
+                                        {msg.photoUrl && (
+                                            <div className="mt-3 overflow-hidden rounded-xl border border-white/10 md:w-1/2">
+                                                <img src={msg.photoUrl} alt="Attachment" className="w-full h-auto object-cover hover:scale-105 transition-transform" />
+                                            </div>
+                                        )}
+                                        
                                         {msg.response && (
                                             <div className="mt-4 p-4 bg-indigo-500/5 border-l-2 border-indigo-500/30 rounded-r-xl">
                                                 <p className="text-[9px] font-black text-indigo-400 uppercase tracking-widest mb-1 flex items-center gap-2">
@@ -3819,6 +3825,7 @@ function TasksManager({ tenants, tasks, vendors, onAddTask, onAddVendor, onEditV
 export function TenantDashboard({ tenant, unit, tenantMessages = [], onSendMessage, onUpdateProfile, utilityBills = [], payments = [], currency = 'USD' }) {
     const [profileForm, setProfileForm] = React.useState({ mobile: tenant?.mobile || '', password: tenant?.password || '' });
     const [showMsgModal, setShowMsgModal] = useState(false);
+    const [msgModalInitialText, setMsgModalInitialText] = useState('');
 
     const utilityDue = useMemo(() => {
         if (!Array.isArray(utilityBills) || !Array.isArray(payments)) return 0;
@@ -3931,7 +3938,7 @@ export function TenantDashboard({ tenant, unit, tenantMessages = [], onSendMessa
                     </div>
 
                     <button 
-                        onClick={() => setShowMsgModal(true)}
+                        onClick={() => { setMsgModalInitialText('please acknowledge receipt'); setShowMsgModal(true); }}
                         className="w-full bg-indigo-600 text-white font-black py-4 md:py-5 rounded-2xl hover:bg-indigo-500 transition-all shadow-xl shadow-indigo-600/20 text-[11px] md:text-xs uppercase tracking-widest mt-8 flex items-center justify-center gap-2 active:scale-95 glow-indigo"
                     >
                         Verify my Rent Payment <ArrowUpRight className="w-5 h-5" />
@@ -4131,8 +4138,9 @@ export function TenantDashboard({ tenant, unit, tenantMessages = [], onSendMessa
 
             {showMsgModal && (
                 <MessageModal
-                    onClose={() => setShowMsgModal(false)}
-                    onSubmit={(msg, photo) => { onSendMessage(msg, photo); setShowMsgModal(false); }}
+                    onClose={() => { setShowMsgModal(false); setMsgModalInitialText(''); }}
+                    initialMessage={msgModalInitialText}
+                    onSubmit={(msg, photo) => { onSendMessage(msg, photo); setShowMsgModal(false); setMsgModalInitialText(''); }}
                 />
             )}
         </div>
@@ -4141,8 +4149,18 @@ export function TenantDashboard({ tenant, unit, tenantMessages = [], onSendMessa
 
 // --- Modals & Support Components ---
 
-function MessageModal({ onClose, onSubmit }) {
-    const [msg, setMsg] = useState('');
+function MessageModal({ onClose, onSubmit, initialMessage = '' }) {
+    const [msg, setMsg] = useState(initialMessage);
+    const [photo, setPhoto] = useState(null);
+    const [preview, setPreview] = useState(null);
+
+    const handlePhotoChange = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            setPhoto(file);
+            setPreview(URL.createObjectURL(file));
+        }
+    };
 
     return (
         <div className="fixed inset-0 z-[155] flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-md" onClick={onClose}>
@@ -4150,7 +4168,7 @@ function MessageModal({ onClose, onSubmit }) {
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
                 onClick={e => e.stopPropagation()}
-                className="bg-slate-900 border border-white/10 w-full max-w-md rounded-[2.5rem] p-8 pb-32 md:pb-8 shadow-2xl"
+                className="bg-slate-900 border border-white/10 w-full max-w-md rounded-[2.5rem] p-8 pb-32 md:pb-8 shadow-2xl overflow-y-auto max-h-[90vh]"
             >
                 <div className="flex justify-between items-center mb-6">
                     <h2 className="text-xl font-black text-white italic flex items-center gap-3">
@@ -4161,7 +4179,7 @@ function MessageModal({ onClose, onSubmit }) {
                         <X className="w-6 h-6" />
                     </button>
                 </div>
-                <form onSubmit={(e) => { e.preventDefault(); onSubmit(msg); }} className="space-y-4">
+                <form onSubmit={(e) => { e.preventDefault(); onSubmit(msg, photo); }} className="space-y-6">
                     <textarea
                         required
                         rows={4}
@@ -4170,6 +4188,28 @@ function MessageModal({ onClose, onSubmit }) {
                         value={msg}
                         onChange={e => setMsg(e.target.value)}
                     />
+
+                    <div className="space-y-4">
+                        <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Attach Proof / Receipt</p>
+                        <div className="flex flex-wrap gap-4">
+                            <label className="w-20 h-20 rounded-2xl border-2 border-dashed border-white/5 hover:border-indigo-500/50 hover:bg-white/[0.02] flex items-center justify-center cursor-pointer transition-all group">
+                                <input type="file" className="hidden" accept="image/*" onChange={handlePhotoChange} />
+                                <Camera className="w-6 h-6 text-slate-600 group-hover:text-indigo-400 transition-colors" />
+                            </label>
+                            {preview && (
+                                <div className="relative w-20 h-20 rounded-2xl overflow-hidden border border-white/10">
+                                    <img src={preview} alt="Preview" className="w-full h-full object-cover" />
+                                    <button 
+                                        type="button"
+                                        onClick={() => { setPhoto(null); setPreview(null); }}
+                                        className="absolute top-1 right-1 bg-black/60 p-1 rounded-lg text-white hover:bg-red-500 transition-colors"
+                                    >
+                                        <X className="w-3 h-3" />
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                    </div>
 
                     <button type="submit" className="w-full py-4 bg-indigo-600 hover:bg-indigo-500 text-white font-black rounded-2xl shadow-xl shadow-indigo-600/20 transition-all uppercase tracking-widest text-[10px] flex items-center justify-center gap-2 glow-indigo">
                         <Send className="w-3.5 h-3.5" /> Send Message
