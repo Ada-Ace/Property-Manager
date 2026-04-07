@@ -3339,7 +3339,7 @@ function UtilityManager({ tenants, utilityBills, payments, onAddBill, onMarkUtil
                                         </div>
                                     </div>
                                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                        {bill.allocations.map(alloc => {
+                                        {bill.allocations?.map(alloc => {
                                             const t = tenants.find(t => t.id === alloc.tenantId);
                                             return t ? (
                                                 <div key={alloc.tenantId} className="bg-slate-900/50 p-4 rounded-2xl border border-white/5 flex flex-col justify-between">
@@ -3375,7 +3375,7 @@ function TasksManager({ tenants, tasks, vendors, onAddTask, onAddVendor, onEditV
 
     const handleAdd = () => {
         if (!title || !tenantId) return;
-        const formattedOptions = dateOptions.map(opt => `${opt.date} ${opt.time}`);
+        const formattedOptions = dateOptions?.map(opt => `${opt.date} ${opt.time}`);
         onAddTask({
             id: `TSK${Date.now()}`,
             title,
@@ -3460,7 +3460,7 @@ function TasksManager({ tenants, tasks, vendors, onAddTask, onAddVendor, onEditV
                                 >
                                     <option value="">Select Tenant...</option>
                                     <option value="ALL">Broadcast to All</option>
-                                    {tenants.map(t => <option key={t.id} value={t.id}>{t.name} ({t.unit})</option>)}
+                                    {tenants?.map(t => <option key={t.id} value={t.id}>{t.name} ({t.unit})</option>)}
                                 </select>
                             </div>
 
@@ -3475,7 +3475,7 @@ function TasksManager({ tenants, tasks, vendors, onAddTask, onAddVendor, onEditV
                                         + Add
                                     </button>
                                 </div>
-                                {dateOptions.map((opt, i) => (
+                                {dateOptions?.map((opt, i) => (
                                     <div key={i} className="flex gap-2">
                                         <input
                                             type="date"
@@ -3519,7 +3519,7 @@ function TasksManager({ tenants, tasks, vendors, onAddTask, onAddVendor, onEditV
                                         <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest">Unit {tenant.unit} · {tenant.name}</p>
                                         {task.dateOptions?.length > 0 && (
                                             <div className="flex flex-wrap gap-1.5 pt-0.5">
-                                                {task.dateOptions.map((d, idx) => <span key={idx} className="bg-slate-800/60 text-slate-400 text-[9px] font-bold px-2 py-1 rounded-lg border border-white/5 font-mono-data">{d}</span>)}
+                                                {task.dateOptions?.map((d, idx) => <span key={idx} className="bg-slate-800/60 text-slate-400 text-[9px] font-bold px-2 py-1 rounded-lg border border-white/5 font-mono-data">{d}</span>)}
                                             </div>
                                         )}
                                     </div>
@@ -4037,7 +4037,7 @@ function InventoryModal({ unit, onClose, onSave }) {
                         <button onClick={addItem} className="bg-indigo-600 p-3 rounded-xl hover:bg-indigo-500 transition-all glow-indigo"><Plus className="w-5 h-5 text-white" /></button>
                     </div>
                     <div className="space-y-2">
-                        {localFittings.map((item, idx) => (
+                        {localFittings?.map((item, idx) => (
                             <div key={idx} className="flex items-center justify-between bg-white/5 px-4 py-3 rounded-xl border border-white/5 group">
                                 <span className="text-sm font-bold text-slate-300 flex items-center gap-2"><CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" /> {item}</span>
                                 <button onClick={() => removeItem(idx)} className="text-slate-600 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all"><Trash2 className="w-4 h-4" /></button>
@@ -4613,7 +4613,7 @@ function LeaseModal({ initialData, availableUnits, onClose, onSubmit }) {
                             <input required className="w-full bg-slate-800/60 border border-white/5 focus:border-indigo-500/50 rounded-lg px-3 py-2 text-white text-xs font-bold outline-none transition-all placeholder:text-slate-600" placeholder="Full Resident Name" value={leaseForm.name} onChange={e => setLeaseForm({ ...leaseForm, name: e.target.value })} />
                             <select required className="w-full bg-slate-800/60 border border-white/5 focus:border-indigo-500/50 rounded-lg px-3 py-2 text-white text-xs font-bold outline-none transition-all appearance-none" value={leaseForm.unit} onChange={e => setLeaseForm({ ...leaseForm, unit: e.target.value })}>
                                 <option value="" disabled>Assigned Unit</option>
-                                {availableUnits.map(u => <option key={u.id} value={u.unitNumber}>{u.unitNumber} ({u.size} sqft)</option>)}
+                                {availableUnits?.map(u => <option key={u.id} value={u.unitNumber}>{u.unitNumber} ({u.size} sqft)</option>)}
                             </select>
                             <input required type="tel" className="w-full bg-slate-800/60 border border-white/5 focus:border-indigo-500/50 rounded-lg px-3 py-2 text-white text-xs font-bold outline-none transition-all placeholder:text-slate-600" placeholder="WhatsApp Number" value={leaseForm.mobile} onChange={e => setLeaseForm({ ...leaseForm, mobile: e.target.value })} />
                             <input required type="text" className="w-full bg-slate-800/60 border border-white/5 focus:border-indigo-500/50 rounded-lg px-3 py-2 text-white text-xs font-bold outline-none transition-all placeholder:text-slate-600" placeholder="Portal Password" value={leaseForm.password} onChange={e => setLeaseForm({ ...leaseForm, password: e.target.value })} />

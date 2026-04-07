@@ -38,8 +38,13 @@ function doGet(e) {
         const obj = {};
         cleanHeaders.forEach((header, index) => {
           let val = row[index];
-          // Parse JSON strings if needed
-          if (typeof val === 'string' && (val.startsWith('[') || val.startsWith('{'))) {
+          // Convert sheet dates cleanly to YYYY-MM-DD format
+          if (val instanceof Date) {
+            const y = val.getFullYear();
+            const m = String(val.getMonth() + 1).padStart(2, '0');
+            const d = String(val.getDate()).padStart(2, '0');
+            val = `${y}-${m}-${d}`;
+          } else if (typeof val === 'string' && (val.startsWith('[') || val.startsWith('{'))) {
             try { val = JSON.parse(val); } catch(err) {}
           }
           obj[header] = val;
@@ -106,7 +111,15 @@ function doPost(e) {
     const newRow = headers.map(header => {
       const dataKey = Object.keys(data).find(k => k.toLowerCase() === String(header).toLowerCase());
       let val = dataKey ? data[dataKey] : "";
-      if (typeof val === 'object' && val !== null) val = JSON.stringify(val);
+      
+      // Convert standard date strings (YYYY-MM-DD) into native JS Date objects for Sheet compatibility
+      if (typeof val === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(val)) {
+        const parts = val.split('-');
+        val = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+      } else if (typeof val === 'object' && val !== null) {
+        val = JSON.stringify(val);
+      }
+      
       return val;
     });
     sheet.appendRow(newRow);
@@ -134,7 +147,14 @@ function doPost(e) {
                 const dataKey = Object.keys(data).find(k => k.toLowerCase() === String(header).toLowerCase());
                 let val = dataKey ? data[dataKey] : undefined;
                 
-                if (typeof val === 'object' && val !== null) val = JSON.stringify(val);
+                // Convert standard date strings (YYYY-MM-DD) into native JS Date objects for Sheet compatibility
+                if (typeof val === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(val)) {
+                  const parts = val.split('-');
+                  val = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+                } else if (typeof val === 'object' && val !== null) {
+                  val = JSON.stringify(val);
+                }
+
                 // Preserve existing value if not provided in update
                 return val !== undefined ? val : rows[i][colIdx];
             });
