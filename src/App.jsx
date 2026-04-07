@@ -3079,52 +3079,59 @@ function UtilityManager({ tenants, utilityBills, payments, onAddBill, onMarkUtil
                             <h3 className="font-black text-2xl text-white italic tracking-tight flex items-center gap-3">
                                 <Calendar className="w-6 h-6 text-indigo-400" /> My Monthly Utility Breakdown
                             </h3>
-                            <p className="text-[10px] text-slate-500 font-black uppercase tracking-[0.2em] mt-2">Bills per tenant - {new Date(effectiveMonth + '-01').toLocaleString('default', { month: 'long', year: 'numeric' })}</p>
+                            <p className="text-[10px] text-slate-500 font-black uppercase tracking-[0.2em] mt-2">All Outstanding Utility Obligations</p>
                         </div>
                         <div className="flex items-center gap-3">
-                            <span className="text-[10px] font-black text-slate-600 uppercase tracking-widest hidden md:inline">Period</span>
-                            <select className="bg-slate-950/60 border border-white/10 hover:border-indigo-500/40 rounded-2xl px-5 py-3 text-white text-xs font-black outline-none cursor-pointer transition-all font-mono-data" value={effectiveMonth} onChange={e => setSelectedMonth(e.target.value)}>
-                                {uniqueMonths?.map(m => <option key={m} value={m}>{new Date(m + '-01').toLocaleString('default', { month: 'long', year: 'numeric' })}</option>)}
-                            </select>
+                            {/* Period dropdown eliminated gracefully for global overview */}
                         </div>
                     </div>
 
                      <div className="space-y-4">
                         {Array.isArray(tenants) && (() => {
-                            const validTenants = tenants.map(t => {
-                                const billsInMonth = (Array.isArray(utilityBills) ? utilityBills.filter(b => b && extractYearMonth(b.date) === effectiveMonth) : []);
-                                const breakdowns = billsInMonth.reduce((acc, bill) => {
-                                    const alloc = bill.allocations?.find(a => a.tenantId === t.id);
-                                    if (alloc && alloc.amount > 0) acc.push({ type: bill.type, amount: alloc.amount });
-                                    return acc;
-                                }, []);
-                                const totalOwed = breakdowns.reduce((sum, item) => sum + item.amount, 0);
-                                
-                                const isPaid = Array.isArray(payments) && payments.some(p => {
-                                    if (p.tenantId !== t.id) return false;
-                                    if (extractYearMonth(p.date) !== effectiveMonth) return false;
-                                    const isUtilityType = String(p.type || '').toLowerCase() === 'utility';
-                                    const amountMatches = Math.abs(parseFloat(p.amount) - totalOwed) < 0.01;
-                                    return isUtilityType || (totalOwed > 0 && amountMatches);
-                                });
-                                return { ...t, breakdowns, totalOwed, isPaid };
-                            }).filter(t => t.totalOwed > 0 && !t.isPaid);
+                            const outstandingObligations = [];
+                            
+                            tenants.forEach(t => {
+                                (uniqueMonths || []).forEach(month => {
+                                    const billsInMonth = (Array.isArray(utilityBills) ? utilityBills.filter(b => b && extractYearMonth(b.date) === month) : []);
+                                    const breakdowns = billsInMonth.reduce((acc, bill) => {
+                                        const alloc = bill.allocations?.find(a => a.tenantId === t.id);
+                                        if (alloc && alloc.amount > 0) acc.push({ type: bill.type, amount: alloc.amount });
+                                        return acc;
+                                    }, []);
+                                    const totalOwed = breakdowns.reduce((sum, item) => sum + item.amount, 0);
+                                    
+                                    const isPaid = Array.isArray(payments) && payments.some(p => {
+                                        if (p.tenantId !== t.id) return false;
+                                        if (extractYearMonth(p.date) !== month) return false;
+                                        const isUtilityType = String(p.type || '').toLowerCase() === 'utility';
+                                        const amountMatches = Math.abs(parseFloat(p.amount) - totalOwed) < 0.01;
+                                        return isUtilityType || (totalOwed > 0 && amountMatches);
+                                    });
 
-                            if (validTenants.length === 0) {
+                                    if (totalOwed > 0 && !isPaid) {
+                                        outstandingObligations.push({ tenant: t, month, breakdowns, totalOwed });
+                                    }
+                                });
+                            });
+
+                            if (outstandingObligations.length === 0) {
                                 return (
                                     <div className="text-center py-16 bg-white/[0.02] border border-white/5 rounded-3xl">
                                         <CheckCircle2 className="w-12 h-12 text-emerald-500 mx-auto mb-4 opacity-50" />
                                         <p className="text-[14px] font-black text-slate-300 italic tracking-tight mb-1">All Utilities Cleared!</p>
-                                        <p className="text-[10px] uppercase font-black tracking-widest text-slate-500">No outstanding bills for this period</p>
+                                        <p className="text-[10px] uppercase font-black tracking-widest text-slate-500">No outstanding bills for any period</p>
                                     </div>
                                 );
                             }
 
-                            return validTenants.map((t, idx) => {
-                                const { breakdowns, totalOwed, isPaid } = t;
+                            return outstandingObligations.map((obl, idx) => {
+                                const { tenant: t, month, breakdowns, totalOwed } = obl;
+                                const monthName = new Date(month + '-01').toLocaleString('default', { month: 'long', year: 'numeric' });
+                                const isPaid = false;
+
                                 return (
                                 <Motion.div
-                                    key={t.id}
+                                    key={`${t.id}-${month}`}
                                     initial={{ opacity: 0, x: -10 }}
                                     animate={{ opacity: 1, x: 0 }}
                                     transition={{ delay: idx * 0.05 }}
@@ -3137,7 +3144,7 @@ function UtilityManager({ tenants, utilityBills, payments, onAddBill, onMarkUtil
                                         </div>
                                         <div>
                                             <p className="text-base font-black text-white tracking-tight">{t.name}</p>
-                                            <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest mt-0.5 font-mono-data">{t.mobile || 'No Contact'}</p>
+                                            <p className="text-[10px] uppercase font-black tracking-widest mt-0.5"><span className="text-indigo-400">{monthName}</span> <span className="text-slate-600 mx-1">&bull;</span> <span className="text-slate-500 font-mono-data">{t.mobile || 'No Contact'}</span></p>
                                         </div>
                                     </div>
 
@@ -3183,8 +3190,8 @@ function UtilityManager({ tenants, utilityBills, payments, onAddBill, onMarkUtil
                                                         tenant: t, 
                                                         totalOwed, 
                                                         breakdowns,
-                                                        period: new Date(effectiveMonth + '-01').toLocaleString('default', { month: 'long', year: 'numeric' }),
-                                                        effectiveMonth
+                                                        period: new Date(month + '-01').toLocaleString('default', { month: 'long', year: 'numeric' }),
+                                                        effectiveMonth: month
                                                     })}
                                                     className="flex items-center gap-2 px-5 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all bg-indigo-600/20 hover:bg-indigo-600 text-indigo-400 hover:text-white border border-indigo-500/30 glow-indigo"
                                                 >
@@ -3193,7 +3200,7 @@ function UtilityManager({ tenants, utilityBills, payments, onAddBill, onMarkUtil
                                                 <Motion.a
                                                     whileHover={{ scale: 1.02 }}
                                                     whileTap={{ scale: 0.98 }}
-                                                    href={`https://wa.me/${String(t.mobile || '').replace(/\D/g, '')}?text=${encodeURIComponent(`Hi ${String(t.name || 'Tenant').split(' ')[0]},\n\nYour utility bill summary for ${new Date(effectiveMonth + '-01').toLocaleString('default', { month: 'long', year: 'numeric' })} is:\n${breakdowns.map(b => `- ${b.type}: ${currency} ${b.amount.toFixed(2)}`).join('\n')}\n\n*Total Due: ${currency} ${totalOwed.toFixed(2)}*`)}`}
+                                                    href={`https://wa.me/${String(t.mobile || '').replace(/\D/g, '')}?text=${encodeURIComponent(`Hi ${String(t.name || 'Tenant').split(' ')[0]},\n\nYour utility bill summary for ${new Date(month + '-01').toLocaleString('default', { month: 'long', year: 'numeric' })} is:\n${breakdowns.map(b => `- ${b.type}: ${currency} ${b.amount.toFixed(2)}`).join('\n')}\n\n*Total Due: ${currency} ${totalOwed.toFixed(2)}*`)}`}
                                                     target="_blank"
                                                     rel="noopener noreferrer"
                                                     className="flex items-center gap-2 px-5 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all bg-emerald-600/20 hover:bg-emerald-600 text-emerald-400 hover:text-white border border-emerald-500/30 glow-emerald"
