@@ -358,8 +358,7 @@ function ManagerDashboard(props) {
             <CompactStatsBar 
                 stats={[
                     { title: "Revenue", value: cur(totalRevenue), icon: <CreditCard className="text-emerald-400" /> },
-                    { title: "Occupancy", value: totalUnits > 0 ? `${Math.round((occupiedUnits / totalUnits) * 100)}%` : '0%', icon: <Users className="text-blue-400" /> },
-                    { title: "Available", value: vacantUnits || 0, icon: <Building2 className="text-sky-400" /> },
+                    { title: "Available", value: vacantUnits || 0, icon: <Building2 className="text-sky-400" />, onClick: () => updateActiveTab('inventory') },
                     { title: "Maintenance", value: (tasksCount || 0).toString(), icon: <Wrench className="text-amber-400" /> }
                 ]}
             />
@@ -4909,7 +4908,7 @@ function CompactStatsBar({ stats }) {
         <div className="sticky top-[72px] z-30 -mx-4 md:-mx-12 px-4 md:px-12 py-3 bg-slate-950/40 backdrop-blur-xl border-b border-white/5 shadow-2xl shadow-black/20 overflow-x-auto no-scrollbar snap-x">
             <div className="flex items-center gap-5 md:gap-12 min-w-max">
                 {stats?.map((stat, idx) => (
-                    <div key={idx} className="flex items-center gap-3 snap-start group">
+                    <div key={idx} className={`flex items-center gap-3 snap-start group ${stat.onClick ? 'cursor-pointer active:scale-95' : ''} transition-all`} onClick={stat.onClick}>
                         <div className="p-2 bg-white/5 rounded-lg border border-white/5 group-hover:bg-indigo-500/10 group-hover:border-indigo-500/20 transition-all">
                             {React.cloneElement(stat.icon, { className: "w-3.5 h-3.5" })}
                         </div>
