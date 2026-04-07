@@ -70,7 +70,7 @@ import {
     History,
     Package,
     Key,
-    Broadcast
+    Radio
 } from 'lucide-react';
 
 // --- System Credentials & Configuration ---
@@ -2563,7 +2563,7 @@ function ManagerChat({ messages = [], onUpdateMessage, onAddVendor, vendors = []
             <div className="premium-card rounded-[2.5rem] p-8">
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-10 pb-6 border-b border-white/5">
                     <div>
-                        <h3 className="font-black text-2xl text-white italic tracking-tight flex items-center gap-3"><Broadcast className="w-7 h-7 text-indigo-400" /> Signal Communications</h3>
+                        <h3 className="font-black text-2xl text-white italic tracking-tight flex items-center gap-3"><Radio className="w-7 h-7 text-indigo-400" /> Signal Communications</h3>
                         <div className="flex gap-4 mt-3">
                             <button onClick={() => setFilter('ALL')} className={`text-[9px] font-black uppercase tracking-widest ${filter === 'ALL' ? 'text-indigo-400' : 'text-slate-500'}`}>All Signals</button>
                             <button onClick={() => setFilter('UNREAD')} className={`text-[9px] font-black uppercase tracking-widest ${filter === 'UNREAD' ? 'text-indigo-400' : 'text-slate-500'}`}>Unread {messages?.filter(m => m.status === 'UNREAD')?.length > 0 && `(${messages?.filter(m => m.status === 'UNREAD')?.length})`}</button>
