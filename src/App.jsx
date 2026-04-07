@@ -2585,8 +2585,8 @@ function ManagerChat({ messages = [], tenants = [], onUpdateMessage, onAddVendor
 
     const currentList = [...(filteredList || [])].sort((a, b) => {
         if (sortBy === 'TENANT') {
-            const tenantA = (tenants.find(t => t.id === a.tenantId)?.name || 'Guest').toLowerCase();
-            const tenantB = (tenants.find(t => t.id === b.tenantId)?.name || 'Guest').toLowerCase();
+            const tenantA = (tenants.find(t => String(t.id) === String(a.tenantId))?.name || 'Guest').toLowerCase();
+            const tenantB = (tenants.find(t => String(t.id) === String(b.tenantId))?.name || 'Guest').toLowerCase();
             return tenantA.localeCompare(tenantB);
         }
         const timeA = new Date(a.resolvedAt || a.timestamp || a.date || 0).getTime();
