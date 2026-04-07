@@ -1761,8 +1761,8 @@ function App() {
             
             if (photoData) {
                 setGlobalMessage({ type: 'info', text: "Uploading attachment..." });
-                const uploadRes = await API.uploadToDrive(photoData, `msg_${Date.now()}.png`);
-                if (uploadRes.success) {
+                const uploadRes = await API.uploadFile(photoData);
+                if (uploadRes && uploadRes.success) {
                     photoUrl = uploadRes.url;
                 } else {
                     setGlobalMessage({ type: 'error', text: "Photo upload failed! Please ensure UPLOAD_FOLDER_ID is set in your GAS Script." });
