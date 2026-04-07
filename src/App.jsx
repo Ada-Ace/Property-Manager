@@ -3753,10 +3753,10 @@ export function TenantDashboard({ tenant, unit, tenantMessages = [], onSendMessa
                     
                     <div className="flex justify-between items-start mb-8">
                         <div>
-                            <p className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-500 mb-2">Total Outstanding</p>
+                            <p className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-500 mb-2">Total Due</p>
                             <div className="flex items-baseline gap-2">
                                 <span className="text-4xl md:text-5xl font-black text-white tracking-tighter italic font-mono-data">{currency} {totalDue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                                <span className="text-[10px] text-slate-500 font-black uppercase tracking-widest opacity-60">Balanced Due</span>
+                                <span className="text-[10px] text-slate-500 font-black uppercase tracking-widest opacity-60">Next Rent Due on {formatDate(calculateNextRentDue(tenant.leaseStart))}</span>
                             </div>
                         </div>
 
