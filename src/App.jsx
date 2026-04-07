@@ -70,7 +70,8 @@ import {
     History,
     Package,
     Key,
-    Radio
+    Radio,
+    Wifi
 } from 'lucide-react';
 
 // --- System Credentials & Configuration ---
@@ -2882,7 +2883,8 @@ function UtilityManager({ tenants, utilityBills, payments, onAddBill, onMarkUtil
     }, [uniqueMonths, selectedMonth]);
 
     // New Bill State
-    const [billType, setBillType] = useState('Electricity');
+    const [billType, setBillType] = useState('Utilities');
+    const [billRemarks, setBillRemarks] = useState('');
     const [billDate, setBillDate] = useState(getTodayString());
     const [billAmount, setBillAmount] = useState('');
     const [billFile, setBillFile] = useState(null);
@@ -2919,6 +2921,7 @@ function UtilityManager({ tenants, utilityBills, payments, onAddBill, onMarkUtil
         const newBill = {
             id: `B${Date.now()}`,
             type: billType,
+            remarks: billRemarks,
             date: billDate || getTodayString(),
             amount: totalBill,
             mode,
@@ -2935,6 +2938,7 @@ function UtilityManager({ tenants, utilityBills, payments, onAddBill, onMarkUtil
         onAddBill(newBill, updatedTenants);
 
         setBillAmount('');
+        setBillRemarks('');
         setBillDate(getTodayString());
         setBillFile(null);
         setTenantDates(tenants.reduce((acc, t) => ({ ...acc, [t.id]: { start: '', end: '' } }), {}));
@@ -2960,12 +2964,9 @@ function UtilityManager({ tenants, utilityBills, payments, onAddBill, onMarkUtil
                                 <div className="space-y-1">
                                     <label className="text-[10px] text-slate-500 font-bold uppercase tracking-widest pl-1">Type</label>
                                     <select className="w-full bg-slate-800 border-none rounded-xl p-3 text-white text-sm outline-none" value={billType} onChange={e => setBillType(e.target.value)}>
-                                        <option>Electricity</option>
-                                        <option>Water</option>
-                                        <option>Gas</option>
-                                        <option>Trash</option>
-                                        <option>Internet</option>
-                                        <option>Other</option>
+                                        <option>Utilities</option>
+                                        <option>Broadband</option>
+                                        <option>Others</option>
                                     </select>
                                 </div>
                                 <div className="space-y-1">
@@ -2975,6 +2976,10 @@ function UtilityManager({ tenants, utilityBills, payments, onAddBill, onMarkUtil
                                 <div className="space-y-1">
                                     <label className="text-[10px] text-slate-500 font-bold uppercase tracking-widest pl-1">Amount ($)</label>
                                     <input type="number" className="w-full bg-slate-800 border-none rounded-xl p-3 text-white text-sm outline-none font-mono-data" placeholder="0.00" value={billAmount} onChange={e => setBillAmount(e.target.value)} />
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="text-[10px] text-slate-500 font-bold uppercase tracking-widest pl-1">Remarks (Optional)</label>
+                                    <input type="text" className="w-full bg-slate-800 border-none rounded-xl p-3 text-white text-sm outline-none" placeholder="Add note..." value={billRemarks} onChange={e => setBillRemarks(e.target.value)} />
                                 </div>
                                 <div className="space-y-1">
                                     <label className="text-[10px] text-slate-500 font-bold uppercase tracking-widest pl-1">Document (Optional)</label>
@@ -3154,7 +3159,7 @@ function UtilityManager({ tenants, utilityBills, payments, onAddBill, onMarkUtil
                                             <div className="flex flex-wrap gap-2">
                                                 {breakdowns?.map((b, i) => (
                                                     <div key={i} className="flex items-center gap-2 bg-white/5 border border-white/5 px-3 py-2 rounded-xl">
-                                                        {b.type === 'Electricity' ? <Zap className="w-3 h-3 text-amber-400 shrink-0" /> : b.type === 'Water' ? <Droplets className="w-3 h-3 text-blue-400 shrink-0" /> : b.type === 'Gas' ? <Flame className="w-3 h-3 text-orange-400 shrink-0" /> : <Receipt className="w-3 h-3 text-slate-400 shrink-0" />}
+                                                        {b.type === 'Utilities' ? <Zap className="w-3 h-3 text-amber-400 shrink-0" /> : b.type === 'Broadband' ? <Wifi className="w-3 h-3 text-blue-400 shrink-0" /> : <Receipt className="w-3 h-3 text-slate-400 shrink-0" />}
                                                         <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">{b.type}</span>
                                                         <span className="text-[11px] font-black text-white font-mono-data">{currency} {b.amount.toFixed(2)}</span>
                                                     </div>
@@ -3273,7 +3278,7 @@ function UtilityManager({ tenants, utilityBills, payments, onAddBill, onMarkUtil
                                         {confirmUtilityTenant?.breakdowns?.map((b, i) => (
                                             <div key={i} className="flex justify-between items-center bg-white/5 px-4 py-2.5 rounded-xl border border-white/5">
                                                 <div className="flex items-center gap-2.5">
-                                                    {b.type === 'Electricity' ? <Zap className="w-3 h-3 text-amber-400" /> : b.type === 'Water' ? <Droplets className="w-3 h-3 text-blue-400" /> : b.type === 'Gas' ? <Flame className="w-3 h-3 text-orange-400" /> : <Receipt className="w-3 h-3 text-indigo-400" />}
+                                                    {b.type === 'Utilities' ? <Zap className="w-3 h-3 text-amber-400" /> : b.type === 'Broadband' ? <Wifi className="w-3 h-3 text-blue-400" /> : <Receipt className="w-3 h-3 text-indigo-400" />}
                                                     <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">{b.type} Bill</span>
                                                 </div>
                                                 <span className="text-[13px] font-black text-white font-mono-data">{currency} {b.amount.toFixed(2)}</span>
@@ -3343,7 +3348,7 @@ function UtilityManager({ tenants, utilityBills, payments, onAddBill, onMarkUtil
                                     <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6 pb-6 border-b border-white/5">
                                         <div className="flex gap-4 items-center">
                                             <div className="bg-indigo-600/20 p-3.5 rounded-2xl border border-indigo-500/20">
-                                                {bill.type === 'Electricity' ? <Zap className="w-6 h-6 text-amber-400" /> : bill.type === 'Water' ? <Droplets className="w-6 h-6 text-blue-400" /> : bill.type === 'Gas' ? <Flame className="w-6 h-6 text-orange-400" /> : <Receipt className="w-6 h-6 text-indigo-400" />}
+                                                {bill.type === 'Utilities' ? <Zap className="w-6 h-6 text-amber-400" /> : bill.type === 'Broadband' ? <Wifi className="w-6 h-6 text-blue-400" /> : <Receipt className="w-6 h-6 text-indigo-400" />}
                                             </div>
                                             <div>
                                                 <h4 className="text-lg font-black text-white flex items-center gap-2">
@@ -3362,6 +3367,11 @@ function UtilityManager({ tenants, utilityBills, payments, onAddBill, onMarkUtil
                                                         {bill.mode === 'equal' ? 'Standard Split' : 'Designated Split'}
                                                     </span>
                                                 </div>
+                                                {bill.remarks && (
+                                                    <div className="mt-2 text-xs text-slate-400 italic">
+                                                        "{bill.remarks}"
+                                                    </div>
+                                                )}
                                             </div>
                                         </div>
                                         <div className="text-right">
