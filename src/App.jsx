@@ -4060,15 +4060,15 @@ export function TenantDashboard({ tenant, unit, tenantMessages = [], onSendMessa
                         </div>
                     ) : (
                         tenantMessages?.map(msg => (
-                            <div key={msg.id} className="bg-slate-950/50 border border-white/5 p-5 rounded-3xl relative overflow-hidden group hover:border-indigo-500/30 transition-all">
-                                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-3">
+                            <div key={msg.id} className={`bg-slate-950/50 border p-5 rounded-3xl relative overflow-hidden group transition-all ${msg.status === 'READ' ? 'border-emerald-500/20 bg-emerald-500/[0.02]' : 'border-white/5 hover:border-indigo-500/30'}`}>
+                                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
                                     <div className="flex items-center gap-3">
                                         <span className={`px-2.5 py-1 rounded-md text-[9px] font-black uppercase tracking-widest border ${
-                                            msg.status === 'RESOLVED' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' :
+                                            msg.status === 'READ' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' :
                                             msg.status === 'IN PROGRESS' ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' :
-                                            'bg-red-500/10 text-red-400 border-red-500/20'
+                                            'bg-red-500/5 text-red-500/60 border-red-500/10'
                                         }`}>
-                                            {msg.status === 'RESOLVED' ? '-?Resolved' : msg.status === 'IN PROGRESS' ? '-- In Progress' : '-- Unread'}
+                                            {msg.status === 'READ' ? 'Resolved' : msg.status === 'IN PROGRESS' ? 'In Progress' : 'Unread'}
                                         </span>
                                         <span className="text-[10px] text-slate-500 font-black uppercase tracking-widest font-mono-data">
                                             {formatDate(msg.timestamp)}
@@ -4076,20 +4076,34 @@ export function TenantDashboard({ tenant, unit, tenantMessages = [], onSendMessa
                                     </div>
                                     {msg.handledBy && (
                                         <div className="flex items-center gap-1.5 px-3 py-1 bg-indigo-500/10 border border-indigo-500/20 rounded-full text-indigo-300 text-[9px] font-black uppercase tracking-widest">
-                                            <ShieldCheck className="w-3 h-3" /> {msg.handledBy}
+                                            <ShieldCheck className="w-3 h-3" /> Handled by {msg.handledBy}
                                         </div>
                                     )}
                                 </div>
                                 
-                                <p className="text-slate-300 text-sm leading-relaxed font-medium bg-black/20 p-4 rounded-xl border border-white/5 mb-2">
-                                    "{msg.content}"
-                                </p>
+                                <div className="space-y-4">
+                                    <p className="text-slate-300 text-sm leading-relaxed font-medium bg-black/20 p-4 rounded-xl border border-white/5 italic">
+                                        "{msg.content}"
+                                    </p>
 
-                                {msg.photoUrl && (
-                                    <div className="mt-3 overflow-hidden rounded-xl border border-white/10 md:w-1/2">
-                                        <img src={msg.photoUrl} alt="Attachment" className="w-full h-auto object-cover hover:scale-105 transition-transform" />
-                                    </div>
-                                )}
+                                    {msg.response && (
+                                        <div className="bg-indigo-500/5 border-l-2 border-indigo-500/30 p-5 rounded-r-2xl animate-in fade-in slide-in-from-left-4 duration-500">
+                                            <p className="text-[9px] font-black text-indigo-400 uppercase tracking-widest mb-2 flex items-center gap-2">
+                                                <MessageSquare className="w-3 h-3" /> Management Resolution
+                                                {msg.resolvedAt && <span className="opacity-50 ml-auto">{formatDate(msg.resolvedAt)}</span>}
+                                            </p>
+                                            <p className="text-sm text-slate-200 font-medium leading-relaxed">
+                                                {msg.response}
+                                            </p>
+                                        </div>
+                                    )}
+
+                                    {msg.photoUrl && (
+                                        <div className="mt-3 overflow-hidden rounded-xl border border-white/10 md:w-1/2">
+                                            <img src={msg.photoUrl} alt="Attachment" className="w-full h-auto object-cover hover:scale-105 transition-transform" />
+                                        </div>
+                                    )}
+                                </div>
                             </div>
                         ))
                     )}
