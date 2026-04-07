@@ -4053,60 +4053,68 @@ export function TenantDashboard({ tenant, unit, tenantMessages = [], onSendMessa
                 </div>
 
                 <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
-                    {tenantMessages.length === 0 ? (
-                        <div className="text-center py-10 border-2 border-dashed border-white/5 rounded-3xl bg-white/[0.01]">
-                            <MessageCircle className="w-8 h-8 text-slate-600 mx-auto mb-3" />
-                            <p className="text-slate-400 font-bold text-sm">No support tickets found.</p>
-                        </div>
-                    ) : (
-                        tenantMessages?.map(msg => (
-                            <div key={msg.id} className={`bg-slate-950/50 border p-5 rounded-3xl relative overflow-hidden group transition-all ${msg.status === 'READ' ? 'border-emerald-500/20 bg-emerald-500/[0.02]' : 'border-white/5 hover:border-indigo-500/30'}`}>
-                                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
-                                    <div className="flex items-center gap-3">
-                                        <span className={`px-2.5 py-1 rounded-md text-[9px] font-black uppercase tracking-widest border ${
-                                            msg.status === 'READ' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' :
-                                            msg.status === 'IN PROGRESS' ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' :
-                                            'bg-red-500/5 text-red-500/60 border-red-500/10'
-                                        }`}>
-                                            {msg.status === 'READ' ? 'Resolved' : msg.status === 'IN PROGRESS' ? 'In Progress' : 'Unread'}
-                                        </span>
-                                        <span className="text-[10px] text-slate-500 font-black uppercase tracking-widest font-mono-data">
-                                            {formatDate(msg.timestamp)}
-                                        </span>
-                                    </div>
-                                    {msg.handledBy && (
-                                        <div className="flex items-center gap-1.5 px-3 py-1 bg-indigo-500/10 border border-indigo-500/20 rounded-full text-indigo-300 text-[9px] font-black uppercase tracking-widest">
-                                            <ShieldCheck className="w-3 h-3" /> Handled by {msg.handledBy}
-                                        </div>
-                                    )}
-                                </div>
-                                
-                                <div className="space-y-4">
-                                    <p className="text-slate-300 text-sm leading-relaxed font-medium bg-black/20 p-4 rounded-xl border border-white/5 italic">
-                                        "{msg.content}"
-                                    </p>
+                    {(() => {
+                        const sortedMessages = [...(tenantMessages || [])].sort((a, b) => {
+                            const timeA = new Date(a.resolvedAt || a.timestamp || a.date || 0).getTime();
+                            const timeB = new Date(b.resolvedAt || b.timestamp || b.date || 0).getTime();
+                            return timeB - timeA;
+                        });
 
-                                    {msg.response && (
-                                        <div className="bg-indigo-500/5 border-l-2 border-indigo-500/30 p-5 rounded-r-2xl animate-in fade-in slide-in-from-left-4 duration-500">
-                                            <p className="text-[9px] font-black text-indigo-400 uppercase tracking-widest mb-2 flex items-center gap-2">
-                                                <MessageSquare className="w-3 h-3" /> Management Resolution
-                                                {msg.resolvedAt && <span className="opacity-50 ml-auto">{formatDate(msg.resolvedAt)}</span>}
-                                            </p>
-                                            <p className="text-sm text-slate-200 font-medium leading-relaxed">
-                                                {msg.response}
-                                            </p>
-                                        </div>
-                                    )}
-
-                                    {msg.photoUrl && (
-                                        <div className="mt-3 overflow-hidden rounded-xl border border-white/10 md:w-1/2">
-                                            <img src={msg.photoUrl} alt="Attachment" className="w-full h-auto object-cover hover:scale-105 transition-transform" />
-                                        </div>
-                                    )}
-                                </div>
+                        return sortedMessages.length === 0 ? (
+                            <div className="text-center py-10 border-2 border-dashed border-white/5 rounded-3xl bg-white/[0.01]">
+                                <MessageCircle className="w-8 h-8 text-slate-600 mx-auto mb-3" />
+                                <p className="text-slate-400 font-bold text-sm">No support tickets found.</p>
                             </div>
-                        ))
-                    )}
+                        ) : (
+                            sortedMessages.map(msg => (
+                                <div key={msg.id} className={`bg-slate-950/50 border p-5 rounded-3xl relative overflow-hidden group transition-all ${msg.status === 'READ' ? 'border-emerald-500/20 bg-emerald-500/[0.02]' : 'border-white/5 hover:border-indigo-500/30'}`}>
+                                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
+                                        <div className="flex items-center gap-3">
+                                            <span className={`px-2.5 py-1 rounded-md text-[9px] font-black uppercase tracking-widest border ${
+                                                msg.status === 'READ' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' :
+                                                msg.status === 'IN PROGRESS' ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' :
+                                                'bg-red-500/5 text-red-500/60 border-red-500/10'
+                                            }`}>
+                                                {msg.status === 'READ' ? 'Resolved' : msg.status === 'IN PROGRESS' ? 'In Progress' : 'Unread'}
+                                            </span>
+                                            <span className="text-[10px] text-slate-500 font-black uppercase tracking-widest font-mono-data">
+                                                {formatDate(msg.timestamp || msg.date)}
+                                            </span>
+                                        </div>
+                                        {msg.handledBy && (
+                                            <div className="flex items-center gap-1.5 px-3 py-1 bg-indigo-500/10 border border-indigo-500/20 rounded-full text-indigo-300 text-[9px] font-black uppercase tracking-widest">
+                                                <ShieldCheck className="w-3 h-3" /> Handled by {msg.handledBy}
+                                            </div>
+                                        )}
+                                    </div>
+                                    
+                                    <div className="space-y-4">
+                                        <p className="text-slate-300 text-sm leading-relaxed font-medium bg-black/20 p-4 rounded-xl border border-white/5 italic">
+                                            "{msg.content}"
+                                        </p>
+
+                                        {msg.response && (
+                                            <div className="bg-indigo-500/5 border-l-2 border-indigo-500/30 p-5 rounded-r-2xl animate-in fade-in slide-in-from-left-4 duration-500">
+                                                <p className="text-[9px] font-black text-indigo-400 uppercase tracking-widest mb-2 flex items-center gap-2">
+                                                    <MessageSquare className="w-3 h-3" /> Management Resolution
+                                                    {msg.resolvedAt && <span className="opacity-50 ml-auto">{formatDate(msg.resolvedAt)}</span>}
+                                                </p>
+                                                <p className="text-sm text-slate-200 font-medium leading-relaxed">
+                                                    {msg.response}
+                                                </p>
+                                            </div>
+                                        )}
+
+                                        {msg.photoUrl && (
+                                            <div className="mt-3 overflow-hidden rounded-xl border border-white/10 md:w-1/2">
+                                                <img src={msg.photoUrl} alt="Attachment" className="w-full h-auto object-cover hover:scale-105 transition-transform" />
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            ))
+                        );
+                    })()}
                 </div>
             </div>
 
