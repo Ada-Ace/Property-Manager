@@ -454,7 +454,7 @@ function ManagerDashboard(props) {
                             currency={currency} 
                         />
                     )}
-                    {activeTab === 'tasks' && <MaintenanceManager tasks={tasks} tenants={tenants} onAddTask={onAddTask} currency={currency} vendors={vendors} onAddVendor={() => setShowVendorModal(true)} onEditVendor={setEditingVendor} onDeleteVendor={onDeleteVendor} />}
+                    {activeTab === 'tasks' && <TasksManager tasks={tasks} tenants={tenants} onAddTask={onAddTask} currency={currency} vendors={vendors} onAddVendor={() => setShowVendorModal(true)} onEditVendor={setEditingVendor} onDeleteVendor={onDeleteVendor} />}
                     {activeTab === 'messages' && <ManagerChat messages={tenantMessages} onUpdateMessage={onUpdateMessage} onAddVendor={setShowVendorModal} vendors={vendors} onEditVendor={setEditingVendor} onDeleteVendor={onDeleteVendor} />}
                     {activeTab === 'settings' && <CredentialManager activeManager={activeManager} onEditManager={onEditManager} />}
                 </Motion.div>
