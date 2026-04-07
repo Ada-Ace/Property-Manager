@@ -71,7 +71,8 @@ import {
     Package,
     Key,
     Radio,
-    Wifi
+    Wifi,
+    Search
 } from 'lucide-react';
 
 // --- System Credentials & Configuration ---
