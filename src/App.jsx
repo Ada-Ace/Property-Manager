@@ -550,8 +550,10 @@ function RentSummaryTab({ tenants, payments, currency = 'USD', onMarkPaid, prope
                 if (p.tenantId !== t.id) return false;
                 const payDate = new Date(p.date || p.timestamp);
                 if (isNaN(payDate.getTime())) return false;
-                const daysSincePayment = (today.getTime() - payDate.getTime()) / (1000 * 60 * 60 * 24);
-                return daysSincePayment >= 0 && daysSincePayment <= 25;
+                
+                // A payment covers the upcoming cycle if it was processed within 25 days prior to the specific dueDate.
+                const diffFromDue = (t.dueDate.getTime() - payDate.getTime()) / (1000 * 60 * 60 * 24);
+                return diffFromDue <= 25 && diffFromDue >= -15;
             });
             return !hasPaid && (Number(t.daysUntil) || 0) <= 14;
         }).sort((a, b) => {
