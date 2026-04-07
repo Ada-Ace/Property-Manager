@@ -2562,7 +2562,7 @@ function ManagerChat({ messages = [], onUpdateMessage, onAddVendor, vendors = []
     return (
         <div className="space-y-12 animate-in fade-in slide-in-from-bottom-5">
             {/* Communication Hub Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="bg-white/5 border border-white/5 p-8 rounded-[2rem] flex items-center justify-between">
                     <div><p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Total Signals</p><p className="text-3xl font-black text-white italic">{messages?.length}</p></div>
                     <div className="p-4 bg-indigo-500/10 rounded-2xl border border-indigo-500/20"><MessageSquare className="w-6 h-6 text-indigo-400" /></div>
@@ -2570,10 +2570,6 @@ function ManagerChat({ messages = [], onUpdateMessage, onAddVendor, vendors = []
                 <div className="bg-white/5 border border-white/5 p-8 rounded-[2rem] flex items-center justify-between">
                     <div><p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Pending Actions</p><p className="text-3xl font-black text-amber-500 italic">{messages?.filter(m => m.status === 'UNREAD')?.length}</p></div>
                     <div className="p-4 bg-amber-500/10 rounded-2xl border border-amber-500/20"><Clock className="w-6 h-6 text-amber-400" /></div>
-                </div>
-                <div className="bg-white/5 border border-white/5 p-8 rounded-[2rem] flex items-center justify-between">
-                    <div><p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Service Partners</p><p className="text-3xl font-black text-emerald-500 italic">{vendors?.length}</p></div>
-                    <div className="p-4 bg-emerald-500/10 rounded-2xl border border-emerald-500/20"><Shield className="w-6 h-6 text-emerald-400" /></div>
                 </div>
             </div>
 
