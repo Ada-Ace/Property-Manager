@@ -546,15 +546,15 @@ function RentSummaryTab({ tenants, payments, currency = 'USD', onMarkPaid, prope
                 return { ...t, dueDate, daysUntil };
             } catch (e) { return { ...t, dueDate: new Date(), daysUntil: 0 }; }
         }).filter(t => {
-            const hasPaid = (payments || []).some(p => {
-                if (p.tenantId !== t.id) return false;
-                const payDate = new Date(p.date || p.timestamp);
-                if (isNaN(payDate.getTime())) return false;
-                
-                // A payment covers the upcoming cycle if it was processed within 14 days prior to the specific dueDate.
-                const diffFromDue = (t.dueDate.getTime() - payDate.getTime()) / (1000 * 60 * 60 * 24);
-                return diffFromDue <= 14 && diffFromDue >= -15;
-            });
+            let hasPaid = false;
+            if (t.lastPaymentDate) {
+                const lp = new Date(t.lastPaymentDate);
+                if (!isNaN(lp.getTime())) {
+                    const diffFromDue = (t.dueDate.getTime() - lp.getTime()) / (1000 * 60 * 60 * 24);
+                    // Consider it marked paid for this cycle if the last manual mark was within 25 days prior to or 15 days after the due date.
+                    hasPaid = diffFromDue <= 25 && diffFromDue >= -15;
+                }
+            }
             return !hasPaid && (Number(t.daysUntil) || 0) <= 14;
         }).sort((a, b) => {
             const da = (a.dueDate instanceof Date && !isNaN(a.dueDate)) ? a.dueDate.getTime() : 0;
