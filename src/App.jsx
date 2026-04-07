@@ -3090,26 +3090,39 @@ function UtilityManager({ tenants, utilityBills, payments, onAddBill, onMarkUtil
                     </div>
 
                      <div className="space-y-4">
-                        {Array.isArray(tenants) && tenants.map((t, idx) => {
-                            const billsInMonth = (Array.isArray(utilityBills) ? utilityBills.filter(b => b && extractYearMonth(b.date) === effectiveMonth) : []);
-                            const breakdowns = billsInMonth.reduce((acc, bill) => {
-                                const alloc = bill.allocations?.find(a => a.tenantId === t.id);
-                                if (alloc && alloc.amount > 0) acc.push({ type: bill.type, amount: alloc.amount });
-                                return acc;
-                            }, []);
-                            const totalOwed = breakdowns.reduce((sum, item) => sum + item.amount, 0);
-                            
-                            // Enhanced Matching: Robust check for verified payments in this month
-                            const isPaid = Array.isArray(payments) && payments.some(p => {
-                                if (p.tenantId !== t.id) return false;
-                                if (extractYearMonth(p.date) !== effectiveMonth) return false;
-                                // Match if type is explicitly 'Utility' (any case) OR if the amount matches the exact bill total precisely
-                                const isUtilityType = String(p.type || '').toLowerCase() === 'utility';
-                                const amountMatches = Math.abs(parseFloat(p.amount) - totalOwed) < 0.01;
-                                return isUtilityType || (totalOwed > 0 && amountMatches);
-                            });
+                        {Array.isArray(tenants) && (() => {
+                            const validTenants = tenants.map(t => {
+                                const billsInMonth = (Array.isArray(utilityBills) ? utilityBills.filter(b => b && extractYearMonth(b.date) === effectiveMonth) : []);
+                                const breakdowns = billsInMonth.reduce((acc, bill) => {
+                                    const alloc = bill.allocations?.find(a => a.tenantId === t.id);
+                                    if (alloc && alloc.amount > 0) acc.push({ type: bill.type, amount: alloc.amount });
+                                    return acc;
+                                }, []);
+                                const totalOwed = breakdowns.reduce((sum, item) => sum + item.amount, 0);
+                                
+                                const isPaid = Array.isArray(payments) && payments.some(p => {
+                                    if (p.tenantId !== t.id) return false;
+                                    if (extractYearMonth(p.date) !== effectiveMonth) return false;
+                                    const isUtilityType = String(p.type || '').toLowerCase() === 'utility';
+                                    const amountMatches = Math.abs(parseFloat(p.amount) - totalOwed) < 0.01;
+                                    return isUtilityType || (totalOwed > 0 && amountMatches);
+                                });
+                                return { ...t, breakdowns, totalOwed, isPaid };
+                            }).filter(t => t.totalOwed > 0 && !t.isPaid);
 
-                            return (
+                            if (validTenants.length === 0) {
+                                return (
+                                    <div className="text-center py-16 bg-white/[0.02] border border-white/5 rounded-3xl">
+                                        <CheckCircle2 className="w-12 h-12 text-emerald-500 mx-auto mb-4 opacity-50" />
+                                        <p className="text-[14px] font-black text-slate-300 italic tracking-tight mb-1">All Utilities Cleared!</p>
+                                        <p className="text-[10px] uppercase font-black tracking-widest text-slate-500">No outstanding bills for this period</p>
+                                    </div>
+                                );
+                            }
+
+                            return validTenants.map((t, idx) => {
+                                const { breakdowns, totalOwed, isPaid } = t;
+                                return (
                                 <Motion.div
                                     key={t.id}
                                     initial={{ opacity: 0, x: -10 }}
@@ -3200,7 +3213,8 @@ function UtilityManager({ tenants, utilityBills, payments, onAddBill, onMarkUtil
                                     </div>
                                 </Motion.div>
                             );
-                        })}
+                            })
+                        })()}
                     </div>
                 </div>
             )}
