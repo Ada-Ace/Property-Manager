@@ -370,8 +370,7 @@ function ManagerDashboard(props) {
                     { id: 'inventory', icon: <Building2 className="w-3.5 h-3.5" />, label: 'My Property Assets' },
                     { id: 'utilities', icon: <Droplets className="w-3.5 h-3.5" />, label: 'Utility Ledger' },
                     { id: 'tasks', icon: <Hammer className="w-3.5 h-3.5" />, label: 'Maintenance Desk' },
-                    { id: 'messages', icon: <MessageSquare className="w-3.5 h-3.5" />, label: 'Communications', badge: (tenantMessages?.length > 0) },
-                    { id: 'settings', icon: <Lock className="w-3.5 h-3.5" />, label: 'Security Hub' }
+                    { id: 'messages', icon: <MessageSquare className="w-3.5 h-3.5" />, label: 'Communications', badge: (tenantMessages?.length > 0) }
                 ] : [])?.map((tab) => (
                     <Motion.button 
                         key={tab.id}
@@ -456,7 +455,6 @@ function ManagerDashboard(props) {
                     )}
                     {activeTab === 'tasks' && <TasksManager tasks={tasks} tenants={tenants} onAddTask={onAddTask} currency={currency} vendors={vendors} onAddVendor={() => setShowVendorModal(true)} onEditVendor={(v) => { setEditingVendor(v); setShowVendorModal(true); }} onDeleteVendor={onDeleteVendor} />}
                     {activeTab === 'messages' && <ManagerChat messages={tenantMessages} onUpdateMessage={onUpdateMessage} onAddVendor={setShowVendorModal} vendors={vendors} onEditVendor={(v) => { setEditingVendor(v); setShowVendorModal(true); }} onDeleteVendor={onDeleteVendor} />}
-                    {activeTab === 'settings' && <CredentialManager activeManager={activeManager} onEditManager={onEditManager} />}
                 </Motion.div>
             </AnimatePresence>
 
