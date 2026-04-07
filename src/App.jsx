@@ -544,12 +544,21 @@ function RentSummaryTab({ tenants, payments, currency = 'USD', onMarkPaid, prope
                 const daysUntil = getDaysUntilDue(t.leaseStart);
                 return { ...t, dueDate, daysUntil };
             } catch (e) { return { ...t, dueDate: new Date(), daysUntil: 0 }; }
+        }).filter(t => {
+            const hasPaid = (payments || []).some(p => {
+                if (p.tenantId !== t.id) return false;
+                const payDate = new Date(p.date || p.timestamp);
+                if (isNaN(payDate.getTime())) return false;
+                const daysSincePayment = (today.getTime() - payDate.getTime()) / (1000 * 60 * 60 * 24);
+                return daysSincePayment >= 0 && daysSincePayment <= 25;
+            });
+            return !hasPaid;
         }).sort((a, b) => {
             const da = (a.dueDate instanceof Date && !isNaN(a.dueDate)) ? a.dueDate.getTime() : 0;
             const db = (b.dueDate instanceof Date && !isNaN(b.dueDate)) ? b.dueDate.getTime() : 0;
             return da - db;
         });
-    }, [tenants]);
+    }, [tenants, payments]);
 
     const totalRevenueThisCycle = useMemo(() => upcomingRents.reduce((a, b) => a + (Number(b?.baseRent) || 0), 0), [upcomingRents]);
     const soonDueCount = upcomingRents.filter(r => r && (Number(r?.daysUntil) || 0) <= 3).length;
