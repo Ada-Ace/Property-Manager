@@ -3895,35 +3895,26 @@ export function TenantDashboard({ tenant, unit, tenantMessages = [], onSendMessa
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div className="bg-slate-900 border border-white/5 p-8 rounded-[2.5rem] shadow-2xl relative overflow-hidden group">
-                    <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity">
-                        <CreditCard className="w-24 h-24" />
-                    </div>
-                    
                     <div className="flex justify-between items-start mb-8">
-                        <div>
-                            <p className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-500 mb-2">Total Due</p>
-                            <div className="flex items-baseline gap-2">
-                                <span className="text-4xl md:text-5xl font-black text-white tracking-tighter italic font-mono-data">{currency} {totalDue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                                <span className="text-[10px] text-slate-500 font-black uppercase tracking-widest opacity-60">Next Rent Due on {formatDate(calculateNextRentDue(tenant.leaseStart))}</span>
+                        <div className="space-y-4">
+                            <div>
+                                <p className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-500 mb-2">Total Outstanding Balance</p>
+                                <span className="text-4xl md:text-5xl font-black text-white tracking-tighter italic font-mono-data">
+                                    {currency} {totalDue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                </span>
+                            </div>
+                            
+                            <div className="flex items-center gap-3">
+                                <span className="px-3 py-1.5 bg-indigo-500/10 border border-indigo-500/20 rounded-xl text-indigo-400 text-[9px] font-black uppercase tracking-widest flex items-center gap-2">
+                                    <Clock className="w-3.5 h-3.5" /> Next Rent Due On {formatDate(calculateNextRentDue(tenant.leaseStart))}
+                                </span>
+                                {totalDue === 0 && (
+                                    <span className="px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-emerald-400 text-[9px] font-black uppercase tracking-widest flex items-center gap-2">
+                                        <CheckCircle2 className="w-3.5 h-3.5" /> Fully Paid
+                                    </span>
+                                )}
                             </div>
                         </div>
-
-                        {/* Visual Progress Ring */}
-                        {totalDue > 0 ? (
-                            <div className="relative w-16 h-16 shrink-0">
-                                <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
-                                    <circle className="text-white/5 stroke-current" strokeWidth="8" cx="50" cy="50" r="40" fill="transparent"></circle>
-                                    <circle className="text-red-500 stroke-current drop-shadow-[0_0_8px_rgba(239,68,68,0.5)]" strokeWidth="8" strokeLinecap="round" cx="50" cy="50" r="40" fill="transparent" strokeDasharray="251.2" strokeDashoffset="60" style={{ transition: 'stroke-dashoffset 1s ease-out' }}></circle>
-                                </svg>
-                                <div className="absolute inset-0 flex items-center justify-center">
-                                    <AlertCircle className="w-4 h-4 text-red-500 animate-pulse" />
-                                </div>
-                            </div>
-                        ) : (
-                            <div className="w-16 h-16 shrink-0 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
-                                <CheckCircle2 className="w-8 h-8 text-emerald-400" />
-                            </div>
-                        )}
                     </div>
  
                     <div className="space-y-4 pt-6 border-t border-white/5">
