@@ -3905,7 +3905,7 @@ export function TenantDashboard({ tenant, unit, tenantMessages = [], onSendMessa
                             </div>
                             
                             <div className="flex items-center gap-3">
-                                <span className="px-3 py-1.5 bg-indigo-500/10 border border-indigo-500/20 rounded-xl text-indigo-400 text-[9px] font-black uppercase tracking-widest flex items-center gap-2">
+                                <span className="px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-emerald-400 text-[9px] font-black uppercase tracking-widest flex items-center gap-2">
                                     <Clock className="w-3.5 h-3.5" /> Next Rent Due On {formatDate(calculateNextRentDue(tenant.leaseStart))}
                                 </span>
                                 {totalDue === 0 && (
