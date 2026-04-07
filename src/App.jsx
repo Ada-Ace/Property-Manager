@@ -1427,7 +1427,7 @@ function App() {
 
         // Main login logic continues...
         
-        const tenant = tenants.find(t => cleanMobile(t.mobile) === inputMobile && t.password === inputPass);
+        const tenant = tenants.find(t => cleanMobile(t.mobile) === inputMobile && String(t.password || '').trim() === inputPass);
         if (tenant) {
             setActiveTenantId(tenant.id);
             setActiveProperty(tenant.propertyName);
