@@ -466,6 +466,7 @@ function ManagerDashboard(props) {
                                 setShowVendorModal(true); 
                             }} 
                             onDeleteVendor={onDeleteVendor} 
+                            activeManager={activeManager}
                         />
                     )}
                 </Motion.div>
@@ -2570,9 +2571,28 @@ const extractYearMonth = (dateStr) => {
 
 // --- Utility Components ---
 
-function ManagerChat({ messages = [], tenants = [], onUpdateMessage, onAddVendor, vendors = [], onEditVendor, onDeleteVendor }) {
+function ManagerChat({ messages = [], tenants = [], onUpdateMessage, onAddVendor, vendors = [], onEditVendor, onDeleteVendor, activeManager }) {
     const [filter, setFilter] = useState('ALL');
-    const currentList = messages?.filter(m => filter === 'ALL' || m.status === filter);
+    const [replyingTo, setReplyingTo] = useState(null);
+    const [replyText, setReplyText] = useState('');
+
+    const currentList = messages?.filter(m => {
+        if (filter === 'ALL') return m.status === 'UNREAD';
+        if (filter === 'RESOLVED') return m.status === 'READ';
+        return m.status === filter;
+    });
+
+    const handleSendReply = async (msgId) => {
+        if (!replyText.trim()) return;
+        setReplyingTo(null);
+        await onUpdateMessage(msgId, { 
+            status: 'READ', 
+            response: replyText, 
+            resolvedAt: toSheetDate(new Date()),
+            handledBy: activeManager?.name || 'Administrator'
+        });
+        setReplyText('');
+    };
 
     return (
         <div className="space-y-12 animate-in fade-in slide-in-from-bottom-5">
@@ -2593,42 +2613,87 @@ function ManagerChat({ messages = [], tenants = [], onUpdateMessage, onAddVendor
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-10 pb-6 border-b border-white/5">
                     <div>
                         <h3 className="font-black text-2xl text-white italic tracking-tight flex items-center gap-3"><Radio className="w-7 h-7 text-indigo-400" /> Signal Communications</h3>
-                        <div className="flex gap-4 mt-3">
-                            <button onClick={() => setFilter('ALL')} className={`text-[9px] font-black uppercase tracking-widest ${filter === 'ALL' ? 'text-indigo-400' : 'text-slate-500'}`}>All Signals</button>
-                            <button onClick={() => setFilter('UNREAD')} className={`text-[9px] font-black uppercase tracking-widest ${filter === 'UNREAD' ? 'text-indigo-400' : 'text-slate-500'}`}>Unread {messages?.filter(m => m.status === 'UNREAD')?.length > 0 && `(${messages?.filter(m => m.status === 'UNREAD')?.length})`}</button>
+                        <div className="flex gap-6 mt-3">
+                            <button onClick={() => setFilter('ALL')} className={`text-[9px] font-black uppercase tracking-widest transition-all ${filter === 'ALL' ? 'text-indigo-400' : 'text-slate-500 hover:text-slate-300'}`}>Active Signals ({messages?.filter(m => m.status === 'UNREAD')?.length})</button>
+                            <button onClick={() => setFilter('RESOLVED')} className={`text-[9px] font-black uppercase tracking-widest transition-all ${filter === 'RESOLVED' ? 'text-emerald-400' : 'text-slate-500 hover:text-slate-300'}`}>Resolved Hub ({messages?.filter(m => m.status === 'READ')?.length})</button>
                         </div>
                     </div>
                 </div>
 
                 {!currentList || currentList?.length === 0 ? (
                     <div className="text-center py-20 border-2 border-dashed border-white/5 rounded-[2rem]">
-                        <p className="text-[10px] uppercase font-black tracking-widest text-slate-600">No active signals found</p>
+                        <p className="text-[10px] uppercase font-black tracking-widest text-slate-600">No signals found in this category</p>
                     </div>
                 ) : (
                     <div className="space-y-4">
                         {currentList?.map((msg, idx) => (
-                            <div key={msg.id || idx} className="bg-white/[0.03] border border-white/5 p-6 rounded-[2rem] flex flex-col md:flex-row justify-between items-start md:items-center gap-6 group hover:bg-white/[0.06] transition-all">
-                                <div className="flex-1">
-                                    <div className="flex items-center gap-3 mb-2">
-                                        <span className="text-[9px] font-black text-indigo-400 uppercase tracking-widest bg-indigo-500/10 px-3 py-1 rounded-lg border border-indigo-500/20">
-                                            {tenants.find(t => t.id === msg.tenantId)?.name || 'Tenant Signal'}
-                                        </span>
-                                        <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">
-                                            {msg.timestamp ? formatDate(msg.timestamp) : msg.date ? formatDate(msg.date) : 'New Signal'}
-                                        </span>
+                            <div key={msg.id || idx} className="bg-white/[0.03] border border-white/5 p-6 rounded-[2rem] flex flex-col gap-6 group hover:bg-white/[0.06] transition-all">
+                                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+                                    <div className="flex-1">
+                                        <div className="flex items-center gap-3 mb-3">
+                                            <span className="text-[9px] font-black text-indigo-400 uppercase tracking-widest bg-indigo-500/10 px-3 py-1 rounded-lg border border-indigo-500/20">
+                                                {tenants.find(t => t.id === msg.tenantId)?.name || 'Guest Resident'}
+                                            </span>
+                                            <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">
+                                                {msg.timestamp ? formatDate(msg.timestamp) : msg.date ? formatDate(msg.date) : 'New Signal'}
+                                            </span>
+                                            {msg.status === 'READ' && (
+                                                <span className="text-[9px] font-black text-emerald-400 uppercase tracking-widest flex items-center gap-1">
+                                                    <CheckCircle2 className="w-3 h-3" /> Resolved
+                                                </span>
+                                            )}
+                                        </div>
+                                        <p className="text-sm text-slate-300 font-medium leading-relaxed italic">"{msg.content || msg.message || 'No content provided'}"</p>
+                                        
+                                        {msg.response && (
+                                            <div className="mt-4 p-4 bg-indigo-500/5 border-l-2 border-indigo-500/30 rounded-r-xl">
+                                                <p className="text-[9px] font-black text-indigo-400 uppercase tracking-widest mb-1 flex items-center gap-2">
+                                                    <User className="w-3 h-3" /> Management Response ({msg.handledBy || 'Admin'})
+                                                </p>
+                                                <p className="text-sm text-slate-400">{msg.response}</p>
+                                            </div>
+                                        )}
                                     </div>
-                                    <p className="text-sm text-slate-300 font-medium leading-relaxed">{msg.content || msg.message || 'No content provided'}</p>
+
+                                    <div className="flex items-center gap-4">
+                                        {msg.status === 'UNREAD' && replyingTo !== msg.id && (
+                                            <>
+                                                <button 
+                                                    onClick={() => setReplyingTo(msg.id)}
+                                                    className="bg-indigo-600 hover:bg-indigo-500 text-[9px] font-black text-white px-5 py-3 rounded-xl uppercase tracking-widest transition-all flex items-center gap-2"
+                                                >
+                                                    <Send className="w-3 h-3" /> Respond
+                                                </button>
+                                                <button 
+                                                    onClick={() => onUpdateMessage(msg.id, { status: 'READ', resolvedAt: toSheetDate(new Date()) })}
+                                                    className="bg-white/5 hover:bg-white/10 text-[9px] font-black text-white px-5 py-3 rounded-xl uppercase tracking-widest border border-white/5 transition-all"
+                                                >
+                                                    Archive Only
+                                                </button>
+                                            </>
+                                        )}
+                                    </div>
                                 </div>
-                                <div className="flex items-center gap-4">
-                                    {msg.status === 'UNREAD' && (
-                                        <button 
-                                            onClick={() => onUpdateMessage(msg.id, 'READ')}
-                                            className="bg-white/5 hover:bg-white/10 text-[9px] font-black text-white p-3 rounded-xl uppercase tracking-widest border border-white/5 transition-all"
-                                        >
-                                            Mark Resolved
-                                        </button>
-                                    )}
-                                </div>
+
+                                {replyingTo === msg.id && (
+                                    <div className="bg-slate-900/50 p-6 rounded-2xl border border-white/5 space-y-4 animate-in slide-in-from-top-2">
+                                        <textarea 
+                                            value={replyText}
+                                            onChange={(e) => setReplyText(e.target.value)}
+                                            placeholder="Transmit official response to resident..."
+                                            className="w-full bg-slate-950/50 border border-white/10 rounded-xl p-4 text-sm text-slate-200 focus:outline-none focus:border-indigo-500/50 min-h-[100px] resize-none"
+                                        />
+                                        <div className="flex gap-3 justify-end text-[10px] font-black">
+                                            <button onClick={() => setReplyingTo(null)} className="text-slate-500 uppercase tracking-widest hover:text-slate-300">Cancel</button>
+                                            <button 
+                                                onClick={() => handleSendReply(msg.id)}
+                                                className="bg-indigo-600 text-white px-6 py-2 rounded-lg uppercase tracking-widest hover:bg-indigo-500 transition-all glow-indigo"
+                                            >
+                                                Lock & Transmit Response
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         ))}
                     </div>
