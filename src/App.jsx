@@ -2672,8 +2672,19 @@ function ManagerChat({ messages = [], tenants = [], onUpdateMessage, onAddVendor
                                         <p className="text-sm text-slate-300 font-medium leading-relaxed italic">"{msg.content || msg.message || 'No content provided'}"</p>
                                         
                                         {msg.photoUrl && (
-                                            <div className="mt-3 overflow-hidden rounded-xl border border-white/10 md:w-1/2">
-                                                <img src={msg.photoUrl} alt="Attachment" className="w-full h-auto object-cover hover:scale-105 transition-transform" />
+                                            <div className="mt-3 space-y-2">
+                                                <div className="overflow-hidden rounded-xl border border-white/10 md:w-1/2 group/msgimg relative cursor-pointer" onClick={() => window.open(msg.photoUrl, '_blank')}>
+                                                    <img src={msg.photoUrl} alt="Attachment" className="w-full h-auto object-cover hover:scale-105 transition-transform" />
+                                                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/msgimg:opacity-100 transition-opacity flex items-center justify-center">
+                                                        <span className="text-[9px] font-black text-white uppercase tracking-widest bg-black/60 px-3 py-1.5 rounded-lg">View Full</span>
+                                                    </div>
+                                                </div>
+                                                <button 
+                                                    onClick={() => window.open(msg.photoUrl, '_blank')}
+                                                    className="text-[9px] font-black text-indigo-400 uppercase tracking-widest flex items-center gap-2 hover:text-white transition-colors"
+                                                >
+                                                    <Camera className="w-3 h-3" /> External Attachment Link
+                                                </button>
                                             </div>
                                         )}
                                         
@@ -4112,11 +4123,19 @@ export function TenantDashboard({ tenant, unit, tenantMessages = [], onSendMessa
                                         </p>
 
                                         {msg.photoUrl && (
-                                            <div className="mt-4 overflow-hidden rounded-2xl border border-white/10 max-w-[280px] group/photo relative cursor-pointer" onClick={() => window.open(msg.photoUrl, '_blank')}>
-                                                <img src={msg.photoUrl} alt="Attachment" className="w-full h-auto object-cover group-hover/photo:scale-105 transition-transform duration-500" />
-                                                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/photo:opacity-100 transition-opacity flex items-center justify-center">
-                                                    <span className="text-[10px] font-black text-white uppercase tracking-widest bg-black/60 px-4 py-2 rounded-full border border-white/20">Open Attachment</span>
+                                            <div className="mt-4 space-y-2">
+                                                <div className="overflow-hidden rounded-2xl border border-white/10 max-w-[280px] group/photo relative cursor-pointer" onClick={() => window.open(msg.photoUrl, '_blank')}>
+                                                    <img src={msg.photoUrl} alt="Attachment" className="w-full h-auto object-cover group-hover/photo:scale-105 transition-transform duration-500" />
+                                                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/photo:opacity-100 transition-opacity flex items-center justify-center">
+                                                        <span className="text-[10px] font-black text-white uppercase tracking-widest bg-black/60 px-4 py-2 rounded-full border border-white/20">Expand Image</span>
+                                                    </div>
                                                 </div>
+                                                <button 
+                                                    onClick={() => window.open(msg.photoUrl, '_blank')}
+                                                    className="text-[9px] font-black text-indigo-400 uppercase tracking-widest flex items-center gap-2 hover:text-white transition-colors"
+                                                >
+                                                    <Camera className="w-3 h-3" /> View Original Attachment
+                                                </button>
                                             </div>
                                         )}
 
