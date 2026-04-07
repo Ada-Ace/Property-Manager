@@ -4126,10 +4126,11 @@ function MessageModal({ onClose, onSubmit }) {
     const [msg, setMsg] = useState('');
 
     return (
-        <div className="fixed inset-0 z-[155] flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-md">
+        <div className="fixed inset-0 z-[155] flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-md" onClick={onClose}>
             <Motion.div 
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
+                onClick={e => e.stopPropagation()}
                 className="bg-slate-900 border border-white/10 w-full max-w-md rounded-[2.5rem] p-8 pb-32 md:pb-8 shadow-2xl"
             >
                 <div className="flex justify-between items-center mb-6">
@@ -4137,7 +4138,9 @@ function MessageModal({ onClose, onSubmit }) {
                         <MessageSquare className="w-6 h-6 text-indigo-500" />
                         My Message Manager
                     </h2>
-                    <button onClick={onClose} className="text-slate-500 hover:text-white transition-colors"></button>
+                    <button onClick={onClose} className="p-2 hover:bg-white/5 rounded-xl text-slate-500 hover:text-white transition-all">
+                        <X className="w-6 h-6" />
+                    </button>
                 </div>
                 <form onSubmit={(e) => { e.preventDefault(); onSubmit(msg); }} className="space-y-4">
                     <textarea
