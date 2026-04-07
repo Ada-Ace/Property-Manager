@@ -2177,6 +2177,8 @@ function App() {
                                 currency={activeCurrency}
                                 tenantMessages={tenantMessages.filter(m => m.tenantId === activeTenantId)}
                                 onSendMessage={handleSendMessage}
+                                utilityBills={utilityBills}
+                                payments={payments}
                                 onUpdateProfile={editTenant}
                             />
                         )}
@@ -3706,9 +3708,47 @@ function TasksManager({ tenants, tasks, vendors, onAddTask, onAddVendor, onEditV
 
 // --- Tenant Dashboard (unchanged logic, showing for completeness) ---
 
-export function TenantDashboard({ tenant, unit, tenantMessages = [], onSendMessage, onUpdateProfile, currency = 'USD' }) {
+export function TenantDashboard({ tenant, unit, tenantMessages = [], onSendMessage, onUpdateProfile, utilityBills = [], payments = [], currency = 'USD' }) {
     const [profileForm, setProfileForm] = React.useState({ mobile: tenant?.mobile || '', password: tenant?.password || '' });
     const [showMsgModal, setShowMsgModal] = useState(false);
+
+    const utilityDue = useMemo(() => {
+        if (!Array.isArray(utilityBills) || !Array.isArray(payments)) return 0;
+        
+        // 1. Get unique months covered by bills + current month
+        const todayStr = new Date().toISOString().substring(0, 7);
+        const billMonths = utilityBills.filter(b => b && b.date).map(b => extractYearMonth(b.date));
+        const uniqueMonths = Array.from(new Set([todayStr, ...billMonths])).sort().reverse();
+        
+        let total = 0;
+        uniqueMonths.forEach(month => {
+            // Find all bills for this month
+            const billsInMonth = utilityBills.filter(b => b && extractYearMonth(b.date) === month);
+            
+            // Calculate what THIS tenant owes for this month's bills
+            const totalOwed = billsInMonth.reduce((sum, bill) => {
+                const alloc = bill.allocations?.find(a => a.tenantId === tenant.id);
+                return sum + (Number(alloc?.amount) || 0);
+            }, 0);
+            
+            if (totalOwed <= 0) return;
+            
+            // Check if there is a payment matching this month + tenant + type (or amount)
+            const isPaid = payments.some(p => {
+                if (p.tenantId !== tenant.id) return false;
+                // Match month
+                if (extractYearMonth(p.date) !== month) return false;
+                // Match utility type or exact amount
+                const isUtility = String(p.type || '').toLowerCase() === 'utility';
+                const amountMatches = Math.abs(parseFloat(p.amount) - totalOwed) < 0.01;
+                return isUtility || amountMatches;
+            });
+            
+            if (!isPaid) total += totalOwed;
+        });
+        return total;
+    }, [tenant.id, utilityBills, payments]);
+
     if (!tenant) {
         return (
             <div className="flex flex-col items-center justify-center py-40">
@@ -3717,7 +3757,7 @@ export function TenantDashboard({ tenant, unit, tenantMessages = [], onSendMessa
             </div>
         );
     }
-    const totalDue = (Number(tenant.baseRent) || 0) + (Number(tenant.utilityShare) || 0);
+    const totalDue = (Number(tenant.baseRent) || 0) + utilityDue;
 
     return (
         <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
@@ -3785,9 +3825,9 @@ export function TenantDashboard({ tenant, unit, tenantMessages = [], onSendMessa
                         </div>
                         <div className="flex justify-between text-[11px] font-bold">
                             <span className="text-slate-500 uppercase tracking-widest flex items-center gap-2">
-                                Utility Share <Droplets className="w-3 h-3 text-blue-400" />
+                                Utility Due <Droplets className="w-3 h-3 text-blue-400" />
                             </span>
-                            <span className="text-white font-mono-data">{currency} {(Number(tenant.utilityShare) || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                            <span className="text-white font-mono-data">{currency} {utilityDue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                         </div>
                     </div>
 
